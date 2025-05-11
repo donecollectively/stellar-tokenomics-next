@@ -2777,6 +2777,7 @@ declare interface FixedSaleDetailsLike {
 declare type GenericTokenomicsFeatureFlags = {
     mktSale: boolean;
     fundedPurpose: boolean;
+    vesting: boolean;
 };
 
 /**
