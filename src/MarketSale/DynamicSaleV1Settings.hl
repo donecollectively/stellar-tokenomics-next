@@ -1,0 +1,46 @@
+module DynamicSaleV1Settings
+
+struct DynamicSaleV1Settings {
+    targetPrice: Real  // same as targetPriceBenchmark
+    targetedSellingTime: Duration  
+
+    minPrice: Real  // same as minSalePrice
+    maxPrice: Real  // same as maxSalePrice
+
+    // 0.20 by default
+    progressPricingDiscountFloorPoint: Real // same as paceDiscountFloorPoint
+    // 0.25 by default
+    progressPricingDiscountWhenSlow: Real  // same as paceDiscountWhenSlow
+    // 0.20 by default
+    progressPricingExpansionWhenFast: Real // same as paceExpansionWhenFast
+
+    // 0.3 by default
+    dynaPaceFasterSaleWeight: Real 
+    // 0.5 by default
+    dynaPaceIdleDecayRate: Real 
+
+    // 5 by default
+    pricingWeightDynaPace: Real  // same as weightNextDynaPace
+
+    func validateCreatedDetails(self) -> Bool {
+        assert(self.progressPricingDiscountFloorPoint > 0.05, "floor point too low");
+        assert(self.progressPricingDiscountFloorPoint < 0.50, "floor point too high");
+        assert(self.progressPricingDiscountWhenSlow >= 0.0, "negative discount");
+        assert(self.progressPricingDiscountWhenSlow < 1.0, "discount too high");
+        assert(self.progressPricingExpansionWhenFast > 0.05, "expansion too low");
+        assert(self.progressPricingExpansionWhenFast < 10.0, "expansion too high");
+        assert(self.dynaPaceFasterSaleWeight >= 0.0, "faster weight negative");
+        assert(self.dynaPaceFasterSaleWeight < 2.0, "faster weight way too high");
+        assert(self.dynaPaceIdleDecayRate >= 0.0, "negative decay rate");
+        assert(self.dynaPaceIdleDecayRate < 2.0, "decay rate too high");
+        assert(self.pricingWeightDynaPace >= 0.0, "dyna pace weight negative");
+        assert(self.pricingWeightDynaPace < 15, "dyna pace weight way too high");
+
+        true
+    }
+
+    // func validateUpdatedDetails(self) -> Bool {
+
+    //     true
+    // }
+}

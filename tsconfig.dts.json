@@ -1,0 +1,70 @@
+{
+    "$schema": "http://json.schemastore.org/tsconfig",
+    "compilerOptions": {
+        "strict": true,
+        "noEmit": false,
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "allowJs": true,
+        "allowSyntheticDefaultImports": true,
+        "allowArbitraryExtensions": true,
+        "skipLibCheck": true,
+
+        "target": "ESNext",
+        "lib": ["esnext", "dom"],
+        "module": "nodenext",
+        "esModuleInterop": true,
+        "types": ["node"],
+        "verbatimModuleSyntax": true,
+
+        "moduleResolution": "nodenext",
+        "customConditions": ["dev"],
+        "baseUrl": ".",
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        // "isolatedModules": false,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        
+        "outDir": "./doc-gen/d.ts",        
+        // "outFile": "doc-gen/d.ts/stellar-tokenomics-raw.d.ts",
+        // "importHelpers": true,
+        "rootDir": ".",
+        
+        // "exactOptionalPropertyTypes": true,        
+        "noImplicitAny": false,
+        // "noErrorTruncation": true,
+
+        // "importHelpers": true,
+        // "baseUrl": ".",
+
+        // "skipLibCheck": true,
+
+        // "emitDeclarationOnly": true,
+        // "noResolve": true,
+        // "disableReferencedProjectLoad": false,
+        "paths": {
+            "@donecollectively/stellar-tokenomics": ["./src/index.ts"],
+            "src/*": ["./src/*"]
+        }
+        // "plugins": [],
+        // "outFile": "dist/index.d.ts",
+    },
+    "files": [ 
+        "src/index.ts",
+        "./heliosModule.d.ts",
+    ],
+    "include": [
+        // "lib/**/*.json", 
+        // "src/**/*.hl",
+        // "lib/**/*.ts", 
+        // "lib/**/*.js", 
+    ],
+    "exclude": [
+        "node_modules",
+        // "src/**/*.ts",
+        "**/node_modules/"
+    ]
+}

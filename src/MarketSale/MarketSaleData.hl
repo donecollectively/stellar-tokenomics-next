@@ -1,0 +1,304 @@
+module MarketSaleData
+
+import {
+    REQT,
+    bREQT,
+    TODO
+} from StellarHeliosHelpers
+
+import {
+    DgDataDetails,
+    CapoCtx,
+    mkCapoCtx
+} from CapoHelpers
+
+import {
+    DynamicSaleV1Settings
+} from DynamicSaleV1Settings
+
+import {
+    SaleProgressDetails
+} from SaleProgressDetails
+
+import {
+    VxfDestination
+} from VxfProtocol
+
+enum MarketSaleState {
+    Pending
+    Active
+    Retired
+    SoldOut
+}
+
+struct SaleAssets {
+    saleUnitAssets: Value
+    singleBuyMaxUnits: Int
+    primaryAssetMph: MintingPolicyHash
+    primaryAssetName: ByteArray
+    primaryAssetTargetCount: Int 
+    totalSaleUnits: Int
+}
+
+struct FixedSaleDetails {
+    settings: DynamicSaleV1Settings
+    // ^ was saleStrategy: AnySaleStrategy "strat" 
+    startAt: Time
+
+    // these details about the sale should always be sync'd to nested chunks
+    vxfTokensTo: Option[VxfDestination]
+    vxfFundsTo: Option[VxfDestination] 
+}
+
+struct OtherSaleState {
+    progressDetails: SaleProgressDetails
+    salePace: Real
+    state: MarketSaleState 
+    // ^ was saleStrategyState: AnySaleState "stratState" 
+
+    func mustBeActive(self, which : String) -> Bool {
+        if (self.state == MarketSaleState::Active) {
+            true
+        } else {
+            error(which + ": state must be Active")
+        }
+    }
+
+    func mustBePending(self, which : String) -> Bool {
+        if (self.state == MarketSaleState::Pending) {
+            true
+        } else {
+            error(which + ": state must be Pending")
+        }
+    }
+}
+
+struct ThreadInfo {
+    // These details will always start with zero values.  
+    // They act as reference-counters, and they increment during split/join transactions
+    nestedThreads: Int
+    retiredThreads: Int
+    
+    // Each chunk should point to the chunk it was split from.  Level 1 chunks will have parentChunkId == saleId
+    parentChunkId: ByteArray 
+    chunkForkedAt: Time 
+
+    // saleId is empty in the root MarketSale.
+    // each split chunk should point to the root MarketSale 
+    saleId: ByteArray 
+}
+
+struct MoreFields {
+    saleState: OtherSaleState 
+    fixedSaleDetails: FixedSaleDetails 
+    saleAssets: SaleAssets 
+    threadInfo: ThreadInfo 
+}
+
+struct MarketSaleData {
+    id: ByteArray  "@id"
+    type: String "tpe"
+    name: String
+    moreFields: MoreFields "mo"
+
+    // func totalSaleSize(self) -> Value {
+    //     self.moreFields.saleAssets.saleUnitAssets * self.moreFields.saleAssets.totalSaleUnits
+    // }
+
+    func validate(self) -> Bool {
+        print("mktSale: validate()");
+        assert(self.type == "mktSale", "wrong type");
+        assert(self.name.serialize().length > 10, "name must be at least 10 characters");
+        saleAssets = self.moreFields.saleAssets;
+        assert(
+            saleAssets.totalSaleUnits *
+            saleAssets.saleUnitAssets
+            .get_assets()
+                .get_policy(saleAssets.primaryAssetMph)
+                .get(saleAssets.primaryAssetName) 
+            == saleAssets.primaryAssetTargetCount, 
+            "saleUnitAssets' primary-token value must divide the target-count over the sale-unit count"
+        );
+
+        // assert(self.currentUnitPrice > 0, "currentUnitPrice must be greater than zero");
+
+        assert(saleAssets.saleUnitAssets.get_assets().to_map().length > 0, "saleUnitAssets must not be empty");
+        assert(saleAssets.totalSaleUnits > 0, "totalSaleUnits must be greater than zero");
+        assert(saleAssets.singleBuyMaxUnits > 0, "singleBuyMaxUnits must be greater than zero");
+        assert(saleAssets.singleBuyMaxUnits < saleAssets.totalSaleUnits, "singleBuyMaxUnits must be less than totalSaleUnits");
+
+        true
+    }
+
+    func validatePendingDetails(self) -> Bool {
+        print("mktSale: validatePendingDetails()");
+        threadInfo = self.moreFields.threadInfo;
+        assert(threadInfo.parentChunkId == #, "parentChunkId must be empty");
+        assert(threadInfo.saleId == self.id, "saleId must be equal to id");
+        assert(threadInfo.nestedThreads == 0, "nestedThreads must be zero");
+        assert(threadInfo.retiredThreads == 0, "retiredThreads must be zero");
+
+        true
+    }
+
+    func validateCreatedDetails(self) -> Bool {
+        print("mktSale: validateCreatedDetails()");
+        saleState = self.moreFields.saleState;
+        assert(saleState.salePace == 1.0, "salePace must be initialized to 1.0");
+        // assert(self.weightedPace == 0 * Duration::SECOND, "weightedPace must be zero");
+        saleDetails = self.moreFields.fixedSaleDetails;
+        saleAssets = self.moreFields.saleAssets;
+        true
+        && saleState.mustBePending("created").trace("must be Pending? ")
+        && saleDetails.settings.validateCreatedDetails()
+        && saleState.progressDetails.validateCreatedDetails(
+            saleDetails.startAt, 
+            saleAssets.totalSaleUnits
+        ).trace("progress details OK? ")
+        && true
+    }
+
+    func validateActivating(self, utxoValue: Value, DDdetails : DgDataDetails ) -> Bool {
+        print("mktSale: validateActivating()");
+        prevMktSale : MarketSaleData = MarketSaleData::from_data(
+            DDdetails.inputData()
+        );
+        // expectedDatum : ByteArray = prevMktSale.copy(
+        //     state: MarketSaleState::Active
+        // ).serialize();
+        // print("expectedDatum: ");
+        // print(expectedDatum.show());
+        // print("actualDatum: ");
+        // print(self.serialize().show());
+        // assert(expectedDatum == self.serialize(), "Activating a sale may only change the state to Active");
+
+        assert(self.name == prevMktSale.name, "name must not change");
+        assert(
+            prevMktSale.moreFields.saleState.mustBePending("old"), 
+            "previous sale not Pending"
+        );
+        assert(self.moreFields.saleState.state == MarketSaleState::Active, "state must be Active");
+        // ok to change the sale start time
+        // assert(self.startAt == prevMktSale.startAt, "startAt must not change");
+
+        // assert(self.lastPurchaseAt == prevMktSale.lastPurchaseAt, "lastPurchaseAt must not change");
+        // assert(self.prevPurchaseAt == prevMktSale.prevPurchaseAt, "prevPurchaseAt must not change");
+
+        // assert(self.weightedPace == prevMktSale.weightedPace, "weightedPace must not change");
+        // ok to change the assets & sale units, as long as everthing else checks out
+        //    assert(self.saleUnitAssets == prevMktSale.saleUnitAssets, "saleUnitAssets must not change");
+        //    assert(self.totalSaleUnits == prevMktSale.totalSaleUnits, "totalSaleUnits must not change");
+        //    assert(self.singleBuyMaxUnits == prevMktSale.singleBuyMaxUnits, "singleBuyMaxUnits must not change");
+        //    assert(self.currentUnitPrice == prevMktSale.currentUnitPrice, "currentUnitPrice must not change");
+
+        assets : Value = utxoValue.get_assets() - DDdetails.uutValue();
+        print("expected assets: ");
+        print(assets.show());
+
+        assert(self.moreFields.saleAssets.saleUnitAssets * self.moreFields.saleAssets.totalSaleUnits == assets, "utxo must contain the supply of tokens to be sold");
+
+        REQT("validates VxfDestination in vxfTokensTo field");
+        self.moreFields.fixedSaleDetails.vxfTokensTo.switch {
+            Some{vxf} => {
+                assert(vxf.validate("vxfTokensTo"), "<-- that fails; this can't");
+            },
+            None => {
+                print("  -- vxfTokensTo is not restricted");
+            }
+        }
+
+        REQT("validates VxfDestination in vxfFundsTo field");
+        assert(
+            (
+                self.moreFields.fixedSaleDetails.vxfFundsTo.unwrap().validate("vxfFundsTo")
+            ).trace("  -- vxfFundsTo ok? "), 
+            "^^^ that fails; this can't"
+        );
+
+
+        true
+        && self.validatePendingDetails() 
+        && true
+    }
+
+    func previous(ddd : DgDataDetails) -> MarketSaleData {
+        MarketSaleData::from_data(ddd.inputData())    
+    }
+
+    func updated(ddd : DgDataDetails) -> MarketSaleData {
+        MarketSaleData::from_data(ddd.outputData())
+    }
+
+   func validateAdding(self, ddd : DgDataDetails, mph : MintingPolicyHash, tn: ByteArray) -> Bool {
+        updated : MarketSaleData = MarketSaleData::updated(ddd);
+        outValue : Value = ddd.output().value;
+ 
+        updatedAssetCount : Int = outValue.get_policy(mph).get(tn);
+                // print("primary tn" + self.primaryAssetName.decode_utf8());
+                // print("this tn: " + tn.decode_utf8());
+                // print("primary mph" + self.primaryAssetMph.show());
+                // print("this mph: " + mph.show());
+
+        currentAssets = self.moreFields.saleAssets;
+        currentState = self.moreFields.saleState;
+        nextAssets = updated.moreFields.saleAssets;
+        nextState = updated.moreFields.saleState;
+        isPrimary : Bool = ( true
+            && ( mph == currentAssets.primaryAssetMph )
+                .trace("    -- is primary mph? ")
+            && ( tn == currentAssets.primaryAssetName )
+                .trace("    -- is primary tn? ")
+        ).trace("  -- isPrimary? ");
+            
+        print("vvv ... for added tn: "+ tn.show());
+        updatedAssetChunkSize : Int = nextAssets.saleUnitAssets.get_policy(mph).get(tn);
+        expectedAssetCount : Int = if (isPrimary) {
+            existingAssetChunkSize : Int = currentAssets.saleUnitAssets.get_policy(mph).get(tn);
+            if (updatedAssetChunkSize < existingAssetChunkSize) {
+                error("primary asset chunk size shouldn't decrease")
+            };
+            print("    ... each sale-unit has " + updatedAssetChunkSize.show());
+            print("    ... sale now supplied with " + updatedAssetCount.show());
+            print("    ... ^ / saleUnits  "+ nextAssets.totalSaleUnits.show());
+            percentSupplied = 100.0 * updatedAssetCount / nextAssets.primaryAssetTargetCount;
+            print("Now supplied with "+ percentSupplied.show() +"% of the primary token");
+    
+            // allows that the primary tokens can be progressively funded,
+            // without disturbing the sale-unit chunk size for that primary token
+            updatedAssetCount
+        } else {            
+            isEvenChunk : Bool = updatedAssetCount % nextAssets.totalSaleUnits == 0;
+            print("got "+ updatedAssetCount.show());
+            print("Expected chunks of "+ nextAssets.totalSaleUnits.show());
+            if (!isEvenChunk) {
+                error("new non-primary asset must have an even distribution for each unit of sale")
+            };
+
+            print("    ... each sale-unit has " + updatedAssetChunkSize.show());
+            print("    ... ^ times sale-units  "+ nextAssets.totalSaleUnits.show());
+
+            // non-primary tokens must have the sale-unit sync'd with the deposited value
+            expected : Int = updatedAssetChunkSize * nextAssets.totalSaleUnits;
+            print("Expecting the value to be = "+ expected.show() + " (= current Value/this-tn)");
+            
+            expected
+        };
+        // check that the deposited assets don't exceed the number of tokens implied by the saleUnitAssets * totalSaleUnits 
+        print("    ... updated value has "+ updatedAssetCount.show() + " " + tn.show());
+        hasMatchyValue : Bool = if (updatedAssetCount != expectedAssetCount) {
+            if (isPrimary) {
+                error("no way") // unreachable
+            };
+            error("The updated sale-units * sale-unit-count / this-tn must match the updated deposit-value / this-tn")
+        } else { true };
+
+        true
+        && hasMatchyValue
+        && currentState.mustBePending("old: AddTokens").trace("input sale must be Pending: ")
+        && nextState.mustBePending("new:AddTokens").trace("updated sale must be Pending: ")
+        && updated.validate()
+        && updated.validateCreatedDetails()
+        && updated.validatePendingDetails()
+        && true
+    }
+}

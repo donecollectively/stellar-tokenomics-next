@@ -1,0 +1,181 @@
+module VxfProtocol
+
+import {
+    RelativeDelegateLink
+} from CapoDelegateHelpers
+
+import {
+    REQT,
+    bREQT,
+    TODO
+} from StellarHeliosHelpers
+
+/**
+ * The VxfExpectedActivity enum is used to capture details of how the vesting contract can
+ * enforce the required smart contract to which funds may be distributed after they vest.
+ * It is used in the Vxf Sealing process to establish a positive linkage to a receiving contract, 
+ * or to a collaborating (Vxf Transfer agent) contract that has a stake or policy to be enforced 
+ * during the funds distribution.
+ *
+ * the appData field can include additional details which are transparent to the vesting contract,
+ * interpreted only by the receiving contract to enforce any details of its required behavior.
+ * When distributing funds out of the vesting contract, the receiving contract must match with the
+ * provided appData (if provided).
+ */
+enum VxfExpectedActivity {
+    /** 
+    * implicitly seeks a tagged redeemer with first-field constructor 'VX' = 0x5658 = decimal 22104
+    *
+    * This is the same as using TaggedRedeemer with id=22104.
+    *
+    * The appData field can include further details to be enforced by the receiving 
+    * contract, and if provided, the target redeemer's 22104 must have the matching appData 
+    * in its first field. ??? TODO: value needed too?
+    */
+    22104: VxfTransfer {
+        appData: Option[Data]
+    }
+
+    /**
+    * implicitly seeks a tagged redeemer with first-field constructor 'VZ' = 0x565A = decimal 22106.
+    * 
+    * This is the same as using TaggedRedeemer with id=22106.
+    *
+    * When provided, the appData field must be matched by the receiving contract's 
+    * matched redeemer, the VZ constructor's first field. 
+    * TODO: value needed too?
+    */
+    22106: VxfStorage {
+        appData: Option[Data]
+    }
+    /**
+    * Seeks a redeemer with a specific constructor tag.  When inNestedList is true,
+    * the indicated constructor tag is also sought in any item of a nested list found 
+    * in the first field of any top-level constructor tag.  With a nestedListRedeemerId,
+    * that top-level constructor-tag is required to match, before the nested-list item is sought.
+    *
+    * When provided, the appData field must be matched by the receiving contract's 
+    * matched redeemer, in the constructor tag's second field.
+    * TODO: value needed too?
+    */
+    22107: SpecificRedeemerId {
+        id: Int
+        inNestedList: Bool
+        nestedListRedeemerId: Option[Int]
+        appData: Option[Data]
+    }
+    /**
+     * Seeks a redeemer at any index, with its first field as a tagged constructor with 
+     * the specified integer tag.  This first-field constructor-index convention allows 
+     * any top-level redeemer index, with the indicated first field as a highly selective 
+     * discriminator of minimal size.  
+     *
+     * When inNestedList is true, the indicated constructor tag is also sought in any item of a 
+     * nested list found in the first field of any top-level constructor tag.
+     *
+     * When provided, the appData field must be matched by the receiving contract's 
+     * matched redeemer, in the matched field constructor's first field.
+     * TODO: value needed too?
+     */
+    22108: TaggedRedeemer {
+        firstFieldConstrTag: Int
+        inNestedList: Bool
+        // scriptPurpose: ScriptPurpose
+        appData: Option[Data]
+    }
+}
+
+enum VxfDestination {
+    /**
+    * When the beneficiary is a relative link with a validator hash, the link is used to identify
+    * a delegate script whose UUT controls spending of its utxos, including
+    * the vested + distributed funds.  That script's activity is anchored with the ***required `vxfActvity`***,
+    * identifying the script activity (redeemer variant) needed to take control of the funds 
+    * on distribution
+    *
+    * When the beneficiary is a member UUT name, the delegate link
+    * will have no delegateValidatorHash, and the vxfActivity field is not required.
+    * The UUT is a token name in the minting policy of the same Capo in which the vesting
+    * record is created.  In this case, the vxfActivity field is not required.  ***The holder
+    * of the indicated token will be able to withdraw vested funds.***
+    */
+    RelativeLink { 
+        link: RelativeDelegateLink 
+        vxfActivity: Option[VxfExpectedActivity]
+    }
+
+    /**
+     * The beneficiary is any token holder of the given minting policy
+     * and asset name.  Normally this asset name will be a unique token.
+     */
+    AnyTokenHolder {
+        mph: MintingPolicyHash
+        assetName: ByteArray
+    }
+
+    /**
+     * The beneficiary is identified by a public key.  This is useful for indicating a
+     * wallet address, without the scripting overhead needed for encoding an Address here.
+     */
+    PubKey {
+        pkh: PubKeyHash
+    }
+    /**
+     * when the beneficiary is not constrained
+     */
+    98: Anywhere
+    /**
+     * when the beneficiary is not yet defined.  Will need to be defined before activation.
+     */
+    99: NotYetDefined
+    /**
+     * The beneficiary is any address.  This is useful for vesting to a
+     * multi-sig address, or other situations where a more specific way of identifying
+     * the beneficiary is not available.
+     *
+     * The credential for the address is required.  When the address is a plutus script,
+     * the vxfActivity is strongly recommended, to create a strong linkage between the
+     * vesting instance and specific activities under the receiving contract's control; otherwise,
+     * a utxo could be created that not ever be spendable by the receiver, or which could misdirect
+     * the receiver's further disposition of the funds.
+     *
+     * When the address is a multi-sig (/NativeScript) address, the Credential (a hash of the script)
+     * is required, and the vxfActivity is not needed.
+     */
+    //  TODO when there's a good use-case for this generic angle on distributing based on address
+    // AnyAddress {
+    //     unsupported: Int
+    //     // NOTE: Address is a pretty large type, consuming from a limited space in the compiled script
+    //     // address: Address
+    //     // credential: Credential
+    //     // vxfExpectedActivity: Option[VxfExpectedActivity]
+    // }
+
+    func validate(self, fieldName: String) -> Bool {
+        self.switch {
+            RelativeLink => error(fieldName + ": todo: RelativeLink support"),
+            AnyTokenHolder => error(fieldName+ ": todo: AnyTokenHolder support"),
+            PubKey => true,
+            Anywhere => true,
+            NotYetDefined => error("VxfDestination: " + fieldName + ": NotYetDefined")
+            // should NOT need to check the default case
+            // if the above cases are exhaustive
+            // _ => false
+        }
+    }
+
+    func verifyDestination(self, tx: Tx) -> Bool {
+        self.switch {
+            RelativeLink => error("todo: RelativeLink support"),
+            AnyTokenHolder => error("todo: AnyTokenHolder support"),
+            PubKey{pkh} => tx.is_signed_by(pkh),
+            Anywhere => true,
+            NotYetDefined => {
+                error("unreachable")
+            }
+            // should NOT need to check the default case
+            // if the above cases are exhaustive
+            // _ => false
+        }
+    }
+}

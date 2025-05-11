@@ -1,0 +1,79 @@
+{
+    "$schema": "http://json.schemastore.org/tsconfig",
+    "compilerOptions": {
+        "strict": true,
+        "noEmit": false,
+        "allowJs": true,
+        "declaration": true,
+        // "emitDeclarationOnly": false,
+        "declarationMap": true,
+        // "sourceMap": true, // provided by esbuild?
+        "allowSyntheticDefaultImports": true,
+        "allowArbitraryExtensions": true,
+        "skipLibCheck": true,
+        
+        "target": "ESNext",
+        "lib": ["esnext", "dom"],
+        "module": "nodenext",
+        "esModuleInterop": true,
+        // types: ‹default›
+        "verbatimModuleSyntax": true,
+
+        "moduleResolution": "nodenext",
+        // "traceResolution": true,
+        "customConditions": ["dev"],
+        "baseUrl": "./",
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        // "isolatedModules": false,
+        "experimentalDecorators": true,
+        // "emitDecoratorMetadata": false,
+
+        "outDir": "./doc-gen/d.ts",
+        // "outFile": none!
+        "importHelpers": true,
+        "rootDir": ".",
+
+        // "exactOptionalPropertyTypes": true,        
+        "noImplicitAny": false,
+        "noErrorTruncation": true,
+
+        "incremental": true,
+        // "moduleResolution": "NodeNext",
+        "preserveSymlinks": false,
+        // "resolvePackageJsonExports": true,
+        "jsx": "preserve",
+        // "outFile": "doc-gen/d.ts/stellar-tokenomics-raw.d.ts",
+        "paths": {
+            "@/*": ["./src/*"],
+            // "@donecollectively/stellar-contracts": [
+            //     "../stellar-contracts/src/index.ts"
+            // ]
+            //     "node_modules/@donecollectively/stellar-contracts"
+            //   ]
+        },
+        // "isolatedModules": true
+    },
+    "ts-node": {
+        "esm": true,
+        "files": true,
+        "transpileOnly": true,
+        "experimentalResolver": true,
+        "experimentalSpecifierResolution": "node"
+    },
+    "include": [
+        "./heliosModule.d.ts",
+        "next-env.d.ts",
+        "./src/**/*.ts",
+        "./src/**/*.tsx",
+        "./src/**/*.js",
+        "./src/**/*.jsx",
+        // "tests/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules", 
+        "src/**/*.test.ts",
+        "src/**/*/*Adapter.ts",
+        "disabled-for-now/**/*"
+    ]
+}

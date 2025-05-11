@@ -2,7 +2,8 @@
 *.hlBundled.mjs
 zz_junk/
 // for api-extractor's input files:
-.api-extractor-temp/
+doc-gen/d.ts/
+doc-gen/temp/
 .vscode/
 .cursor/
 

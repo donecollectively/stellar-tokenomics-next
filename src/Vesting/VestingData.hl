@@ -1,0 +1,333 @@
+module VestingData
+
+import {
+    REQT,
+    bREQT,
+    TODO
+} from StellarHeliosHelpers
+
+import {
+    DgDataDetails,
+    CapoCtx,
+    mkCapoCtx
+} from CapoHelpers
+
+import {
+    RelativeDelegateLink
+} from CapoDelegateHelpers
+
+import { 
+    VxfDestination
+} from VxfProtocol
+
+enum VestingState {
+    Initializing
+    VerifyingBeneficiary
+    Active
+    Paused {
+        reason: String
+        infoRef: Option[AssetClass]
+    }
+    Closed {
+        reason: String
+        infoRef: Option[AssetClass]
+    }
+
+    func validate(self) -> Bool {
+        self.switch {
+            Initializing => true,
+            VerifyingBeneficiary => true,
+            Active => true,
+            Paused{reason, infoRef} => {
+                REQT("... for pausing");
+                self.validateReason(reason, infoRef)
+            },
+            Closed{reason, infoRef} => {
+                REQT("... for closing");
+                self.validateReason(reason, infoRef)
+            }
+        }
+    }
+
+    func validateReason(self, reason: String, infoRef: Option[AssetClass]) -> Bool {
+        assert(true || /*never executed*/ self == self, "prevent unused var error");
+
+        REQT("the reason must be at least 12 characters");
+        assert(reason.encode_utf8().length >= 12, "reason < 12 - too short");
+        infoRef.switch {
+            Some{_infoRef} => {
+                TODO("the InfoRef token must be referenced in the txn");
+                assert(false, "InfoRef not yet supported");
+                false
+            },
+            None => true
+        }
+    }
+}
+
+enum VestingFrequency {
+    Interval {
+        interval: Duration
+        count: Int
+    }
+    Continuous
+}
+
+func valueTimesReal(v: Value, units: Real) -> Value {
+    Value::from_map(v
+        // .get_assets()
+        .to_map().map(
+            (policyId: MintingPolicyHash, assets: Map[ByteArray]Int) -> (MintingPolicyHash, Map[ByteArray]Int) {
+                (policyId, assets.map(
+                    (asset: ByteArray, quantity: Int) -> (ByteArray, Int) {
+                        (asset, (quantity * units).floor())
+                    }
+                ))
+            }
+        ))
+    // TBD: separate lovelace treatment only if needed
+    // +Value::lovelace(
+    //     (v.get_lovelace() * units) 
+    // ).floor())
+}
+
+func assertIntegralUnits(units: Real) -> () {
+    assert(units == units.floor(), "units not an integer value: "+units.show())
+}
+
+
+struct VestingProgress {
+    lastPartialMaturity: Time
+    vestedValue: Value
+    vestedFreqUnits: Real
+
+    func isEmpty(self) -> Bool {
+        self.lastPartialMaturity == Time::new(0) &&
+        self.vestedValue.is_zero() &&
+        self.vestedFreqUnits == 0.0
+    }
+}
+
+enum VestingDetails {
+    Once {
+        totalValue: Value
+        fullMaturity: Time
+    }
+
+    StraightLine {
+        totalValue: Value
+        fullMaturity: Time
+        vestingStart: Time 
+        frequency: VestingFrequency
+        vestingProgress: VestingProgress
+    }
+
+    // stubby shorthand for later Requirements integration
+    SimpleContingency {
+        totalValue: Value
+        fullMaturity: Option[Time]
+        contingencyDescription: String
+        usesReqts: Bool
+    }    
+
+    func nextPartialMaturity(self, now: Time, frequencyUnits: Real) -> Time {
+        self.switch {
+            Once{_total, _maturity} => {
+                REQT("Once vesting: no partial-maturity; withdrawing now, so partial-maturity is now");
+                now
+            },
+            SimpleContingency{_total, _fullMaturity, _description, _usesReqts} => {
+                REQT("SimpleContingency vesting: no partial-maturity; withdrawing now, so partial-maturity is now");
+                now
+            },
+            StraightLine{_start, _totalValue, _fullMaturity, frequency, progress} => {
+                frequency.switch {
+                    Interval{interval, _count} => {
+                        REQT("Interval vesting: extends the last-partial-maturity by a integer-multiple of the interval");
+                        assertIntegralUnits(frequencyUnits)
+
+                        progress.lastPartialMaturity + (interval * frequencyUnits.floor())
+                    },
+                    Continuous => {                        
+                        REQT("Continuous vesting: extends the last-partial-maturity by exactly the amount of elapsed time");
+                        // lastPartialMaturity + ( interval * 1_000_000 * frequencyUnits) / 1_000_000
+                        now
+                    }
+                }
+            }
+        }
+    }
+
+    func vestableUnits(self, now: Time) -> Real {
+        self.switch {
+            Once{_total, maturity} => {
+                if (now < maturity) {
+                    0.0
+                } else {
+                    1.0
+                }
+            },
+            StraightLine{_totalValue, fullMaturity, start, frequency, progress} => {
+                totalVestingDuration = fullMaturity - start
+                if (now < start) {
+                    0.0
+                } else {
+                    recentInterval = now - progress.lastPartialMaturity
+                    realUnits = (recentInterval * 1_000_000 / totalVestingDuration) / 1_000_000.0
+                    frequency.switch {
+                        Interval{interval, _count} => {
+                            if (recentInterval < interval) {
+                                0.0
+                            } else {
+                                intUnits = realUnits.floor() // truncate to integer units
+                                intUnitsAsReal = 0.0 + intUnits // convert to real
+                                intUnitsAsReal
+                            }
+                        },
+
+                        Continuous => {
+                            realUnits
+                        }
+                    }
+                }
+            },
+            SimpleContingency{_total, fullMaturity, _description, _usesReqts} => {
+                fullMaturity.switch {
+                    Some{m} => {
+                        if (now < m) {
+                            print("SimpleContingency: maturity date not yet reached")
+                            0.0
+                        } else {
+                            print("SimpleContingency: maturity has passed; vesting 100% (if conditions are met)");
+                            1.0
+                        }
+                    },
+                    None => {
+                        print("SimpleContingency vesting: no maturity; vesting = 100% (if conditions are met)");
+                        1.0
+                    }
+                }
+            }
+        }
+            
+    }
+    func isEmpty(self) -> Bool {
+        self.switch {
+            Once{_total, _maturity} => true,
+            SimpleContingency{_total, _fullMaturity, _description, _usesReqts} => true,
+            StraightLine{_totalValue, _fullMaturity, _start, _frequency, vestingProgress} => {
+                bREQT("Straight-line: the vesting-progress must be empty") &&
+
+                vestingProgress.isEmpty()
+            }
+        }
+    }
+
+    func vestableValue(self, frequencyUnitsElapsed: Real) -> Value {
+        self.switch {
+            Once{totalValue, _} => {
+                valueTimesReal(totalValue, frequencyUnitsElapsed)
+            },
+            SimpleContingency{totalValue, _fullMaturity, _description, _usesReqts} => {
+                assert(frequencyUnitsElapsed == 1.0, "frequencyUnitsElapsed not 1.0 for SimpleContingency");
+                totalValue
+            },
+            StraightLine{totalValue, _fullMaturity, _start, frequency, _progress} => {
+                frequency.switch {
+                    Interval{_interval, _count} => {
+                        assertIntegralUnits(frequencyUnitsElapsed)
+                    }
+                }
+
+                valueTimesReal(totalValue, frequencyUnitsElapsed)
+            }
+        }
+    }
+}
+
+struct VestingData {
+    id : ByteArray "@id" // = "vest-XXXXyyyyZZZZ"
+    type : String "tpe" // = "vest"
+
+    ownerToken: ByteArray "onrTkn"
+    beneficiary: VxfDestination "vxDst"
+    state: VestingState "state"
+    vestingDetails: VestingDetails "dtls"
+
+    func validate(self) -> Bool {
+        assert(true || /*never executed*/ self == self, "no way");
+        // assert(self.memberToken != null, "memberToken is null");
+        true
+    }
+
+    func validateCreated(self) -> Bool {
+        REQT("the vesting instance is created in Initializing state");
+        assert(self.state == VestingState::Initializing, "vesting instance is not in Initializing state");
+
+        bREQT("the vesting-progress must be empty") &&
+        self.vestingDetails.switch {
+            Once => true,
+            SimpleContingency => true,
+            StraightLine{_totalValue, _fullMaturity, _start, _frequency, vestingProgress} => {
+                vestingProgress.isEmpty().trace("empty vestingProgress? ")
+            }
+        }
+    }
+
+    func previous(ddd : DgDataDetails) -> VestingData {
+        VestingData::from_data(ddd.inputData())    
+    }
+
+    func updated(ddd : DgDataDetails) -> VestingData {
+        VestingData::from_data(ddd.outputData())
+    }
+
+    func validateVerifyingBeneficiary(self, nextRec: VestingData) -> Bool {
+        REQT("the current vesting instance must have the Initializing state");
+        assert(self.state == VestingState::Initializing, "vesting instance is not in Initializing state");
+
+        REQT("the next vesting instance must have VerifyingBeneficiary state");
+        assert(nextRec.state == VestingState::VerifyingBeneficiary, "next vesting instance is not in VerifyingBeneficiary state");
+
+        self.vestingDetails.isEmpty().trace("empty vestingProgress? ") &&
+
+        bREQT("the beneficiary is valid") &&
+        self.beneficiary.validate("beneficiary").trace("valid beneficiary? ") &&
+
+        true
+    }
+    
+    func validateActivating(self, tx: Tx) -> Bool {
+        REQT("... for Activating a vesting instance");
+        REQT("the vesting instance is in VerifyingBeneficiary state");
+        assert(self.state == VestingState::VerifyingBeneficiary, "vesting instance is not in VerifyingBeneficiary state");
+
+        bREQT("the beneficiary is valid") &&
+        self.beneficiary.validate("beneficiary").trace("valid beneficiary? ") &&
+
+        bREQT("the beneficiary is verified") &&
+        self.beneficiary.verifyDestination(tx).trace("verified beneficiary? ") &&
+
+        true
+    }
+
+    func validatePausing(self, nextRec: VestingData) -> Bool {
+        REQT("the current vesting instance must have the Active state");
+        assert(self.state == VestingState::Active, "vesting instance is not in Active state");
+
+        REQT("the next vesting instance must have the Paused state");
+        assert(nextRec.state.switch {
+            p : Paused{reason, infoRef} => {
+                p.validateReason(reason, infoRef)
+            },
+            _ => false
+        }, "next vesting instance is not in Paused state");
+
+        REQT("the beneficiary must be unchanged");
+        REQT("the vesting-details must be unchanged");
+
+        
+        false
+    }
+
+}

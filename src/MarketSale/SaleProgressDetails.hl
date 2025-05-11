@@ -1,0 +1,73 @@
+module SaleProgressDetails
+
+import {
+    REQT,
+    bREQT,
+    TODO
+} from StellarHeliosHelpers
+
+struct SaleProgressDetails {
+    lastPurchaseAt: Time 
+    prevPurchaseAt: Time 
+
+    chunkUnitCount: Int 
+    chunkUnitsSold: Int 
+
+    func validateCreatedDetails(self, 
+        saleStartTime : Time, 
+        totalSaleUnits : Int
+     ) -> Bool {
+        print("progDtls: validate");
+        assert(self.lastPurchaseAt == saleStartTime, "lastPurchaseAt must be equal to startAt");
+        assert(self.prevPurchaseAt == saleStartTime, "prevPurchaseAt must be equal to startAt");
+        assert(self.chunkUnitCount == totalSaleUnits, "chunkUnitCount must be equal to totalSaleUnits");
+        assert(self.chunkUnitsSold == 0, "chunkUnitsSold must be zero");
+        // assert(self.lastPurchaseAt >= self.prevPurchaseAt, "lastPurchaseAt must be greater than or equal to prevPurchaseAt");
+        true    
+    }
+
+    func validateUpdatedDetails(
+        self, 
+        prevProgress: SaleProgressDetails, 
+        now: Time,
+        unitsSold: Int
+    ) -> Bool {
+        print("SaleProgressDetails: validating update");
+
+        REQT("Updates last-purchase-time to the current tx time");
+        print("   ----  lastPurchaseAt: " + self.lastPurchaseAt.show());
+        print("   ----  now: " + now.show());
+        assert(
+            (self.lastPurchaseAt == now).trace("  -- updated lastPurchaseAt ok? "),
+            "lastPurchaseAt not updated correctly"
+        );
+
+        REQT("Keeps a record of the prior purchase time for dynamic pacing");
+        prevNow : Time = prevProgress.lastPurchaseAt;
+        assert(self.prevPurchaseAt == prevNow,
+            "must update prevPurchaseAt to prev lastPurchaseAt " + prevNow.show() + 
+            ", got " + self.prevPurchaseAt.show()
+        );
+
+        REQT("Updates total-sale-units to include the new units being purchased");
+        print("   ----  prev unitsSold: " + prevProgress.chunkUnitsSold.show());
+        print("   ----  unitsSold: " + self.chunkUnitsSold.show());
+        assert(
+            (
+                self.chunkUnitsSold == prevProgress.chunkUnitsSold + unitsSold
+            ).trace("  -- updated chunkUnitsSold ok? "),
+            "must update progress units sold"
+        );
+
+        REQT("Ensures the total number of units available for purchase is unchanged");
+        assert(
+            (
+                self.chunkUnitCount == prevProgress.chunkUnitCount
+            ).trace("  -- chunkUnitCount unchanged? "),
+            "must not change chunk unit count"
+        );
+        print("✔ progress details updated OK");
+
+        true
+    }
+}

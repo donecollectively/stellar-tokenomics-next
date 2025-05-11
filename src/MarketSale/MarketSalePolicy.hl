@@ -1,0 +1,589 @@
+module MarketSalePolicy
+
+
+// this is a Helios smart contract module for managing a market sale of assets.
+// Reference Value.md for the Value type and its operations.
+
+
+
+// specialized to ...
+//   -  support MarketSale custom-data
+// original notes about (un)specialization follow:
+
+//  //! provides a basic version, ~~not yet specialized~~
+//  // of the "specializedDelegate" interface, which simply
+//  // exports a DelegateDatum enum and DelegateActivities (redeemer enum).  
+
+//  //! Your specialization MUST include the enum variants found in this
+//  //  ... unspecialized version.  It MAY include additional Datum variants.
+//  // Any additional Redeemer/Activity variants should be added underneath 
+//  // the SpendingActivity / MintingActivity top-level enum variants, instead 
+//  // of adding new top-level enum variants to DelegateActivity.
+
+//  // The DelegateActivity (redeemer) enum conforms to the 
+//  // Delegate Redeemer protocol, in which enum 0 is reserved for
+//  // lifecycle activities, enum 1 is used for spend-related activities 
+//  // (if the delegate is used as a spend delegate), and enum 2 is called
+//  // for authorizing minting.  Enum 3 and beyond are reserved for
+//  // extensions to the Delegate Redeemer protocol.
+
+//  // Within the minting and spending activities, the specialization can 
+//  // indicate a nested activity enum to support various dApp-specific
+//  // activities.  
+
+//  // Activities that validate minting of UUTs should contain enum fields 
+//  // to identify the seed-transaction details needed for properly validating 
+//  // UUT mints fitting the use-case.
+
+//  //! Your specialization MAY include any additional functions, imports or 
+//  //  methods defined on any of the types in this file.
+
+import {tx, get_current_input} from ScriptContext
+
+import {
+    TODO,
+    REQT,
+    bREQT,
+    AnyData,
+    getTimeRange,
+    endsBefore
+} from StellarHeliosHelpers
+
+import {
+    DelegationDetail,
+    mustReturnValueToScript,
+    DelegateLifecycleActivity,
+    CapoLifecycleActivity,
+    unmodifiedDelegation
+} from CapoDelegateHelpers
+
+import {
+    validateUutMinting,
+    mkUutTnFactory
+} from CapoMintHelpers
+
+// import {
+//     ProtocolSettings
+// } from ProtocolSettings
+
+import {
+    DgDataDetails,
+    CapoCtx,
+    mkCapoCtx
+} from CapoHelpers
+
+import {
+    MarketSaleData,
+    MarketSaleState,
+    SaleAssets,
+    OtherSaleState,
+    FixedSaleDetails,
+    ThreadInfo,
+    MoreFields
+} from MarketSaleData
+
+import {
+    SaleProgressDetails
+} from SaleProgressDetails
+
+import {
+    DynamicSaleV1Settings
+} from DynamicSaleV1Settings
+
+import {
+    DynamicSaleV1,
+    DTS_PurchaseInfo
+} from DynamicSaleV1
+
+enum DelegateDatum {
+    Cip68RefToken {  
+        // NOTE: this datum contains reference details for a user-facing token minted according to the cip-68 standard 
+        //  - the asset name (in the Value of this UTXO) MUST be:  #000643b0 + tokenName
+        //     - this asset name can serve user-side tokens using the CIP-68 "222", "333" or other token types.
+        //     - the user-side asset name with its (222/333/etc) CIP-67 prefix and 
+        //       ... its remaining tokenName will be matched to this asset name (#000643b0 +tokenName)
+        //       ... to locate this reference datum; this datum content will be interpreted
+        //       ... according to the semantics implied by the user-side asset-name prefix.
+        //
+        //  - The attached 'meta' field in this Datum variant contains the relevant data, depending on the token type
+        //    - for "222" tokens, the meta field should contain the following fields:
+        //        - "name" : String
+        //        - "description" : String 
+        //        - "files" :   // {mediaType, src (url), name?, ... otherFields)
+        //        - "image": String  // image url: https://, ar://, ipfs:// or data:// (RFC2397 data)
+        //    - for "333" tokens, the meta field should contain the following fields:
+        //        - "name" : String
+        //        - "description" : String 
+        //        - "ticker" : String
+
+        //        - "url": String  // project URL
+        //        - "logo": String  // image url: https://, ar://, ipfs:// or data:// (RFC2397 data)
+        //                    - it must have a mime type `image/png`, `image/jpeg` or `image/svg+xml`
+        //        - "decimals" : Int
+
+        cip68meta: AnyData
+        cip68version: Int
+        otherDetails: Data // can be Unit () or anything else
+    }
+
+    IsDelegation {
+        dd: DelegationDetail
+    }
+    // same variant-index as Capo's DelegatedData
+    capoStoredData {
+        data: MarketSaleData
+        version: Int
+        otherDetails: Data 
+    }
+
+    func validateSettings(self, settings: AnyData) -> Bool {
+        assert(false, "not valid (stubbed)");
+        assert(settings.serialize() != self.serialize(), "no");
+
+        true
+    }
+}
+
+enum MintingActivity {
+    CreatingRecord {
+        seed: TxOutputId
+    }
+    SplittingSaleChunkAndBuying {
+        seed: TxOutputId
+        parentChunkId: String
+        buyingUnitQuantity: Int
+    }
+}
+
+enum SpendingActivity {
+    UpdatingRecord {
+        id: ByteArray
+    }
+
+    AddingToSale {
+        id: ByteArray
+        mph: MintingPolicyHash
+        tn: ByteArray
+    }
+    Activating {
+        id: ByteArray
+    }
+    SellingTokens {
+        id: ByteArray
+        sellingUnitQuantity: Int
+        salePrice: Value
+    }
+    MergingChildChunk {
+        id: ByteArray
+        childChunkId: String
+    }
+    Retiring {
+        id: ByteArray 
+    }
+}
+
+enum BurningActivity {
+    DeletingRecord {
+        id: ByteArray
+    }
+
+    JoiningWithParentChunk {
+        // burns the indicated chunk UUT
+        // requires the parent-chunk to be updated with MergingChildChunk
+        id: String
+        parentChunkId: String
+    }
+    CleanupRetired {
+        id: String
+    }
+}
+
+enum DelegateActivity {
+    // must ALWAYS be at Enum position 0
+    CapoLifecycleActivities {
+        activity: CapoLifecycleActivity
+    }
+
+    // must ALWAYS be at Enum position 1
+    DelegateLifecycleActivities {
+        // administrative activities for the delegate lifecycle, enforced
+        //  by the basic mint delegate code.  Specializations can add more 
+        //  restrictions, but in many/most cases they will not need to.
+        activity: DelegateLifecycleActivity
+    }
+
+    // application-specific spending activities, ALWAYS at Enum position 2
+    SpendingActivities {
+        activity: SpendingActivity
+    }
+
+    // application-specific minting activities, ALWAYS at Enum position 3
+    MintingActivities {
+        activity: MintingActivity
+    }
+
+    BurningActivities {
+        activity: BurningActivity
+    }
+    
+    CreatingDelegatedData {
+        seed: TxOutputId
+        dataType: String
+        // record id created from seed
+    }
+
+    UpdatingDelegatedData {
+        // no seed
+        dataType: String
+        recId: ByteArray
+    }
+
+    DeletingDelegatedData {
+        // no seed
+        dataType: String
+        recId: ByteArray
+    }
+
+    MultipleDelegateActivities {
+        // todo: change this back when the recursive enum's `__is_valid_data not found` error is resolved
+        activities: []Data // actually a DelegateActivity
+    }
+
+    // this function gives a general-purpose implementation of checking for 
+    // valid uut minting. 
+    //
+    // A specialization might modify it to use different policies
+    // or enforce additional requirements
+    // 
+    // func genericUutMinting(self, 
+    //     mdd: DelegateDatum
+    // ) -> Bool {
+    //     //!!! replace with an activity using the same seed-txn pattern:
+    //     // MintingActivities::SomethingMintingUuts{sTxId, sIdx, purposes} = self;
+    //     DelegateDatum::IsDelegation{dd} = mdd;
+    //     returnsAuthzToken : Bool = mustReturnValueToScript(dd.tvAuthorityToken());
+
+    //     o : []TxOutput = get_cont_outputs();
+    //     if (o.length != 1) { error("single utxo only") };
+
+    //     print ("in unsp_MD");
+    //     isOk : Bool = returnsAuthzToken && 
+
+    //     unmodifiedDelegation( /* isD, same as mdd */ mdd.serialize()) &&
+
+    //     // This call can serve as a template for enforcing expected mints 
+    //     // of uuts (and additional token values) in validation of application-
+    //     // specific activities, given (mph, sTxId, sIdx, purposes)
+    //     validateUutMinting(
+    //         mph: dd.mph,
+    //         seedTxId: sTxId, 
+    //         seedIdx: sIdx, 
+    //         purposes: purposes,
+    //         // otherMintedValue: ()
+    //         mkTokenName: mkUutTnFactory(sTxId, sIdx)
+    //     );
+
+    //     isOk
+    // }
+
+    //! used only for validating IsDelegation datum, that is,
+    //   ... to approve minting requests or any customize spending modes 
+    //   ... of that datum.  
+    
+    //  Note that the basic delegate already enforces some basic
+    //    administrative expectations for DelegateLifecycleActivities and CapoLifecycleActivities
+    //    so a specialization doesn't need to re-implement those checks.
+    func additionalDelegateValidation( self,
+        priorMddd: DelegateDatum::IsDelegation,
+        cctx: CapoCtx
+    ) -> Bool {
+        print("  -- mktSalePolicy: checking additional delegate validation");
+        self.switch {
+            // generic DelegateLifecycleActivities is already validated, but 
+            //  ... you can add more constraints here if needed
+            DelegateLifecycleActivities => true,
+            CapoLifecycleActivities => {
+                // CapoLifecycleActivites are always rejected except for MINTING delegates.
+                error("unreachable")
+            },
+            MintingActivities{ma} => {
+                ma.switch {
+                    SplittingSaleChunkAndBuying => { //{_,_,_/*seed, parentChunkId, buyingQuanityt*/} => {
+                        // mint of new UUT already checked
+                        
+                        //!!! it should spend the parent-chunk UUT 
+                        // ... with activity-indicator SpendingActivity::SplittingToChildChunk
+                        //  ^^^ requires that the DelegatedData activities are structured 
+                        //   ... with tight binding to delegate activities from this module
+                        // !!!!!!!!!!!!!!!!!!!!!!!!!!! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        error("SplittingSaleChunk: Implement the above details") // ^^^
+
+                        // it should return the parent-chunk UUT to the Capo
+                        // the new chunk should have saleId pointing to the parent chunk
+                        // the new chunk should validate
+                        // the new chunk's token value should be withdrawn from the parent chunk
+                        // the new chunk's totalTokenCount should equal the withdrawn token value                        
+                    },
+                    CreatingRecord {seed} => {
+                        // mint of new UUT already checked
+                        assert(cctx.withCharterRef().orFail(), "can't");
+
+                        mktSaleId : String = mkUutTnFactory(seed)("mktSale");
+                        mktSaleDD : DgDataDetails = cctx.creatingDgData(mktSaleId);
+
+                        // gets the new MarketSaleData record
+                        mktSale : MarketSaleData = MarketSaleData::from_data(
+                            mktSaleDD.outputData()
+                        );
+
+                        true
+                        // validates it (general)
+                        && mktSale.validate()
+                        // validates creation details
+                        && mktSale.validateCreatedDetails()
+                        && mktSale.validatePendingDetails()
+                        && true
+                    }
+                }
+            },
+            SpendingActivities{x} => x.switch {
+                UpdatingRecord => error("use more specific spending activity"),
+                AddingToSale {saleId, mph, tn} => {
+                    TODO("AddingToSale mktSale: test this code path");
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    // mktSale = cctx.updatingDgData(mktSaleId)
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+                    
+                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
+                    
+                    true
+                    && previous.validateAdding(mktSaleDD, mph, tn)
+                    && cctx.requiresGovAuthority().orFail()
+                },
+                Activating {saleId} => {
+                    TODO("Activating mktSale: test this code path");
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    // mktSale = cctx.updatingDgData(mktSaleId)
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+
+                    // gets the previous MarketSaleData record
+                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
+                    // gets the new MarketSaleData record
+                    updated : MarketSaleData = MarketSaleData::updated(mktSaleDD);
+
+                    prevState : OtherSaleState = previous.moreFields.saleState
+                    nextState : OtherSaleState = updated.moreFields.saleState
+
+                    newValue : Value = mktSaleDD.output().value;
+                    true
+                    && cctx.requiresGovAuthority().orFail()
+                    && prevState.mustBePending("old").trace("sale was Pending? ")
+                    && nextState.mustBeActive("new").trace("Pending -> Active ok: ")
+                    // // validates updated record
+                    && updated.validate()
+                    && updated.validateActivating(newValue, mktSaleDD).trace("valid for activation: ")
+                    && true
+
+                }, 
+                SellingTokens { recId, sellingUnitQuantity, unitSellPrice : Value } => {
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: recId);
+                    // print("SellingTokens: x" + sellingUnitQuantity.show() );
+                    // print("               ^^"+  recId.show());
+
+                    // gets the previous MarketSaleData record
+                    previous = MarketSaleData::previous(mktSaleDD);
+
+                    // gets the new MarketSaleData record
+                    updated = MarketSaleData::updated(mktSaleDD);
+
+                    correctActiveState = true
+                    && previous.moreFields.saleState.mustBeActive("old").trace("sale was Active? ")
+                    && updated.moreFields.saleState.mustBeActive("new").trace("sale is still Active? ")
+
+                    REQT("doesn't sell before the start date")
+                    nowRange = getTimeRange(5*Duration::MINUTE);
+                    print("   --- now start: " + nowRange.start.show());
+                    print("   --- startAt:   " + previous.moreFields.fixedSaleDetails.startAt.show());
+                    print("   --- now end:   " + nowRange.end.show());
+
+                    assert(
+                        nowRange.is_after(
+                            previous.moreFields.fixedSaleDetails.startAt
+                        ), 
+                        "sale not yet started"
+                    );
+
+                    assert(sellingUnitQuantity > 0, "must sell at least one unit");
+                    assert(sellingUnitQuantity <= previous.moreFields.saleAssets.singleBuyMaxUnits, 
+                        "attempted to buy too many units"
+                    );
+                    prevProgress : SaleProgressDetails = previous.moreFields.saleState.progressDetails;
+                    nextProgress : SaleProgressDetails = updated.moreFields.saleState.progressDetails;
+
+                    TODO("don't gather the payments to the mktSale, but follow the VxfDestination instead");
+                    oldValue : Value = mktSaleDD.input().value;
+                    newValue : Value = mktSaleDD.output().value;
+
+                    purchasedTokens : Value = previous.moreFields.saleAssets.saleUnitAssets * sellingUnitQuantity;
+
+                    totalProgress = SaleProgressDetails{
+                        lastPurchaseAt: nowRange.start,
+                        prevPurchaseAt: prevProgress.lastPurchaseAt,
+                        chunkUnitCount: nextProgress.chunkUnitCount,
+                        chunkUnitsSold: prevProgress.chunkUnitsSold + sellingUnitQuantity
+                    };
+
+                    pricingStrategy = DynamicSaleV1{
+                        settings: previous.moreFields.fixedSaleDetails.settings,
+                        purchase: DTS_PurchaseInfo::create(
+                            unitsPurchased: sellingUnitQuantity,
+                            purchaseTime: nowRange.start,
+                            prevPurchaseTime: prevProgress.lastPurchaseAt,
+                            prevSalePace: previous.moreFields.saleState.salePace,
+                            totalProgress: totalProgress
+                        ),
+                        sale: previous,
+                        updatedSale: Option[MarketSaleData]::Some{updated}
+                        // prevSalePace: previous.moreFields.saleState.salePace,
+                        // updatedSettings: Option[DynamicSaleV1Settings]::None
+                    };
+                    
+                    // print("ok pricing strategy");
+                    // unitPrice : Real = pricingStrategy.getUnitPrice();
+                    // print("  -- unitPrice: " + unitPrice.show());
+
+                    // costForPurchase : Value = Value::lovelace( 
+                    //     (
+                    //         // delegate this to the selected pricing strategy!
+                    //         unitPrice * sellingUnitQuantity
+                    //         * 1_000_000
+                    //     ).floor()
+                    // );
+
+                    paidValue : Value = newValue - oldValue + purchasedTokens;
+                    
+                    // print("  -- costForPurchase: " + costForPurchase.show());
+                    print("  -- paidValue: ");
+                    print(paidValue.show());
+                    // if (!paidValue.contains(costForPurchase)) {
+                    //     error( "insufficient payment")
+                    // };
+                    // if (!costForPurchase.contains(paidValue)) {
+                    //     error( "overpayment or wrong distribution of purchased tokens")
+                    // };
+                    // print("  -- payment ok");
+
+                    // todo: the purchased tokens are distributed to a
+                    //   configured sale-distribution contract (e.g. vesting/escrow/yield-farm)
+                    
+                    REQT("Matches redeemer payment with paid value")
+                    assert(
+                        (
+                            paidValue == unitSellPrice * sellingUnitQuantity
+                        ).trace(" -- found payment matching redeemer details? "),
+                        "actual payment/redeemer mismatch"
+                    );
+
+                    true
+                    && correctActiveState
+                    && bREQT("ensures the sale record is updated with sale-progress details")
+                    && nextProgress.validateUpdatedDetails(
+                        prevProgress, 
+                        nowRange.start, 
+                        sellingUnitQuantity
+                    ).trace("details updated correctly? ")
+                    && bREQT("ensures the sale record is updated with dynamic sale details")
+                    && pricingStrategy.validateUpdatedDetails()
+                    && bREQT("Requires payment according to the dynamic pricing strategy")
+                    && pricingStrategy.isRightPayment(paidValue).trace("  -- right payment? ")
+                    && true                    
+                    // && costForPurchase.contains(paidValue).trace("payment correct and tokens distributed? ")
+                    && true
+                },
+                MergingChildChunk => { //{_, _ /* recId, childChunkId */} => {
+                    error("todo: MergingChildChunk")
+                },
+                Retiring => { //{_ /* recId */} => {                    
+                    error("todo: Retiring")
+                    // Must not have active child chunks:
+                    // ...  previous.retiredThreads must be === previous.nestedThreads
+
+                    // updated 
+                    // updated.state must be retired
+                }                
+            },
+            BurningActivities{ba} => {
+                ba.switch {
+                    DeletingRecord => error("use more specific burning activity"),
+                    JoiningWithParentChunk => { //{_, _, _/* recId, parentChunkId */} => {
+                        // burns the indicated chunk UUT
+                        // requires the parent-chunk to be updated with MergingChildChunk
+                        //  ^^^ requires that the DelegatedData activities are structured 
+                        //   ... with tight binding to delegate activities from this module
+                        // !!!!!!!!!!!!!!!!!!!!!!!!!!! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        error("todo: JoinWithParent: Implement the above details") // ^^^
+                    },
+                    CleanupRetired => {//{_/* recId */} => {
+                        // burns the indicated chunk UUT
+
+                        error("todo: CleanupRetired")
+                        // requires that the chunk is retired
+
+                        // burns the remaining previous.totalTokenCount
+
+                        // !!! todo: more details to account positively for the number of tokens actually sold
+                        //   ... by this chunk
+                        //   ... and in aggregate (this chunk and its children)
+
+                    }
+                }
+            },
+            _ => false
+        } || tx.serialize() == priorMddd.serialize()        
+    }
+
+    func supportedCapoDelegatePurposes(self) -> []String {
+        assert(true || /* prevent unused variable */ self == self, "no way" );
+         []String{
+            // "nothingHereYet",
+        }
+    }
+
+    //! Used only for validating non-IsDelegation datum types and activities.
+    // if you have any special admininstrative data structures that inform 
+    // ...  your minting policy, this might be useful.  Otherwise, and typically,
+    // ... you should look to Activity validations above in additionalDelegateValidation,
+    // ...  in which the isDelegation token is being spent with an application-specific
+    // ...  activity/redeemer
+    func otherDatumValidation( self,
+        _priorMdd: DelegateDatum        
+    ) -> Bool {
+        neverTriggered = () -> {  error("never called") };
+        self.switch{
+            // Note: this set of DelegateActivities is reserved for the IsDelegation datum.
+            //  Using it on any other Datum type will always fail and execution will never arrive here.
+            DelegateLifecycleActivities => neverTriggered(),
+            CapoLifecycleActivities => neverTriggered(),
+
+            // -- Application-specific activities can be added here 
+            // -- for special & app-specific types of datum in a delegate,
+            // -- for EXCEPTIONAL cases, if you really know what you're doing.  
+            //  -- see above for normal cases
+
+            _ => false  // prevents non-exhaustive match errors, even if you remove the above neverTriggered() calls
+        }
+    }
+}
+
+
+// func getUnitPrice(mktSale: OutputDatum::Inline, now: Time, sellingUnitQuantity: Int) -> Real {
+//     mkPricingStrategy(
+//         MarketSaleData::from_data(mktSale.data), 
+//         now, 
+//         sellingUnitQuantity
+//     ).getUnitPrice()
+// }

@@ -1,0 +1,500 @@
+module DynamicSaleV1
+
+import {
+    REQT,
+    bREQT,
+    TODO
+} from StellarHeliosHelpers
+
+import {
+    MarketSaleData
+} from MarketSaleData
+
+import {
+    DynamicSaleV1Settings
+} from DynamicSaleV1Settings
+
+import {
+    SaleProgressDetails
+} from SaleProgressDetails
+
+// struct DynamicSaleV1State {
+//     dynamicPace: Real "dynaPace"
+    
+//     func validateCreatedDetails(self) -> Bool {
+//         assert(self.dynamicPace == 1.0, "dynamic pace must be initialized to 1.0");
+//         true
+//     }
+// }
+
+func maxReal(a: Real, b: Real) -> Real {
+    // assert(true || /* never executed */ self.serialize() == self.serialize(), "no way");
+    if (a > b)  { a } else { b }
+}
+
+func minReal(a: Real, b: Real) -> Real {
+    // assert(true || /* never executed */ self.serialize() == self.serialize(), "no way");
+    if (a < b) { a } else { b }
+}
+
+// information about a specific, single purchase
+struct DTS_PurchaseInfo {
+    inferredPace: Real
+    hoursSinceLastPurchase: Real
+
+    unitsPurchased: Int
+    purchaseTime: Time
+    // previousPurchaseTime: Time
+    
+    // dynamicPace: Real
+    prevSalePace: Real
+
+    totalProgress: SaleProgressDetails
+
+    // func inferredPace(self) -> Real {
+    //      p : Real = 
+    //      self.unitsPurchased / self.hoursSinceLastPurchase()
+    //      ;print ("    ---- inferredPace " + p.show());
+    //      p
+    // }
+
+    // // probably can optimize
+    // func hoursSinceLastPurchase(self) -> Real {
+    //     h : Real = 
+    //      (   
+    //         (
+    //             self.purchaseTime - self.previousPurchaseTime
+    //         ) / Duration::new(1) * 1_000_000.0
+    //         / 3_600_000.0
+    //     ) / 1_000_000.0
+    //     ; print("    ---- hoursSinceLastPurchase " + h.show());
+    //     h
+    // }
+    func create(
+        unitsPurchased: Int, 
+        purchaseTime: Time, 
+        prevPurchaseTime: Time,
+        prevSalePace: Real,
+        totalProgress: SaleProgressDetails
+    ) -> DTS_PurchaseInfo {
+        // using Ratio adds some library size to the bundle
+        // hoursSinceLastPurchase  = Ratio::new(
+        //     (purchaseTime - prevPurchaseTime) / Duration::MINUTE,
+        //     60
+        // )
+        hoursSinceLastPurchase : Real = (
+            (purchaseTime - prevPurchaseTime) / Duration::new(1)* 1_000_000.0/ 
+            3_600_000.0
+        ) / 1_000_000.0;
+        REQT("Infers the pace of the current purchase")
+        print("      ---- unitsPurchased " + unitsPurchased.show());
+        print("      ---- hoursSinceLastPurchase " + hoursSinceLastPurchase.show());
+        // inferredPace = Ratio::new(
+        //     unitsPurchased, 1
+        // ) / hoursSinceLastPurchase;
+        inferredPace : Real = unitsPurchased / hoursSinceLastPurchase;
+        print("  -- inferredPace " + inferredPace.show());
+        DTS_PurchaseInfo{
+            inferredPace: inferredPace,
+            hoursSinceLastPurchase: hoursSinceLastPurchase,
+            unitsPurchased: unitsPurchased,
+            purchaseTime: purchaseTime,
+            // previousPurchaseTime: prevPurchaseTime,
+            prevSalePace: prevSalePace,
+            totalProgress: totalProgress
+        }
+    }
+}
+
+struct DynamicSaleV1 {
+    settings: DynamicSaleV1Settings
+    purchase: DTS_PurchaseInfo
+
+    sale: MarketSaleData
+    updatedSale: Option[MarketSaleData]
+    
+    // prevSalePace: Real
+    // updatedSettings: Option[DynamicSaleV1Settings]
+    // updatedState: DynamicSaleV1State
+
+    func isRightPayment(self, payment: Value) -> Bool {
+        expected : Real = self.unitPriceForSale() * self.purchase.unitsPurchased;
+        actual : Real = payment.get_lovelace() / 1_000_000.0;
+        
+        print("    ---- expected payment " + expected.show());
+        print("    ---- actual payment " + actual.show() + " +/- 0.000002");
+        assert(payment.get_assets().is_zero(), "non-ADA assets not yet supported here");
+
+    if ( (actual - expected).abs() > 0.000002) {
+            error("payment amount is not correct")
+        };
+        true
+    }
+
+    // func updatedSettings(self) -> DynamicSaleV1Settings {
+    //     self.updatedSale.switch {
+    //         None => error("must have updatedSale during tx validation"),
+    //         Some{sale} => {
+    //             AnySaleStrategy::from_data(sale.saleStrategy).switch {
+    //                 DynamicSaleV1{settings /* DynamicSaleV1Settings */ } => settings,
+    //                 _ => error("no way") // should never happen
+    //             }
+    //         }
+    //     }
+    // }
+
+    func unitPriceForSale(self) -> Real {
+        // paceThisPurchase : Real = self.purchase.inferredPace(); // units / hours-since-last-purchase
+        print("    ---- target price " + self.settings.targetPrice.show());
+        targetPrice = self.settings.targetPrice
+        price: Real = targetPrice
+            * self.pricingFactorOverallProgress()
+            * self.pricingFactorDynamicPace();
+            print("    ---- unitPriceForSale - unclamped " + price.show());
+
+        // clamp the price to min/max limits
+        clamped : Real = minReal(
+            maxReal(price, self.settings.minPrice),
+            self.settings.maxPrice
+        );
+        print("    -- unitPriceForSale: clamped = " + clamped.show());
+        clamped
+    }
+
+    func validateUpdatedDetails(self) -> Bool {
+        print("DynamicSaleV1: validating updated details");
+        upd : MarketSaleData = self.updatedSale.switch {
+            None => error("must have updatedSale during tx validation"),
+            Some{s} => s
+        };
+        REQT("EXPECTS the basic SaleProgressDetails to be validated separately")
+
+        REQT("The sale settings must not be changed");
+        prevSettings : DynamicSaleV1Settings = self.settings;
+        nextSettings = upd.moreFields.fixedSaleDetails.settings;
+        assert(
+            (
+                prevSettings == nextSettings
+            ).trace("  -- settings unchanged? "), 
+            "settings were changed"
+        );
+
+        expectedPace : Real = self.nextSalePace();
+        nextPace : Real = upd.moreFields.saleState.salePace;
+
+        // prevState : SaleProgressDetails = self.purchase.totalProgress;
+
+        REQT("Updates the nextPace to reflect the ongoing dynamic sale progress");
+        print("  ---- updated salePace: " + nextPace.show());
+        assert(
+            (
+                (nextPace - expectedPace).abs() < 0.000005
+            ).trace("  -- nextPace ok? "),
+            "wrong next salePace in updated sale, expected " + expectedPace.show()
+        );
+
+        REQT("Guards against underflow in dynamic pace calculations, by enforcing a minimum chunk age");
+        chunkAge : Duration = upd.moreFields.saleState.progressDetails.lastPurchaseAt
+            - self.sale.moreFields.saleState.progressDetails.lastPurchaseAt;
+
+        print("  ---- chunkAge: " + chunkAge.show());
+        assert(
+            (chunkAge >= 10 * Duration::MINUTE).trace("  -- chunkAge ok? "),
+            "sale chunk too fresh (less than 10 minutes)"
+        );
+
+        true
+    }
+
+    func actualSellingPace(self) -> Real {
+        t : Real = (
+            self.purchase.unitsPurchased
+            + self.sale.moreFields.saleState.progressDetails.chunkUnitsSold 
+        ) / self.elapsedSaleHours();
+        print("    ---- actualSellingPace " + t.show());
+        t
+    }
+
+    func targetSellingPace(self) -> Real {
+        // print("selling time " + self.settings.targetedSellingTime.show());
+        // print("  -- in hours" + (100 *  self.settings.targetedSellingTime / Duration::HOUR / 100.0).show());
+        chunkUnitCount : Int = self.purchase.totalProgress.chunkUnitCount;
+        // print("chunkUnitCount"+ self.purchase.totalProgress.chunkUnitCount.show());
+        t : Real = 
+         (chunkUnitCount + 0.0) / (
+             self.settings.targetedSellingTime * 100 / Duration::HOUR / 100.0
+        ) 
+
+        ; print( "    ---- targetSellingPace " + t.show());
+        t
+
+        // returns the CHUNK-RELATIVE selling pace
+        // ^^^ distinct from sale-aggregate pace vvv
+        // return self.sale.totalSaleUnits / self.settings.targetedSellingTime
+    }
+
+    func elapsedSaleHours(self) -> Real {
+        h : Real = 
+        ( self.purchase.purchaseTime - self.sale.moreFields.fixedSaleDetails.startAt ) * 1_000_000 / Duration::HOUR / 1_000_000.0
+        ;print("    ---- elapsedSaleHours " + h.show());
+        h
+    }
+
+    // 5000 hours = 208.3333333333333 days
+   // = 5000 * 3600 * 1000 = 18_000_000_000 ms
+   // 5 minutes = 60 * 5 * 1000 = 300_000 ms
+    // at the 5 minute mark, the total pace would be  300 / 18_000_000 = 0.000017
+    // this is okay, though it's near the lower limit of Helios fixed-point precision
+
+    // using elapsedSaleHours in actualSellingPace helps avoid underflow that could otherwise
+    // arise when using elapsed time MS / targetSellingTime, when the target time is very large
+
+    // if the actual selling pace is near 0, then the overall pace will also be near 0
+    //   ... or worst case, actually 0 due to underflow.
+
+    func overallPaceIncludingThisPurchase(self) -> Real {
+        op : Real = 
+        self.actualSellingPace() / self.targetSellingPace()
+        ;print("    ---- overallPaceIncludingThisPurchase " + op.show());
+        op
+        
+        // // fraction of time elapsed can be by hours, but it can just as easily use milliseconds; 
+        // // ... the HOURs (or ms) cancel each other out in the division.
+        // timeProgress: Real  = self.elapsedTime() / self.settings.targetedSellingTime
+
+        // saleProgress : SaleProgressDetails = self.purchase.totalProgress;
+        // unitsProgress : Real = saleProgress.chunkUnitsSold / saleProgress.chunkUnitCount;
+
+        // // net overall pacing is the portion of units sold vs the portion of time elapsed
+        // unitsProgress / timeProgress
+    }
+
+    func pricingFactorDynamicPace(self) -> Real {
+        // from Google Sheet:
+        // =max(0.5,(
+        //     LET(prevWeight, 1
+        //    ,LET(prevPace, recent_pace_in
+        //    ,LET(nextPace, recent_pace_out
+        //    ,LET(nextWeight, weightNextDynaPace,
+        //     ( 
+        //         IF(prevPace=0,1,
+        //           prevPace / targetSellingPace
+        //         ) * prevWeight
+        //       + IF(nextPace=0,1,
+        //          nextPace / targetSellingPace
+        //         ) * nextWeight 
+        //     ) / ( prevWeight +nextWeight )
+        //   ))))
+        //   ))
+
+        // the weight of the previous dyanamic pace
+        prevWeight : Real = 1.0;
+        nextPace : Real = self.nextSalePace();
+        prevPace : Real = self.purchase.prevSalePace;
+        // the weight of the next dynamic pace is variable
+        nextWeight : Real = self.settings.pricingWeightDynaPace;
+        targetSellingPace : Real = self.targetSellingPace();
+        r : Real = 
+        ( 
+            if (prevPace == 0) { 1.0 } else { 
+                prevPace / targetSellingPace
+            } * prevWeight
+            + if (nextPace == 0) { 1.0 } else { 
+                nextPace / targetSellingPace
+            } * nextWeight
+        ) / (prevWeight + nextWeight)
+
+        ;print("  -- pricingFactorDynamicPace " + r.show());
+        r
+    }
+
+    func nextSalePace(self) -> Real {
+        // from Google Sheet:
+        // = LET(nextWeight, 
+        //     if(purchase_inferred_pace > prev_dyna_pace,
+        //         dynaPaceFasterSaleWeight,
+        //         if (purchase_inferred_pace/targetSellingPace > 1,
+        //           purchase_inferred_pace/targetSellingPace,
+        //           max(1,time_lag * dynaPaceIdleDecayRate)
+        //         )
+        //       ),
+        //      ( purchase_inferred_pace*nextWeight
+        //        + prev_dyna_pace
+        //      ) / (1+nextWeight)
+        //   )
+        purchase : DTS_PurchaseInfo = self.purchase;
+        settings : DynamicSaleV1Settings = self.settings;
+        // sale : MarketSaleData = self.sale;
+        
+        REQT("Computes the next sale pace, escalating when the pace increases or decaying when the pace below the target pace");
+        inferredPace : Real = purchase.inferredPace;
+        print("    ---- inferredPace " + inferredPace.show());
+        nextPaceWeight : Real = if (inferredPace > purchase.prevSalePace) {
+            // this buyer is buying faster than the previous pace,
+            //  ... indicating strong demand and likely opportunity to get a higher price
+            //  ... or at least for that higher price to make space for easing buyer exuberance
+            print("    ---- nextPaceWeight: dynaPaceFasterSaleWeight (sale is speeding up)");
+            settings.dynaPaceFasterSaleWeight
+        } else {
+            if (inferredPace > self.targetSellingPace()) {
+                // the pace is slowing down some, but still selling faster than the target pace
+                //   ... so it's not necessary to soften the price for this buyer or apply an idle-decay
+                // this lets the dynamic pace evolve gently downward to reflect
+                //   ... that the "recent pace" isn't quite as fast as it was.
+                // This works in opposition to the escalation effect of the increasing pace.
+                // The current buy will be at higher price than the previous one,
+                //   ... but if the next buy is "at target pace", then it will be at a lower price,
+                //   ... reflecting the lower demand pressure.
+                //   ... This creates a small window for a single buyer to game a slightly
+                //   ... lower price, but other people can slip in and buy at that price too. 
+                print("    ---- nextPaceWeight: 1.0 (sale is proceeding faster than target pace)");
+                1.0
+            } else {
+                // The pace has slowed significantly - not only lower demand pressure,
+                //   ... but the new buy happened slower than the target pace.  This
+                //   ... clearly indicates that the exuberance-limitations above worked,
+                //   ... slowing down the pace.  This is a good thing, because it means
+                //   ... a more moderate price.
+                // If it's been a short time, we don't give this buyer the benefit
+                //   ... of the idle-decay, as a buyer could just be trying to
+                //   ... game the system by sandbagging the pace, only to take advantage 
+                //   ... of that lower pace.
+                // However, if it's actually been a significant amount of time, and other 
+                //   ... buyers have had a chance to buy at a consensually supportable price, 
+                //   ... then clearly it's important to reduce the price for this buyer.
+                // Without the idle-decay, the pricing would remain high, and likely
+                //   ... the sale would stall out.
+                // This applies the decay rate in the form of a > 1.0, or stronger, weight 
+                //   ... of the slower pace, reducing the next-dynamic-pace 
+                //   ... as well as the current price.
+                print("    ---- nextPaceWeight: slowing sale; using dynaPaceIdleDecayRate ");
+                print("      ---- hoursSinceLastPurchase " + purchase.hoursSinceLastPurchase.show());
+                print("      ---- * dynaPaceIdleDecayRate " + settings.dynaPaceIdleDecayRate.show());
+                result = maxReal(
+                    1.0, purchase.hoursSinceLastPurchase * settings.dynaPaceIdleDecayRate
+                )
+                print("  -- nextPaceWeight = " + result.show());
+                result
+            }
+        };
+        print("    ---- nextPaceWeight " + nextPaceWeight.show());
+        psp : Real = purchase.prevSalePace;
+        print("    ---- prev salePace " + psp.show());
+
+        nextDynamicPace : Real = (inferredPace * nextPaceWeight + psp) 
+            / (nextPaceWeight + 1)
+        print("    ---- next salePace: " + nextDynamicPace.show());
+        nextDynamicPace
+    }
+
+
+    func pricingFactorOverallProgress(self) -> Real {
+        // from Google Sheet:
+        // = LET(ceilingHeight, 1-paceDiscountFloorPoint
+        //     ,LET(aboveFloor,current_pace-paceDiscountFloorPoint
+        //     ,LET(relativeHeight, if(aboveFloor<=0,0, aboveFloor/ceilingHeight)
+        //     ,LET(discountDepth,1-relativeHeight
+        //     , LET(discountEarned, 
+        //       discountDepth*paceDiscountWhenSlow
+        //     , LET(clampedMaxDiscount,
+        //       MAX(0,MIN(discountEarned, paceDiscountWhenSlow))
+        //     , LET(priceExpansion,
+        //       if(current_pace<1,1, 
+        //          1+(
+        //            (current_pace-1)*(1+paceExpansionWhenFast)/3
+        //          )
+        //       )
+        //     , LET(RESULT, 
+        //       (1-clampedMaxDiscount) * priceExpansion,  
+        //       RESULT
+        //     ))))))))
+
+        settings : DynamicSaleV1Settings = self.settings;
+        overallPacingProgress : Real = self.overallPaceIncludingThisPurchase();
+        discountEarned : Real = self.progressPricingDiscountDepth(overallPacingProgress) * 
+           settings.progressPricingDiscountWhenSlow;
+        print("      ---- unclamped discountEarned " + discountEarned.show());
+        clampedMaxDiscount : Real = maxReal(
+            0.0, minReal(
+                discountEarned, settings.progressPricingDiscountWhenSlow
+            )
+        );
+        print("      ---- clampedDiscount " + clampedMaxDiscount.show());
+
+        r : Real = 
+        (1 - clampedMaxDiscount) * self.priceExpansion(overallPacingProgress)
+        ;print("  -- pricingFactorOverallProgress " + r.show());
+        r
+    }
+
+    func priceExpansion(self, overallPace: Real) -> Real {
+        expansion : Real = if (overallPace < 1.0) {
+            1.0
+        } else {
+            1.0 + (
+                (overallPace - 1.0) 
+                * (1.0 + self.settings.progressPricingExpansionWhenFast) 
+                / 3.0
+            )
+        }
+        ;print("    ---- priceExpansion " + expansion.show());
+        expansion
+    }
+
+    func progressPricingDiscountDepth(self, overallPace: Real) -> Real {
+        settings : DynamicSaleV1Settings = self.settings;        
+
+        print("      ---- pPDD overallPace " + overallPace.show());
+        ceilingHeight : Real = 1.0 - settings.progressPricingDiscountFloorPoint;       
+        // = 0.5 to 0.95
+
+        
+        aboveFloor : Real = if (overallPace > settings.progressPricingDiscountFloorPoint) {
+            overallPace - settings.progressPricingDiscountFloorPoint
+        } else {  0.0 };
+        relativeHeight : Real = if ( aboveFloor <= 0 ) { 0.0 } else { aboveFloor / ceilingHeight };
+        
+        print("      ---- pPDD ceilingHeight " + ceilingHeight.show());
+        print("      ---- pPDD aboveFloor " + aboveFloor.show());
+        print("      ---- pPDD relativeHeight " + relativeHeight.show());
+
+        ppdd : Real = 1 - relativeHeight
+        print("    ---- progressPricingDiscountDepth " + ppdd.show());
+        ppdd
+    }
+}
+
+// use this pattern inline, instead of as a function, to enable
+// optimizations in the surrounding code for accessing the various
+// details mentioned
+//
+// func mkSaleController(
+//     prevMktSale: MarketSaleData, 
+//     now: Time, 
+//     sellingUnitQuantity: Int,
+//     updatedSale: Option[MarketSaleData] = Option[MarketSaleData]::None
+// ) -> DynamicSaleV1 {
+//     prevProgress : SaleProgressDetails = prevMktSale.progressDetails;
+//     totalProgress: SaleProgressDetails = SaleProgressDetails{
+//         lastPurchaseAt: now,
+//         prevPurchaseAt: prevProgress.lastPurchaseAt,
+//         chunkUnitCount: prevProgress.chunkUnitCount,
+//         chunkUnitsSold: prevProgress.chunkUnitsSold + sellingUnitQuantity
+//     };
+//     prevPace : Real = prevMktSale.salePace;
+//     DynamicSaleV1{
+//         settings: prevMktSale.saleSettings,
+//         purchase: DTS_PurchaseInfo{
+//             unitsPurchased: sellingUnitQuantity,
+//             purchaseTime: now,
+//             previousPurchaseTime: prevProgress.lastPurchaseAt,
+//             prevSalePace: prevPace,
+//             totalProgress: totalProgress
+//         },
+//         sale: prevMktSale,
+//         updatedSale: updatedSale,
+//         prevSalePace: prevPace,
+//         updatedSettings: Option[DynamicSaleV1Settings]::None
+//     }
+// }
+
