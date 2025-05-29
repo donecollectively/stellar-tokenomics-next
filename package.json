@@ -12,8 +12,8 @@
     ],
     "exports": {
         ".": {
-            "import": "./dist/stellar-tokenomics.mjs",
-            "types": "./src/dist/stellar-tokenomics.d.ts"
+            "types": "./dist/stellar-tokenomics.d.ts",
+            "import": "./dist/stellar-tokenomics.mjs"
         },
         "./contracts/*.hlb": "./dist/contracts/*.hlb.mjs",
         "./contracts-preprod/*.hlb": {
