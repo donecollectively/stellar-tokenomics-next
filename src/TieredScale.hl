@@ -6,81 +6,76 @@ import {
 struct Tier {
     type: String
     threshold: Int
-    scaledValue: Real
+    name: String
     /**
-     * actually Map[String]Data
-     * interpreted by as a concrete mStruct type by a caller, in its specific context
+     * actually an Enum 
+     * interpreted in specific context with variants having their own concrete types
      */
-    moreInfo: Data    
+    scaledDetails: Data    
 }
 
-struct TierLookupResult {
-    scaledValue: Real
-    moreInfo: Option[
-        Data
-        // actually Map[String]Data
-    ]
-}
+
+// struct TierLookupResult {
+//     // scaledValue: Real
+//     scaledDetails: Option[
+//         Data
+//         // actually an Enum with variants having their own concrete types
+//     ]
+// }
 
 struct TieredScale {
     tiers: []Tier
 
-    func findTierValue(self, value: Int) -> TierLookupResult {
+    func findTierValue(self, value: Int) -> Option[Data] {
         // list.fold_lazy[ReducedType: Any](
         //     reducer: (item: ItemType, next: () -> ReducedType) -> ReducedType,
         //     final: ReducedType
         // ) -> ReducedType
         print("  -- tiered scale: lookup value "+value.show());
-        self.tiers.fold_lazy[TierLookupResult](
+        result = self.tiers.fold_lazy[Option[Data]](
            // reducer: 
-            (thisTier: Tier, next : () -> TierLookupResult) -> TierLookupResult {
-                higherTierResult : TierLookupResult = next(); // go deep first, to the latest possible item in the list
-                success : TierLookupResult = if (higherTierResult.scaledValue == 0.0) {
-                    // this is potentially a match, if the threshold is met by the item
-                    // print("     -- checking tier "+ thisTier.threshold.show());
-                    if ( value >= thisTier.threshold) {
-                        result = thisTier.scaledValue.show();
-                        print("    <--  returning scaled value " + result);
-                        TierLookupResult {
-                            thisTier.scaledValue,
-                            Option[Data]::Some{thisTier.moreInfo}
-                        }
-                    } else {
-                        // print("      ------ threshold unmet: " + thisTier.threshold.show());
-
-                        // this larger tier is too big to match the input value,
-                        // so we return this "no match" indicator, thus
-                        // ... defering to the next smaller tier at a lesser depth 
-                        // ... in the list (and in the recursion sequence)
-                        TierLookupResult {
-                            0.0,
+            (thisTier: Tier, next : () -> Option[Data]) -> Option[Data] {
+                higherTierResult : Option[Data] = next(); // go deep first, to the latest possible item in the list
+                success : Option[Data] = higherTierResult.switch { 
+                    None => {
+                        // this is potentially a match, if the threshold is met by the item
+                        // print("     -- checking tier "+ thisTier.threshold.show());
+                        if (value < thisTier.threshold) { // this tier is too big to match the input value.
+                            // no-match; defers to the next smaller tier at a lesser depth 
                             Option[Data]::None
-                        }
-                    }                    
-                } else { 
-                    // pops back through all the earlier items, returning 
-                    //   that last tier having any successful lookup result
-                    higherTierResult 
-                 };
+                        } else {
+                            print("    <--  found tier '"+ thisTier.name + "' at threshold "+ thisTier.threshold.show());
+                            Option[Data]::Some{thisTier.scaledDetails}
+                        }                    
+                    }, 
+                    Some => {
+                        // pops back through all the earlier items, returning 
+                        //   that last tier having any successful lookup result
+                        higherTierResult 
+                    }
+                };
 
                  success
             },
-            // the "final" item for the fold is a no-match indicator
-            TierLookupResult {
-                0.0,
-                Option[Data]::None
-            }
+            // the "final" item for the fold is a no-match indticator
+            Option[Data]::None
         )
+
+        result.switch {
+            None => {
+                print("  -- tiered scale: no tier found for value "+value.show());
+            }
+        }
+        result
     }
-    
 }
 
 
 struct TierAsInt {
     type: String
     threshold: Int
-    scaledValue: Int
-    moreInfo: Data // actually Map[String]Data
+    name: String
+    scaledDetails: Data // actually Map[String]Data
 }
 
 struct TieredScaleAsInt {
