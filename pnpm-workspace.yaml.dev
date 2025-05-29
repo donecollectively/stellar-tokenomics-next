@@ -8,7 +8,7 @@
 
 packages:
   - ./
-  - ../stellar-contracts
+#  - ../stellar-contracts
 
 packageManagerStrictVersion: true
 overrides:

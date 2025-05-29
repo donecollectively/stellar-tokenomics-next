@@ -35,6 +35,8 @@
     "main": "./dist/index.mjs",
     "types": "./dist/index.d.ts",
     "scripts": {
+        "link:stc": "test -L pnpm-workspace.yaml || ln -s pnpm-workspace.dev.yaml pnpm-workspace.yaml ; rm -rf node_modules ; pnpm install",
+        "unlink:stc": "rm -f pnpm-workspace.yaml ; rm -rf node_modules ; pnpm install",
         "dev": "scripts/build ; pnpm run rollup:watch",
         "build": "scripts/build",
         "rollup:watch": "scripts/rollup --watch",
