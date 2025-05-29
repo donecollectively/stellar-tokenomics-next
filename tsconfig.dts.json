@@ -46,7 +46,7 @@
         // "noResolve": true,
         // "disableReferencedProjectLoad": false,
         "paths": {
-            "@donecollectively/stellar-tokenomics": ["./src/index.ts"],
+            "stellar-tokenomics": ["./src/index.ts"],
             "src/*": ["./src/*"]
         }
         // "plugins": [],
