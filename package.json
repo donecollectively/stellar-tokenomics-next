@@ -7,6 +7,9 @@
         "pnpm": ">=10"
     },
     "packageManager": "pnpm@10.10.0",
+    "files": [
+        "dist/**/*"
+    ],
     "exports": {
         ".": {
             "import": "./dist/stellar-tokenomics.mjs",

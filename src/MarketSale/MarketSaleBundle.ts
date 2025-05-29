@@ -6,6 +6,7 @@ import SaleProgressDetails from "./SaleProgressDetails.hl"
 import DynamicSaleV1 from "./DynamicSaleV1.hl"
 import DynamicSaleV1Settings from "./DynamicSaleV1Settings.hl"
 import VxfProtocol from "../Vesting/VxfProtocol.hl"
+import type { Source } from "@helios-lang/compiler-utils"
 
 /**
  * @public
@@ -14,7 +15,7 @@ export default class MarketSaleBundle extends DelegatedDataBundle {
     specializedDelegateModule = MarketSalePolicy
     requiresGovAuthority = true
     
-    get modules() {
+    get modules() : Source[]{
         return [
             ...super.modules,
             MarketSaleData,
