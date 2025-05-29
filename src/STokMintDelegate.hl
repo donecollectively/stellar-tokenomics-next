@@ -339,19 +339,18 @@ enum DelegateActivity {
                         );
 
                         REQT("doesn't interfere with other policies that may have a good reason to mint in this txn");
-                        print("    -- no explicit logic for non-interference, but we only inspect our own-policy-mint");
+                        print("    -- NOTE: no explicit logic for non-interference, but we only inspect our own-policy-mint");
+                        ourMint : Map[ByteArray]Int = tx.minted.get_policy(mph);
 
                         REQT("checks that the tokens minted in OUR policy are exactly according to expectations")
                         
-                        ourMint : Map[ByteArray]Int = tx.minted.get_policy(mph);
                         tn = tokenName.decode_utf8();
-                        assert(ourMint.get_safe(tokenName).switch {
+                        ourMint.get_safe(tokenName).switch {
                             None => error("expected tokens not minted: "+ tn),
                             Some{n} => {
-                                print("ok, minting "+n.show()+ " fungibles: "+ tn);
-                                true
+                                print("  -- ok, minting "+n.show()+ " fungibles: "+ tn)
                             }
-                        }, "^^^ that fails; this can't");
+                        }
 
                         REQT("doesn't allow other tokens of ours to be minted in this txn");
                         assert(
