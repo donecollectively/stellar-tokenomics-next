@@ -10,7 +10,9 @@ import type { AssetClass } from '@helios-lang/ledger';
 import { BasicMintDelegate } from '@donecollectively/stellar-contracts';
 import { Capo } from '@donecollectively/stellar-contracts';
 import type { CapoFeatureFlags } from '@donecollectively/stellar-contracts';
+import { CapoHeliosBundle } from '@donecollectively/stellar-contracts';
 import { Cast } from '@helios-lang/contract-utils';
+import { ConcreteCapoDelegateBundle } from '@donecollectively/stellar-contracts';
 import { ContractDataBridge } from '@donecollectively/stellar-contracts';
 import { DataBridgeReaderClass } from '@donecollectively/stellar-contracts';
 import { DelegatedDataBundle } from '@donecollectively/stellar-contracts';
@@ -33,9 +35,10 @@ import { MintingPolicyHash } from '@helios-lang/ledger';
 import type { PubKeyHash } from '@helios-lang/ledger';
 import { ReqtsMap } from '@donecollectively/stellar-contracts';
 import { SeedActivity } from '@donecollectively/stellar-contracts';
-import { Source } from '@helios-lang/compiler-utils';
+import type { Source } from '@helios-lang/compiler-utils';
 import { StellarTxnContext } from '@donecollectively/stellar-contracts';
 import { tagOnly } from '@donecollectively/stellar-contracts';
+import tokenomicsBasicMintDelegate from './STokMintDelegate.hl';
 import { TxInput } from '@helios-lang/ledger';
 import type { TxOutput } from '@helios-lang/ledger';
 import type { TxOutputId } from '@helios-lang/ledger';
@@ -44,6 +47,25 @@ import { UutName } from '@donecollectively/stellar-contracts';
 import type { ValidatorHash } from '@helios-lang/ledger';
 import { Value } from '@helios-lang/ledger';
 import { WrappedDgDataContract } from '@donecollectively/stellar-contracts';
+
+// @public (undocumented)
+export type GenericTokenomicsFeatureFlags = {
+    mktSale: boolean;
+    fundedPurpose: boolean;
+    vesting: boolean;
+};
+
+// @public (undocumented)
+export type hasMemberToken = StellarTxnContext<anyState & {
+    memberToken: UutName;
+}>;
+
+// Warning: (ae-forgotten-export) The symbol "Constructor" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "STokMintDelegateBundle" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "IsStokMintDelegate" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function makeSTokMintDelegateBundle<CapoBundleType extends typeof CapoHeliosBundle>(capoBundle: CapoBundleType, delegateName: string): Constructor<STokMintDelegateBundle & IsStokMintDelegate> & ConcreteCapoDelegateBundle;
 
 // Warning: (ae-forgotten-export) The symbol "MarketSaleDataWrapper" needs to be exported by the entry point index.d.ts
 //
@@ -99,14 +121,42 @@ export class MarketSaleController extends WrappedDgDataContract<MarketSaleData, 
 }
 
 // @public (undocumented)
+export type optionalMemberToken<T extends {
+    mbrTkn: string;
+} | {
+    memberToken: string;
+}> = Omit<T, "mbrTkn" | "memberToken"> & (T extends {
+    mbrTkn: string;
+} ? {
+    mbrTkn?: string;
+} : {
+    memberToken?: string;
+});
+
+// @public (undocumented)
 export type PurchaseContext = {
     prevSale: MarketSaleDataWrapper;
     now: Date;
     unitCount: bigint;
 };
 
-// Warning: (ae-forgotten-export) The symbol "GenericTokenomicsFeatureFlags" needs to be exported by the entry point index.d.ts
-//
+// @public (undocumented)
+export type requiredMemberToken<T extends {
+    mbrTkn: string;
+} | {
+    memberToken: string;
+} | {
+    mbrTkn?: string;
+} | {
+    memberToken?: string;
+}> = Omit<T, "mbrTkn" | "memberToken"> & (T extends {
+    mbrTkn: string;
+} ? {
+    mbrTkn: string;
+} : {
+    memberToken: string;
+});
+
 // @public (undocumented)
 export abstract class StellarTokenomicsCapo<SELF extends StellarTokenomicsCapo<any, any>, //= StellarTokenomics<any>
 F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F> {
@@ -117,12 +167,10 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
     // (undocumented)
     findMemberInfo(): Promise<FoundUut | undefined>;
     // Warning: (ae-forgotten-export) The symbol "CapoDatum$Ergo$CharterData" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "STokMintDelegate" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
     getMintDelegate(charterData?: CapoDatum$Ergo$CharterData): Promise<STokMintDelegate>;
     mkTxnMintParticipantToken(addr: Address): Promise<hasUutContext<"member"> & StellarTxnContext<anyState> & hasSeedUtxo>;
-    // Warning: (ae-forgotten-export) The symbol "hasMemberToken" needs to be exported by the entry point index.d.ts
     mkTxnWithMemberInfo<TCX extends StellarTxnContext = StellarTxnContext>(skipReturningToken?: "skipTokenReturn", tcx?: TCX): Promise<TCX & hasMemberToken & hasSeedUtxo>;
     // (undocumented)
     mkUutName(purpose: string, txin: TxInput): UutName;
@@ -134,6 +182,15 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
     txnAddMemberToken<TCX extends StellarTxnContext>(tcx: TCX, memberInfo?: FoundUut, skipReturningToken?: "skipTokenReturn"): Promise<TCX & hasMemberToken & hasSeedUtxo>;
     // (undocumented)
     txnMintingFungibleTokens<TCX extends StellarTxnContext>(tcx: TCX, tokenName: string | number[], tokenCount: bigint): Promise<TCX & hasCharterRef & hasGovAuthority>;
+}
+
+// @public
+export class STokMintDelegate extends BasicMintDelegate {
+    constructor(...args: any[]);
+    // (undocumented)
+    get delegateName(): string;
+    // (undocumented)
+    scriptBundle(): any;
 }
 
 // Warnings were encountered during analysis:
@@ -355,6 +412,7 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
 // src/MarketSale/MarketSale.concrete.typeInfo.ts:3459:5 - (ae-forgotten-export) The symbol "DTS_PurchaseInfo" needs to be exported by the entry point index.d.ts
 // src/MarketSale/MarketSale.concrete.typeInfo.ts:3489:5 - (ae-forgotten-export) The symbol "DynamicSaleV1SettingsLike" needs to be exported by the entry point index.d.ts
 // src/MarketSale/MarketSale.concrete.typeInfo.ts:3490:5 - (ae-forgotten-export) The symbol "DTS_PurchaseInfoLike" needs to be exported by the entry point index.d.ts
+// src/STokMintDelegate.hlb.ts:10:1 - (ae-forgotten-export) The symbol "STokMintDelegateBundle_base" needs to be exported by the entry point index.d.ts
 // src/STokMintDelegate.typeInfo.ts:398:1 - (ae-forgotten-export) The symbol "DelegateRole" needs to be exported by the entry point index.d.ts
 // src/STokMintDelegate.typeInfo.ts:526:1 - (ae-forgotten-export) The symbol "ManifestActivity$updatingEntry" needs to be exported by the entry point index.d.ts
 // src/STokMintDelegate.typeInfo.ts:564:1 - (ae-forgotten-export) The symbol "ManifestActivity$addingEntry" needs to be exported by the entry point index.d.ts

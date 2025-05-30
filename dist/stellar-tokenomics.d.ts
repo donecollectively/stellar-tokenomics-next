@@ -4,7 +4,9 @@ import type { AssetClass } from '@helios-lang/ledger';
 import { BasicMintDelegate } from '@donecollectively/stellar-contracts';
 import { Capo } from '@donecollectively/stellar-contracts';
 import type { CapoFeatureFlags } from '@donecollectively/stellar-contracts';
+import { CapoHeliosBundle } from '@donecollectively/stellar-contracts';
 import { Cast } from '@helios-lang/contract-utils';
+import { ConcreteCapoDelegateBundle } from '@donecollectively/stellar-contracts';
 import { ContractDataBridge } from '@donecollectively/stellar-contracts';
 import { DataBridgeReaderClass } from '@donecollectively/stellar-contracts';
 import { DelegatedDataBundle } from '@donecollectively/stellar-contracts';
@@ -27,9 +29,10 @@ import { MintingPolicyHash } from '@helios-lang/ledger';
 import type { PubKeyHash } from '@helios-lang/ledger';
 import { ReqtsMap } from '@donecollectively/stellar-contracts';
 import { SeedActivity } from '@donecollectively/stellar-contracts';
-import { Source } from '@helios-lang/compiler-utils';
+import type { Source } from '@helios-lang/compiler-utils';
 import { StellarTxnContext } from '@donecollectively/stellar-contracts';
 import { tagOnly } from '@donecollectively/stellar-contracts';
+import tokenomicsBasicMintDelegate from './STokMintDelegate.hl';
 import { TxInput } from '@helios-lang/ledger';
 import type { TxOutput } from '@helios-lang/ledger';
 import type { TxOutputId } from '@helios-lang/ledger';
@@ -1086,6 +1089,8 @@ declare type cctx_CharterInputTypeLike = IntersectedEnum<{
 } | {
     Input: cctx_CharterInputType$InputLike;
 }>;
+
+declare type Constructor<T> = new (...args: any[]) => T;
 
 /**
  * A strong type for the canonical form of DelegateActivity$CreatingDelegatedData
@@ -2774,7 +2779,7 @@ declare interface FixedSaleDetailsLike {
 /**
  * @public
  */
-declare type GenericTokenomicsFeatureFlags = {
+export declare type GenericTokenomicsFeatureFlags = {
     mktSale: boolean;
     fundedPurpose: boolean;
     vesting: boolean;
@@ -2783,9 +2788,49 @@ declare type GenericTokenomicsFeatureFlags = {
 /**
  * @public
  */
-declare type hasMemberToken = StellarTxnContext<anyState & {
+export declare type hasMemberToken = StellarTxnContext<anyState & {
     memberToken: UutName;
 }>;
+
+declare type IsStokMintDelegate = {
+    specializedDelegateModule: typeof tokenomicsBasicMintDelegate;
+    requiresGovAuthority: true;
+};
+
+/**
+ * Creates a typed helper class to use as a mint delegate for tokenomics subclasses
+ *
+ * ## Usage:
+ * In your `MyMintDelegate.hlb.ts`:
+ * ```typescript
+ *    export const MyMintDelegate = makeSTokMintDelegateBundle(MyCapoBundle, "MyMintDelegate")
+ *    export default MyMintDelegate
+ * ```
+ * This HLB file will be compiled to make  `.bridge.ts` and `.typeInfo.ts` for your delegate.  Import
+ * the DataBridge and make your `MySpendMintDelegate.ts`, extending `STokMintDelegate`
+ * and using:
+ * ```typescript
+ * export class MyMintSpendDelegate extends STokMintDelegate {
+ *    get delegateName() {
+ *        return "MyMintSpendDelegate";
+ *    }
+ *    dataBridgeClass = MyMintSpendDelegateDataBridge;
+ *     scriptBundle(): CapoDelegateBundle {
+ *        return MyMintSpendDelegateBundle.create();
+ *     }
+ * ```
+ *
+ * Use your Mint Delegate class in your Capo:
+ * ```typescript
+ * delegateRoles({
+ *    spendDelegate: defineRole("spendDgt", MyMintSpendDelegate, {}),
+ *    mintDelegate: defineRole("mintDgt", MyMintSpendDelegate, {}),
+ * })
+ * ```
+ *
+ * @public
+ */
+export declare function makeSTokMintDelegateBundle<CapoBundleType extends typeof CapoHeliosBundle>(capoBundle: CapoBundleType, delegateName: string): Constructor<STokMintDelegateBundle & IsStokMintDelegate> & ConcreteCapoDelegateBundle;
 
 /**
  * A strong type for the canonical form of ManifestActivity$addingEntry
@@ -4740,6 +4785,21 @@ declare interface MoreFieldsLike {
 }
 
 /**
+ * @public
+ */
+export declare type optionalMemberToken<T extends {
+    mbrTkn: string;
+} | {
+    memberToken: string;
+}> = Omit<T, "mbrTkn" | "memberToken"> & (T extends {
+    mbrTkn: string;
+} ? {
+    mbrTkn?: string;
+} : {
+    memberToken?: string;
+});
+
+/**
  * A strong type for the canonical form of OtherSaleState
  * @remarks
  * Note that any enum fields in this type are expressed as a disjoint union of the enum variants.  Processing
@@ -5258,6 +5318,25 @@ declare interface RelativeDelegateLinkLike {
 }
 
 /**
+ * @public
+ */
+export declare type requiredMemberToken<T extends {
+    mbrTkn: string;
+} | {
+    memberToken: string;
+} | {
+    mbrTkn?: string;
+} | {
+    memberToken?: string;
+}> = Omit<T, "mbrTkn" | "memberToken"> & (T extends {
+    mbrTkn: string;
+} ? {
+    mbrTkn: string;
+} : {
+    memberToken: string;
+});
+
+/**
  * A strong type for the canonical form of SaleAssets
  * @remarks
  * Note that any enum fields in this type are expressed as a disjoint union of the enum variants.  Processing
@@ -5680,11 +5759,23 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
  * Base class for mint/spend delegates
  * @public
  */
-declare class STokMintDelegate extends BasicMintDelegate {
+export declare class STokMintDelegate extends BasicMintDelegate {
     get delegateName(): string;
     constructor(...args: any[]);
     scriptBundle(): any;
 }
+
+/**
+ * A specialized minting delegate for testing purposes
+ * @public
+ */
+declare class STokMintDelegateBundle extends STokMintDelegateBundle_base {
+    specializedDelegateModule: Source;
+    requiresGovAuthority: boolean;
+    get delegateName(): string;
+}
+
+declare const STokMintDelegateBundle_base: ConcreteCapoDelegateBundle;
 
 /**
  * A strong type for the canonical form of ThreadInfo

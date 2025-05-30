@@ -1,8 +1,43 @@
-import { Capo, bytesToText, UutName, textToBytes, mkValuesEntry, hasReqts, partialTxn, txn, DelegatedDataBundle, realMul, toFixedReal, debugMath, realDiv, ContractDataBridge, DataBridgeReaderClass, EnumBridge, impliedSeedActivityMaker, WrappedDgDataContract, dumpAny, displayTokenName } from '@donecollectively/stellar-contracts';
+import { BasicMintDelegate, Capo, bytesToText, UutName, textToBytes, mkValuesEntry, hasReqts, partialTxn, txn, DelegatedDataBundle, realMul, toFixedReal, debugMath, realDiv, ContractDataBridge, DataBridgeReaderClass, EnumBridge, impliedSeedActivityMaker, WrappedDgDataContract, dumpAny, displayTokenName } from '@donecollectively/stellar-contracts';
 import { makeCast } from '@helios-lang/contract-utils';
 import { makeTxOutput, makeInlineTxOutputDatum, makeValue } from '@helios-lang/ledger';
+export { makeSTokMintDelegateBundle } from 'stellar-tokenomics/contracts-preprod/STokMintDelegate.hlb';
 import { makeSource } from '@helios-lang/compiler-utils';
 import { encodeUtf8 } from '@helios-lang/codec-utils';
+
+class STokMintDelegate extends BasicMintDelegate {
+  // MAINTAINERS NOTE: DO NOT EXPOSE THIS DATA BRIDGE CLASS.
+  // dataBridgeClass = STokMintDelegateDataBridge;
+  // INSTEAD, Subclasses should assign their own dataBridgeClass.
+  // ditto, scriptBundle()
+  // scriptBundle() {
+  //     console.warn("STokMintDelegate.scriptBundle(): using default on-chain scripts\n"+
+  //         "  ... override this method in your subclass to use custom on-chain scripts\n"+
+  //         "  ... also, provide a custom `get delegateName()` and dataBridgeClass = ..."
+  //     );
+  //     return STokMintDelegateBundle.create()
+  // }
+  get delegateName() {
+    return "STokMintDelegate";
+  }
+  constructor(...args) {
+    super(...args);
+    this.scriptBundle();
+  }
+  scriptBundle() {
+    throw new Error(`${this.constructor.name}: required method scriptBundle not implemented for subclass of STokMintDelegate`);
+  }
+  // @Activity.redeemer
+  // activityMintingParticipantToken(seedFrom: hasSeed) : isActivity {
+  //     const seed = this.getSeed(seedFrom)
+  //     return  this.mkSeededMintingActivity("MintingParticipantToken", seed);
+  // }
+  // _m : HeliosModuleSrc
+  // get specializedMintDelegate(): HeliosModuleSrc {
+  //     if (this._m) return this._m
+  //     return this._m = mkHeliosModule(SpecialMintDelegate, "specializedDelegate");
+  // }
+}
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -16569,5 +16604,5 @@ class MarketSaleController extends WrappedDgDataContract {
   }
 }
 
-export { MarketSaleController, StellarTokenomicsCapo };
+export { MarketSaleController, STokMintDelegate, StellarTokenomicsCapo };
 //# sourceMappingURL=stellar-tokenomics.mjs.map

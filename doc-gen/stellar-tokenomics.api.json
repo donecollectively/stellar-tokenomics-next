@@ -5496,6 +5496,45 @@
         },
         {
           "kind": "TypeAlias",
+          "canonicalReference": "stellar-tokenomics!~Constructor:type",
+          "docComment": "",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type Constructor<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "new (...args: any[]) => T"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/STokMintDelegate.hlb.ts",
+          "releaseTag": "Public",
+          "name": "Constructor",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "TypeAlias",
           "canonicalReference": "stellar-tokenomics!~DelegateActivity:type",
           "docComment": "/**\n * DelegateActivity enum variants\n *\n * @remarks\n *\n * - expresses the essential raw data structures supporting the **9 variant(s)** of the DelegateActivity enum type\n *\n * - **Note**: Stellar Contracts provides a higher-level `DelegateActivityHelper` class for generating UPLC data for this enum type\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -13783,7 +13822,7 @@
         },
         {
           "kind": "TypeAlias",
-          "canonicalReference": "stellar-tokenomics!~GenericTokenomicsFeatureFlags:type",
+          "canonicalReference": "stellar-tokenomics!GenericTokenomicsFeatureFlags:type",
           "docComment": "/**\n * @public\n */\n",
           "excerptTokens": [
             {
@@ -13809,7 +13848,7 @@
         },
         {
           "kind": "TypeAlias",
-          "canonicalReference": "stellar-tokenomics!~hasMemberToken:type",
+          "canonicalReference": "stellar-tokenomics!hasMemberToken:type",
           "docComment": "/**\n * @public\n */\n",
           "excerptTokens": [
             {
@@ -13855,6 +13894,156 @@
             "startIndex": 1,
             "endIndex": 7
           }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "stellar-tokenomics!~IsStokMintDelegate:type",
+          "docComment": "",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "type IsStokMintDelegate = "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    specializedDelegateModule: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "tokenomicsBasicMintDelegate",
+              "canonicalReference": "!value:var"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    requiresGovAuthority: true;\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/STokMintDelegate.hlb.ts",
+          "releaseTag": "Public",
+          "name": "IsStokMintDelegate",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "stellar-tokenomics!makeSTokMintDelegateBundle:function(1)",
+          "docComment": "/**\n * Creates a typed helper class to use as a mint delegate for tokenomics subclasses\n *\n * ## Usage: In your `MyMintDelegate.hlb.ts`:\n * ```typescript\n *    export const MyMintDelegate = makeSTokMintDelegateBundle(MyCapoBundle, \"MyMintDelegate\")\n *    export default MyMintDelegate\n * ```\n *\n * This HLB file will be compiled to make `.bridge.ts` and `.typeInfo.ts` for your delegate. Import the DataBridge and make your `MySpendMintDelegate.ts`, extending `STokMintDelegate` and using:\n * ```typescript\n * export class MyMintSpendDelegate extends STokMintDelegate {\n *    get delegateName() {\n *        return \"MyMintSpendDelegate\";\n *    }\n *    dataBridgeClass = MyMintSpendDelegateDataBridge;\n *     scriptBundle(): CapoDelegateBundle {\n *        return MyMintSpendDelegateBundle.create();\n *     }\n * ```\n *\n * Use your Mint Delegate class in your Capo:\n * ```typescript\n * delegateRoles({\n *    spendDelegate: defineRole(\"spendDgt\", MyMintSpendDelegate, {}),\n *    mintDelegate: defineRole(\"mintDgt\", MyMintSpendDelegate, {}),\n * })\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function makeSTokMintDelegateBundle<CapoBundleType extends "
+            },
+            {
+              "kind": "Content",
+              "text": "typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "CapoHeliosBundle",
+              "canonicalReference": "@donecollectively/stellar-contracts!CapoHeliosBundle:class"
+            },
+            {
+              "kind": "Content",
+              "text": ">(capoBundle: "
+            },
+            {
+              "kind": "Content",
+              "text": "CapoBundleType"
+            },
+            {
+              "kind": "Content",
+              "text": ", delegateName: "
+            },
+            {
+              "kind": "Content",
+              "text": "string"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Constructor",
+              "canonicalReference": "stellar-tokenomics!~Constructor:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "STokMintDelegateBundle",
+              "canonicalReference": "stellar-tokenomics!~STokMintDelegateBundle:class"
+            },
+            {
+              "kind": "Content",
+              "text": " & "
+            },
+            {
+              "kind": "Reference",
+              "text": "IsStokMintDelegate",
+              "canonicalReference": "stellar-tokenomics!~IsStokMintDelegate:type"
+            },
+            {
+              "kind": "Content",
+              "text": "> & "
+            },
+            {
+              "kind": "Reference",
+              "text": "ConcreteCapoDelegateBundle",
+              "canonicalReference": "@donecollectively/stellar-contracts!ConcreteCapoDelegateBundle:type"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/STokMintDelegate.hlb.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 8,
+            "endIndex": 15
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "capoBundle",
+              "parameterTypeTokenRange": {
+                "startIndex": 4,
+                "endIndex": 5
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "delegateName",
+              "parameterTypeTokenRange": {
+                "startIndex": 6,
+                "endIndex": 7
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "CapoBundleType",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "makeSTokMintDelegateBundle"
         },
         {
           "kind": "TypeAlias",
@@ -16675,10 +16864,6 @@
                   "text": "get modules(): "
                 },
                 {
-                  "kind": "Content",
-                  "text": "import(\"@helios-lang/compiler-utils\")."
-                },
-                {
                   "kind": "Reference",
                   "text": "Source",
                   "canonicalReference": "@helios-lang/compiler-utils!Source:type"
@@ -16698,7 +16883,7 @@
               "name": "modules",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 4
+                "endIndex": 3
               },
               "isStatic": false,
               "isProtected": false,
@@ -16744,10 +16929,6 @@
                   "text": "specializedDelegateModule: "
                 },
                 {
-                  "kind": "Content",
-                  "text": "import(\"@helios-lang/compiler-utils\")."
-                },
-                {
                   "kind": "Reference",
                   "text": "Source",
                   "canonicalReference": "@helios-lang/compiler-utils!Source:type"
@@ -16763,7 +16944,7 @@
               "name": "specializedDelegateModule",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 3
+                "endIndex": 2
               },
               "isStatic": false,
               "isProtected": false,
@@ -24990,6 +25171,58 @@
           "extendsTokenRanges": []
         },
         {
+          "kind": "TypeAlias",
+          "canonicalReference": "stellar-tokenomics!optionalMemberToken:type",
+          "docComment": "/**\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type optionalMemberToken<T extends "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    mbrTkn: string;\n} | {\n    memberToken: string;\n}"
+            },
+            {
+              "kind": "Content",
+              "text": "> = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Omit",
+              "canonicalReference": "!Omit:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T, \"mbrTkn\" | \"memberToken\"> & (T extends {\n    mbrTkn: string;\n} ? {\n    mbrTkn?: string;\n} : {\n    memberToken?: string;\n})"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/StellarTokenomicsCapo.ts",
+          "releaseTag": "Public",
+          "name": "optionalMemberToken",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 5
+          }
+        },
+        {
           "kind": "Interface",
           "canonicalReference": "stellar-tokenomics!~OtherSaleState:interface",
           "docComment": "/**\n * A strong type for the canonical form of OtherSaleState\n *\n * @remarks\n *\n * Note that any enum fields in this type are expressed as a disjoint union of the enum variants. Processing enum data conforming to this type can be a bit of a pain. For a more ergonomic, though less strictly-safe form of this type, see ErgoOtherSaleState instead.\n *\n * @public\n */\n",
@@ -27829,6 +28062,58 @@
           "extendsTokenRanges": []
         },
         {
+          "kind": "TypeAlias",
+          "canonicalReference": "stellar-tokenomics!requiredMemberToken:type",
+          "docComment": "/**\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type requiredMemberToken<T extends "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    mbrTkn: string;\n} | {\n    memberToken: string;\n} | {\n    mbrTkn?: string;\n} | {\n    memberToken?: string;\n}"
+            },
+            {
+              "kind": "Content",
+              "text": "> = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Omit",
+              "canonicalReference": "!Omit:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T, \"mbrTkn\" | \"memberToken\"> & (T extends {\n    mbrTkn: string;\n} ? {\n    mbrTkn: string;\n} : {\n    memberToken: string;\n})"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/StellarTokenomicsCapo.ts",
+          "releaseTag": "Public",
+          "name": "requiredMemberToken",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 5
+          }
+        },
+        {
           "kind": "Interface",
           "canonicalReference": "stellar-tokenomics!~SaleAssets:interface",
           "docComment": "/**\n * A strong type for the canonical form of SaleAssets\n *\n * @remarks\n *\n * Note that any enum fields in this type are expressed as a disjoint union of the enum variants. Processing enum data conforming to this type can be a bit of a pain. For a more ergonomic, though less strictly-safe form of this type, see ErgoSaleAssets instead.\n *\n * @public\n */\n",
@@ -30144,7 +30429,7 @@
             {
               "kind": "Reference",
               "text": "GenericTokenomicsFeatureFlags",
-              "canonicalReference": "stellar-tokenomics!~GenericTokenomicsFeatureFlags:type"
+              "canonicalReference": "stellar-tokenomics!GenericTokenomicsFeatureFlags:type"
             },
             {
               "kind": "Content",
@@ -30299,7 +30584,7 @@
                 {
                   "kind": "Reference",
                   "text": "STokMintDelegate",
-                  "canonicalReference": "stellar-tokenomics!~STokMintDelegate:class"
+                  "canonicalReference": "stellar-tokenomics!STokMintDelegate:class"
                 },
                 {
                   "kind": "Content",
@@ -30477,7 +30762,7 @@
                 {
                   "kind": "Reference",
                   "text": "hasMemberToken",
-                  "canonicalReference": "stellar-tokenomics!~hasMemberToken:type"
+                  "canonicalReference": "stellar-tokenomics!hasMemberToken:type"
                 },
                 {
                   "kind": "Content",
@@ -30746,7 +31031,7 @@
                 {
                   "kind": "Reference",
                   "text": "hasMemberToken",
-                  "canonicalReference": "stellar-tokenomics!~hasMemberToken:type"
+                  "canonicalReference": "stellar-tokenomics!hasMemberToken:type"
                 },
                 {
                   "kind": "Content",
@@ -30951,7 +31236,7 @@
         },
         {
           "kind": "Class",
-          "canonicalReference": "stellar-tokenomics!~STokMintDelegate:class",
+          "canonicalReference": "stellar-tokenomics!STokMintDelegate:class",
           "docComment": "/**\n * Base class for mint/spend delegates\n *\n * @public\n */\n",
           "excerptTokens": [
             {
@@ -30976,7 +31261,7 @@
           "members": [
             {
               "kind": "Constructor",
-              "canonicalReference": "stellar-tokenomics!~STokMintDelegate:constructor(1)",
+              "canonicalReference": "stellar-tokenomics!STokMintDelegate:constructor(1)",
               "docComment": "/**\n * Constructs a new instance of the `STokMintDelegate` class\n */\n",
               "excerptTokens": [
                 {
@@ -31008,7 +31293,7 @@
             },
             {
               "kind": "Property",
-              "canonicalReference": "stellar-tokenomics!~STokMintDelegate#delegateName:member",
+              "canonicalReference": "stellar-tokenomics!STokMintDelegate#delegateName:member",
               "docComment": "",
               "excerptTokens": [
                 {
@@ -31038,7 +31323,7 @@
             },
             {
               "kind": "Method",
-              "canonicalReference": "stellar-tokenomics!~STokMintDelegate#scriptBundle:member(1)",
+              "canonicalReference": "stellar-tokenomics!STokMintDelegate#scriptBundle:member(1)",
               "docComment": "",
               "excerptTokens": [
                 {
@@ -31066,6 +31351,153 @@
               "isOptional": false,
               "isAbstract": false,
               "name": "scriptBundle"
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "stellar-tokenomics!~STokMintDelegateBundle_base:var",
+          "docComment": "",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "STokMintDelegateBundle_base: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ConcreteCapoDelegateBundle",
+              "canonicalReference": "@donecollectively/stellar-contracts!ConcreteCapoDelegateBundle:type"
+            }
+          ],
+          "fileUrlPath": "src/STokMintDelegate.hlb.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "STokMintDelegateBundle_base",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "stellar-tokenomics!~STokMintDelegateBundle:class",
+          "docComment": "/**\n * A specialized minting delegate for testing purposes\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class STokMintDelegateBundle extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "STokMintDelegateBundle_base",
+              "canonicalReference": "stellar-tokenomics!~STokMintDelegateBundle_base"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "src/STokMintDelegate.hlb.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "STokMintDelegateBundle",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Property",
+              "canonicalReference": "stellar-tokenomics!~STokMintDelegateBundle#delegateName:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "get delegateName(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "delegateName",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "stellar-tokenomics!~STokMintDelegateBundle#requiresGovAuthority:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "requiresGovAuthority: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "requiresGovAuthority",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "stellar-tokenomics!~STokMintDelegateBundle#specializedDelegateModule:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "specializedDelegateModule: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Source",
+                  "canonicalReference": "@helios-lang/compiler-utils!Source:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "specializedDelegateModule",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
             }
           ],
           "extendsTokenRange": {
