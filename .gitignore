@@ -1,3 +1,6 @@
+# don't check in this file; we use it only for dev purposes here.
+pnpm-workspace.yaml
+
 .hltemp/
 *.hlBundled.mjs
 zz_junk/
