@@ -22,7 +22,6 @@ import {
 import { MarketSaleCapo as SomeTokenomicsCapo } from "./modules/MarketSaleCapo.js";
 import { dumpAny } from "@donecollectively/stellar-contracts";
 import { makeValue } from "@helios-lang/ledger";
-import { ErgoMarketSaleData } from "../MarketSale.concrete.typeInfo.js";
 
 let helperState: TestHelperState<SomeTokenomicsCapo> = {
     snapshots: {},

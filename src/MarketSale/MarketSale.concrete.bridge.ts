@@ -49,6 +49,10 @@ import {
     type IntersectedEnum,
 } from "@donecollectively/stellar-contracts"
 
+
+/**
+ * @public
+ */
 export type TimeLike = IntLike;
 
 
@@ -139,7 +143,7 @@ import type * as types from "./MarketSale.concrete.typeInfo.js";
 * method is the normal way to locate and decode on-chain data without needing to explicitly use the data-bridge helper classes.
 * 
 * ##### customizing the bridge class name
-* Note that you may override `get dataBridgeName() { return "..." }` to customize the name of this bridge class
+* Note that you may override `get bridgeClassName() { return "..." }` to customize the name of this bridge class
 * @public
  */
 export class MarketSalePolicyDataBridge extends ContractDataBridge {
@@ -558,7 +562,7 @@ export class MarketSalePolicyDataBridge extends ContractDataBridge {
 }
 export default MarketSalePolicyDataBridge;
 
-/*
+/**
  * @public
  */
 export class MarketSalePolicyDataBridgeReader extends DataBridgeReaderClass {
@@ -2310,7 +2314,6 @@ export class CapoLifecycleActivityHelper extends EnumBridge<JustAnEnum> {
         const nestedAccessor = new DelegateRoleHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: false 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (role: DelegateRoleLike) => {
                 return  this.mkUplcData({ removePendingChange: role }, 
@@ -2464,7 +2467,6 @@ export class CapoLifecycleActivityHelper extends EnumBridge<JustAnEnum> {
         const nestedAccessor = new ManifestActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: false 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: ManifestActivityLike) => {
                 return  this.mkUplcData({ updatingManifest: activity }, 
@@ -3069,7 +3071,6 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
         const nestedAccessor = new ActivityDelegateRoleHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (role: DelegateRoleLike) => {
                 return  this.mkUplcData({ removePendingChange: role }, 
@@ -3239,7 +3240,6 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
         const nestedAccessor = new ManifestActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: ManifestActivityLike) => {
                 return  this.mkUplcData({ updatingManifest: activity }, 
@@ -3718,7 +3718,6 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         const nestedAccessor = new CapoLifecycleActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: CapoLifecycleActivityLike) => {
                 return  this.mkUplcData({ CapoLifecycleActivities: activity }, 
@@ -3734,7 +3733,6 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         const nestedAccessor = new DelegateLifecycleActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: DelegateLifecycleActivityLike) => {
                 return  this.mkUplcData({ DelegateLifecycleActivities: activity }, 
@@ -3750,7 +3748,6 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         const nestedAccessor = new SpendingActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: SpendingActivityLike) => {
                 return  this.mkUplcData({ SpendingActivities: activity }, 
@@ -3766,7 +3763,6 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         const nestedAccessor = new MintingActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: MintingActivityLike) => {
                 return  this.mkUplcData({ MintingActivities: activity }, 
@@ -3782,7 +3778,6 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         const nestedAccessor = new BurningActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: BurningActivityLike) => {
                 return  this.mkUplcData({ BurningActivities: activity }, 

@@ -2,7 +2,7 @@ import { CapoHeliosBundle, CharterData, defineRole, delegateRoles, FoundDatumUtx
 import { GenericTokenomicsFeatureFlags, StellarTokenomicsCapo } from "../../src/StellarTokenomicsCapo";
 import { TxInput } from "@helios-lang/ledger";
 import { STokMintDelegate } from "../../src/STokMintDelegate";
-import { CapoDatum$Ergo$CharterData } from "../../src/STokMintDelegate.typeInfo";
+import type { CapoDatum$Ergo$CharterData } from "../../src/STokMintDelegate.typeInfo";
 import { MarketSaleController } from "../../src/MarketSale/MarketSaleController";
 import {STokMintDelegateDataBridge as gtCapoMintDelegateDataBridge} from "./gtCapoMintDelegate.bridge.js";
 import { gtCapoMintDelegateBundle } from "./gtCapoMintDelegate.hlb.js";

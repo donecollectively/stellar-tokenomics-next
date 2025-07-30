@@ -3,6 +3,7 @@ pnpm-workspace.yaml
 
 .hltemp/
 *.hlBundled.mjs
+zz_disabled/
 zz_junk/
 // for api-extractor's input files:
 doc-gen/d.ts/
