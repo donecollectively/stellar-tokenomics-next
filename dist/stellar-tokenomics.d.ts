@@ -1090,6 +1090,9 @@ declare type cctx_CharterInputTypeLike = IntersectedEnum<{
     Input: cctx_CharterInputType$InputLike;
 }>;
 
+/**
+ * @public
+ */
 declare type Constructor<T> = new (...args: any[]) => T;
 
 /**
@@ -2792,6 +2795,9 @@ export declare type hasMemberToken = StellarTxnContext<anyState & {
     memberToken: UutName;
 }>;
 
+/**
+ * @public
+ */
 declare type IsStokMintDelegate = {
     specializedDelegateModule: typeof tokenomicsBasicMintDelegate;
     requiresGovAuthority: true;
@@ -2806,7 +2812,7 @@ declare type IsStokMintDelegate = {
  *    export const MyMintDelegate = makeSTokMintDelegateBundle(MyCapoBundle, "MyMintDelegate")
  *    export default MyMintDelegate
  * ```
- * This HLB file will be compiled to make  `.bridge.ts` and `.typeInfo.ts` for your delegate.  Import
+ * This HLB file will be compiled to make  `.bridge.ts` and `.typeInfo.d.ts` for your delegate.  Import
  * the DataBridge and make your `MySpendMintDelegate.ts`, extending `STokMintDelegate`
  * and using:
  * ```typescript
@@ -2830,7 +2836,7 @@ declare type IsStokMintDelegate = {
  *
  * @public
  */
-export declare function makeSTokMintDelegateBundle<CapoBundleType extends typeof CapoHeliosBundle>(capoBundle: CapoBundleType, delegateName: string): Constructor<STokMintDelegateBundle & IsStokMintDelegate> & ConcreteCapoDelegateBundle;
+export declare function makeSTokMintDelegateBundle(capoBundle: typeof CapoHeliosBundle, delegateName: string): ConcreteCapoDelegateBundle & Constructor<STokMintDelegateBundle & IsStokMintDelegate>;
 
 /**
  * A strong type for the canonical form of ManifestActivity$addingEntry
@@ -3572,7 +3578,7 @@ declare class MarketSaleDataWrapper {
  * method is the normal way to locate and decode on-chain data without needing to explicitly use the data-bridge helper classes.
  *
  * ##### customizing the bridge class name
- * Note that you may override `get dataBridgeName() { return "..." }` to customize the name of this bridge class
+ * Note that you may override `get bridgeClassName() { return "..." }` to customize the name of this bridge class
  * @public
  */
 declare class MarketSalePolicyDataBridge extends ContractDataBridge {
@@ -3882,6 +3888,9 @@ declare class MarketSalePolicyDataBridge extends ContractDataBridge {
     ᱺᱺDynamicSaleV1Cast: Cast<DynamicSaleV1, DynamicSaleV1Like>;
 }
 
+/**
+ * @public
+ */
 declare class MarketSalePolicyDataBridgeReader extends DataBridgeReaderClass {
     bridge: MarketSalePolicyDataBridge;
     constructor(bridge: MarketSalePolicyDataBridge, isMainnet: boolean);
@@ -5756,6 +5765,11 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
 }
 
 /**
+ * @public
+ */
+declare const stmdbBase: ConcreteCapoDelegateBundle;
+
+/**
  * Base class for mint/spend delegates
  * @public
  */
@@ -5769,13 +5783,11 @@ export declare class STokMintDelegate extends BasicMintDelegate {
  * A specialized minting delegate for testing purposes
  * @public
  */
-declare class STokMintDelegateBundle extends STokMintDelegateBundle_base {
+declare class STokMintDelegateBundle extends stmdbBase {
     specializedDelegateModule: Source;
     requiresGovAuthority: boolean;
     get delegateName(): string;
 }
-
-declare const STokMintDelegateBundle_base: ConcreteCapoDelegateBundle;
 
 /**
  * A strong type for the canonical form of ThreadInfo
@@ -5809,6 +5821,9 @@ declare interface ThreadInfoLike {
 
 declare type TimeLike = IntLike;
 
+/**
+ * @public
+ */
 declare type TimeLike_2 = IntLike;
 
 /**
