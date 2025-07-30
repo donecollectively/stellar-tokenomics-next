@@ -4,7 +4,13 @@
 #  - symlink from pnpm-workspace.yaml to this file
 #  - don't commit these changes!
 #  - run `pnpm install` after changing these. 
-# - remove the symlink and run `pnpm install` before committing!!!!!
+# Before committing changes:
+# - remove the symlink 
+# - ensure package.json has an UPDATED VERSION NUMBER for the stellar-contracts dependency
+# - remove node_modules/
+# - run `pnpm install` 
+# This ^ will ensure that  package.json / pnpm-lock.yaml aren't committed 
+# ... with details that would break the external integration.
 
 packages:
   - ./

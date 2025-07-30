@@ -54,3 +54,6 @@ Visit ODIN for getting help.  https://www.odin.eco/
 
   4. Please add requirements and tests to go with your changes.
 
+  5. To do co-development with changes in stellar-contracts, see pnpm-workspace.yaml.dev for a recipe.
+
+
