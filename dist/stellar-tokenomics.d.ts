@@ -5747,7 +5747,7 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
      * Includes a seed-utxo in the transaction context for use in any aspect
      * of the transaction that may need it (i.e. minting a discount token or ?)
      */
-    mkTxnWithMemberInfo<TCX extends StellarTxnContext = StellarTxnContext>(skipReturningToken?: "skipTokenReturn", tcx?: TCX): Promise<TCX & hasMemberToken & hasSeedUtxo>;
+    mkTxnWithMemberInfo<TCX extends StellarTxnContext = StellarTxnContext>(skipReturningToken?: "skipTokenReturn", tcx?: TCX): Promise<TCX & hasMemberToken>;
     mustFindMemberInfo(): Promise<FoundUut>;
     findMemberInfo(): Promise<FoundUut | undefined>;
     txnAddMemberToken<TCX extends StellarTxnContext>(tcx: TCX, memberInfo?: FoundUut, skipReturningToken?: "skipTokenReturn"): Promise<TCX & hasMemberToken & hasSeedUtxo>;

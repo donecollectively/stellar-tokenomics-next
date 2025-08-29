@@ -171,7 +171,7 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
     // (undocumented)
     getMintDelegate(charterData?: CapoDatum$Ergo$CharterData): Promise<STokMintDelegate>;
     mkTxnMintParticipantToken(addr: Address): Promise<hasUutContext<"member"> & StellarTxnContext<anyState> & hasSeedUtxo>;
-    mkTxnWithMemberInfo<TCX extends StellarTxnContext = StellarTxnContext>(skipReturningToken?: "skipTokenReturn", tcx?: TCX): Promise<TCX & hasMemberToken & hasSeedUtxo>;
+    mkTxnWithMemberInfo<TCX extends StellarTxnContext = StellarTxnContext>(skipReturningToken?: "skipTokenReturn", tcx?: TCX): Promise<TCX & hasMemberToken>;
     // (undocumented)
     mkUutName(purpose: string, txin: TxInput): UutName;
     // (undocumented)

@@ -199,6 +199,9 @@ class StellarTokenomicsCapo extends Capo {
   async mkTxnWithMemberInfo(skipReturningToken, tcx = this.mkTcx()) {
     const memberInfo = await this.mustFindMemberInfo();
     const maybeSkipReturningToken = skipReturningToken;
+    if (tcx.state.memberToken) {
+      return tcx;
+    }
     return this.txnAddMemberToken(tcx, memberInfo, maybeSkipReturningToken);
   }
   async mustFindMemberInfo() {

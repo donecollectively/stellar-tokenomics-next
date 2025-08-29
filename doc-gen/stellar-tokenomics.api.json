@@ -30749,15 +30749,6 @@
                 },
                 {
                   "kind": "Content",
-                  "text": " & "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "hasSeedUtxo",
-                  "canonicalReference": "@donecollectively/stellar-contracts!hasSeedUtxo:type"
-                },
-                {
-                  "kind": "Content",
                   "text": ">"
                 },
                 {
@@ -30781,7 +30772,7 @@
               "isStatic": false,
               "returnTypeTokenRange": {
                 "startIndex": 9,
-                "endIndex": 15
+                "endIndex": 13
               },
               "releaseTag": "Public",
               "isProtected": false,
