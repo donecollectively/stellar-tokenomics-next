@@ -255,10 +255,13 @@ export abstract class StellarTokenomicsCapo<
     >(
         skipReturningToken?: "skipTokenReturn",
         tcx: TCX = this.mkTcx() as TCX
-    ): Promise<TCX & hasMemberToken & hasSeedUtxo> {
+    ): Promise<TCX & hasMemberToken> {
         const memberInfo = await this.mustFindMemberInfo();
         const maybeSkipReturningToken = skipReturningToken;
 
+        if ((tcx.state as any).memberToken) {
+            return tcx as any;
+        }
         return this.txnAddMemberToken(tcx, memberInfo, maybeSkipReturningToken);
     }
 
