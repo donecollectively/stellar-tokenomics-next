@@ -47,6 +47,7 @@ export default defineConfig({
         ],
         exclude: [
             "disabled-for-now/**",
+            "zz_disabled/**",
             "node_modules/**",
         ],
         // diff: './vitest.diff.ts',
