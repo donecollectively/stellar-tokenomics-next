@@ -374,12 +374,17 @@ enum DelegateActivity {
                 print(" ℹ️  mint delegate allowing DeletingDelegatedData on the say-so of its policy delegate");
                 true
             },
+            MultipleDelegateActivities => {
+                print(" ℹ️  mint delegate: MultipleDelegateActivities: no special validation in this unspecialized delegate");
+                true
+            },
             _ => {
                 assert(false, "mint/spend delegate rejecting other activity");
                 false
             }
-        } || tx.serialize() == priorMddd.serialize()        
+        } || tx.serialize() == priorMddd.serialize()
     }
+
     func supportedCapoDelegatePurposes(self) -> []String {
         assert(true || /* prevent unused variable */ self == self, "no way, man" );
          []String{ 
