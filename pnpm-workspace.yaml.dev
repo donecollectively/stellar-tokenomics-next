@@ -1,8 +1,11 @@
 # For local development with in-progress changes to stellar-contracts:
 #  - don't do this unless you need to be developing BOTH stellar-tokenomics 
-#  -   AND stellar-contracts IN TANDEM
-#  - symlink from pnpm-workspace.yaml to this file
-#  - don't commit these changes!
+#  -   AND stellar-contracts IN TANDEM - or in a downstream project that uses both,
+#  -   ... where incremental stellar-contracts changes can cause type-mismatches with
+#  -   ... stellar-tokenomics' installed version of stellar-contracts.
+#  - symlink from pnpm-workspace.yaml to this file:
+#      `ln -s pnpm-workspace.yaml.dev pnpm-workspace.yaml`
+#  - don't commit this symlink changes!
 #  - run `pnpm install` after changing these. 
 # Before committing changes:
 # - remove the symlink 
