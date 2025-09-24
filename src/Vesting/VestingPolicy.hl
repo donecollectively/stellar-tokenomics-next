@@ -254,6 +254,11 @@ enum DelegateActivity {
         // todo: change this back when the recursive enum's `__is_valid_data not found` error is resolved
         activities: []Data // actually a DelegateActivity
     }
+
+    OtherActivities {
+        activity: Data // specialized activities can be added here
+    }
+
     // this function gives a general-purpose implementation of checking for 
     // valid uut minting. 
     //
@@ -512,6 +517,9 @@ enum DelegateActivity {
                 }
             },
             BurningActivities => error("no burn activity here yet"),
+            OtherActivities => error(
+                "no other activities exist in this delegate"
+            ),
             _ => false
         } || tx.serialize() == priorMddd.serialize()        
     }

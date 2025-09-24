@@ -249,6 +249,10 @@ enum DelegateActivity {
         activities: []Data // actually a DelegateActivity
     }
 
+    OtherActivities {
+        activity: Data // specialized activities can be added here
+    }
+
     // this function gives a general-purpose implementation of checking for 
     // valid uut minting. 
     //
@@ -542,6 +546,9 @@ enum DelegateActivity {
                     }
                 }
             },
+            OtherActivities => error(
+                "no other activities exist in this delegate"
+            ),
             _ => false
         } || tx.serialize() == priorMddd.serialize()        
     }

@@ -204,6 +204,10 @@ enum DelegateActivity {
         // todo: change this back when the recursive enum's `__is_valid_data not found` error is resolved
     }
 
+    OtherActivities {
+        activity: Data // specialized activities can be added here
+    }
+
     // this function gives a general-purpose implementation of checking for 
     // valid uut minting. 
     //
@@ -378,6 +382,9 @@ enum DelegateActivity {
                 print(" ℹ️  mint delegate: MultipleDelegateActivities: no special validation in this unspecialized delegate");
                 true
             },
+            OtherActivities => error(
+                "no other activities exist in this delegate"
+            ),
             _ => {
                 assert(false, "mint/spend delegate rejecting other activity");
                 false
