@@ -85,7 +85,6 @@
         "@types/diff": "^5.0.9",
         "autoprefixer": "^10.4.14",
         "clsx": "^1.2.1",
-        "cross-fetch": "^4.0.0",
         "diff": "^5.1.0",
         "focus-visible": "^5.2.0",
         "postcss-focus-visible": "^6.0.4",
