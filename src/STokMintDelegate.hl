@@ -44,7 +44,13 @@ import {
     AnyData,
     REQT,
     bREQT,
-    TODO
+    TODO,
+    REQTgroup,
+    REQTgroupUnit,
+    logGroupUnit,
+    logGroup,
+    logGroupStart,
+    logGroupEnd
 } from StellarHeliosHelpers
 
 import {
@@ -314,7 +320,9 @@ enum DelegateActivity {
                 assert(cctx.withCharterRef().orFail(), "can't");
 
                 ma.switch{
-                    MintingParticipantToken{seed} => {
+                    MintingParticipantToken{seed} => REQTgroup[Bool](
+                    reqt: "minting participant token", collapsed: false, 
+                    callback: () -> {
                         purpose : String = "member"; // todo: get from config
                         // mkTokenName = mkUutTnFactory(seed);
 
@@ -333,7 +341,7 @@ enum DelegateActivity {
                         //     uutPrefix, 
                         //     mkTokenName
                         // )
-                    },
+                    }),
 
                     MintingFungibleTokens{tokenName} => {
                         print("MintingFungibleTokens: ");
@@ -366,16 +374,16 @@ enum DelegateActivity {
                     }        
                 }
             },
-            CreatingDelegatedData => {
-                print(" ℹ️  mint delegate allowing CreatingDelegatedData on the say-so of its policy delegate");
+            CreatingDelegatedData{_, dataType} => {
+                print(" ℹ️  mint: delegates CreatingDelegatedData authority to policy: "+dataType);
                 true
             },
-            UpdatingDelegatedData => {
-                print(" ℹ️  spend delegate allowing UpdatingDelegatedData on the say-so of its policy delegate");
+            UpdatingDelegatedData{dataType, _recId} => {
+                print(" ℹ️  spend: delegates UpdatingDelegatedData authority to policy: "+dataType);
                 true
             },
-            DeletingDelegatedData => {
-                print(" ℹ️  mint delegate allowing DeletingDelegatedData on the say-so of its policy delegate");
+            DeletingDelegatedData{dataType, _recId} => {
+                print(" ℹ️  spend: delegates DeletingDelegatedData authority to policy: "+dataType);
                 true
             },
             MultipleDelegateActivities => {
@@ -399,11 +407,12 @@ enum DelegateActivity {
         }
     }
 
-    //! Used only for validating non-IsDelegation datum types and activities.
-    // if you have any special admininstrative data structures that inform 
-    // ...  your minting policy, this might be useful.  Otherwise, and typically,
-    // ... you should look to Activity validations above in additionalDelegateValidation,
-    // ...  in which the isDelegation token is being spent with an application-specific
+    //! Use this only for validating non-IsDelegation datum types and activities,
+    //  stored in the delegate's own address, for special cases where that could 
+    // be important (so far, it's never been used - please open a discussion if you 
+    //    think it's needed for your special case)
+    // Typically, you should look to Activity validations above in additionalDelegateValidation,
+    // ...  in which the unique isDelegation token is being spent with an application-specific
     // ...  activity/redeemer
     func otherDatumValidation( self,
         _priorMdd: DelegateDatum
