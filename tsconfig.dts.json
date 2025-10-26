@@ -47,13 +47,14 @@
         // "disableReferencedProjectLoad": false,
         "paths": {
             "stellar-tokenomics": ["./src/index.ts"],
-            "src/*": ["./src/*"]
+            // "src/*": ["./src/*"]
         }
         // "plugins": [],
         // "outFile": "dist/index.d.ts",
     },
     "files": [ 
-        "src/index.ts",
+        // "./src/index.ts",
+        "./doc-gen/d.ts/src/index.d.ts",
         "./heliosModule.d.ts",
     ],
     "include": [

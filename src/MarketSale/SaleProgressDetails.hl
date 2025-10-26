@@ -6,7 +6,7 @@ import {
     TODO
 } from StellarHeliosHelpers
 
-struct SaleProgressDetails {
+struct SaleProgressDetailsV1 {
     lastPurchaseAt: Time 
     prevPurchaseAt: Time 
 
@@ -28,7 +28,7 @@ struct SaleProgressDetails {
 
     func validateUpdatedDetails(
         self, 
-        prevProgress: SaleProgressDetails, 
+        prevProgress: SaleProgressDetailsV1, 
         now: Time,
         unitsSold: Int
     ) -> Bool {

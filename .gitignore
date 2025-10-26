@@ -1,7 +1,7 @@
 # don't check in this file; we use it only for dev purposes here.
 pnpm-workspace.yaml
 
-.hltemp/
+.stellar/
 *.hlBundled.mjs
 zz_disabled/
 zz_junk/

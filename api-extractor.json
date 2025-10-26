@@ -62,7 +62,7 @@
      */
     "bundledPackages": [
         // "@donecollectively/stellar-contracts", 
-        // "stellar-tokenomics"
+        "stellar-tokenomics"
     ],
   
     /**
@@ -308,6 +308,7 @@
        * DEFAULT VALUE: false
        */
       // "omitTrimmingComments": true
+      
     },
   
     /**

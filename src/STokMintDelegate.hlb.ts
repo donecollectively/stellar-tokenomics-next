@@ -58,8 +58,9 @@ export type Constructor<T> = new (...args: any[]) => T;
  *        return "MyMintSpendDelegate";
  *    }
  *    dataBridgeClass = MyMintSpendDelegateDataBridge;
- *     scriptBundle(): CapoDelegateBundle {
- *        return MyMintSpendDelegateBundle.create();
+ *     async scriptBundleClass(): Promise<CapoDelegateBundle> {
+ *        const module = await import("./MyMintSpendDelegate.hlb");
+ *        return module.MyMintSpendDelegateBundle
  *     }
  * ```
  * 

@@ -22,9 +22,10 @@ type MktSaleFeatures = {
 };
 
 class ConcreteMSC extends MarketSaleController {
-    scriptBundle() {
-        const capoBundle = this.capo!.scriptBundle()!.constructor as any;
-        return ConcreteMarketSaleBundle.usingCapoBundleClass(capoBundle).create();
+    async scriptBundleClass() {
+        const capoBundle = await this.capo.scriptBundleClass()
+
+        return ConcreteMarketSaleBundle.usingCapoBundleClass(capoBundle)
     }
 }
 
@@ -33,20 +34,16 @@ class msCapoMintDelegate extends STokMintDelegate {
         return "msCapoMintDelegate";
     }
     dataBridgeClass = msCapoMintDelegateDataBridge;
-    scriptBundle() {
-        return msCapoMintDelegateBundle.create({
-            setup: this.setup,
-        });
+    async scriptBundleClass() {
+        return msCapoMintDelegateBundle
     }
 }
 
 export class MarketSaleCapo extends Capo<MarketSaleCapo, MktSaleFeatures> {
     autoSetup = true;
     
-    scriptBundle() {
-        return MarketSaleCapoBundle.create({
-            setup: this.setup,
-        });
+    async scriptBundleClass() {
+        return MarketSaleCapoBundle
     }
 
     get defaultFeatureFlags(): MktSaleFeatures {

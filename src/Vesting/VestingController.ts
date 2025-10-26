@@ -14,9 +14,10 @@ import type {
     hasSeed,
     hasSettingsRef,
     minimalData,
+    DelegatedDataBundle,
 } from "@donecollectively/stellar-contracts";
 
-import GenericVestingBundle from "./Vesting.generic.hlb.js";
+import type GenericVestingBundle from "./Vesting.generic.hlb.js";
 import type { ErgoVestingData, VestingData, VestingDataLike } from "./Vesting.generic.typeInfo.js";
 import VestingPolicyDataBridge, { VestingStateHelper } from "./Vesting.generic.bridge.js";
 import AbstractVestingBundle from "./Vesting.abstractBundle.js";
@@ -40,12 +41,16 @@ export class VestingController extends DelegatedDataContract<
 > {
     dataBridgeClass = VestingPolicyDataBridge;
 
-    scriptBundle() {
-        const capoBundle = this.capo!.scriptBundle()!.constructor as any;
+    async scriptBundleClass() {
+        const capoBundle = await this.capo!.mkScriptBundle();
 
-        return AbstractVestingBundle.usingCapoBundleClass(
-            capoBundle
-        ).create();
+        const msb: typeof GenericVestingBundle = await import(
+            "./Vesting.generic.hlb.js"
+        ).then((m) => m.GenericVestingBundle);
+
+        return msb.usingCapoBundleClass(
+            capoBundle.constructor as any
+        )
     }
     idPrefix = "vest";
 

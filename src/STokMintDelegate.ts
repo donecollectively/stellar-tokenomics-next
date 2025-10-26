@@ -35,11 +35,11 @@ export class STokMintDelegate extends BasicMintDelegate {
     constructor(...args: any[]) {
         //@ts-ignore
         super(...args);
-        this.scriptBundle(); // check that there's a scriptBundle method
+        this.scriptBundleClass(); // check that there's a scriptBundle method
     }
 
-    scriptBundle() {
-        throw new Error(`${this.constructor.name}: required method scriptBundle not implemented for subclass of STokMintDelegate`);
+    async scriptBundleClass() {
+        throw new Error(`${this.constructor.name}: required method scriptBundleClass not implemented for subclass of STokMintDelegate`);
         return null as any
     }
 

@@ -26,20 +26,16 @@ class vCapoMintDelegate extends STokMintDelegate {
         return "vCapoMintDelegate";
     }
     dataBridgeClass = vCapoMintDelegateBridge;
-    scriptBundle() {
-        return vCapoMintDelegateBundle.create({
-            setup: this.setup,
-        });
+    async scriptBundleClass() {
+        return vCapoMintDelegateBundle
     }
 }
 
 export class VestingCapo extends Capo<VestingCapo, VestingFeatures> {
     autoSetup = true;
     
-    scriptBundle() {
-        return VestingCapoBundle.create({
-            setup: this.setup,
-        });
+    async scriptBundleClass() {
+        return VestingCapoBundle
     }
 
     get defaultFeatureFlags(): VestingFeatures {

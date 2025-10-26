@@ -4,7 +4,7 @@ import VestingPolicy from "./VestingPolicy.hl"
 import VestingData from "./VestingData.hl";
 import AbstractVestingBundle from "./Vesting.abstractBundle.js";
 
-export default class GenericVestingBundle 
+export class GenericVestingBundle 
 extends AbstractVestingBundle.usingCapoBundleClass(CapoHeliosBundle) {
     specializedDelegateModule = VestingPolicy;
     requiresGovAuthority = true;
@@ -17,3 +17,4 @@ extends AbstractVestingBundle.usingCapoBundleClass(CapoHeliosBundle) {
     // }
 }
 
+export default GenericVestingBundle;

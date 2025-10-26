@@ -5,6 +5,9 @@
 # testing
 /coverage
 
+# stellar temp files
+.stellar
+
 # next.js
 /.next/
 /out/
