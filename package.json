@@ -43,7 +43,7 @@
         "rollup:watch": "scripts/rollup --watch",
         "build:ui": "next build",
         "start": "next start",
-        "stc:link": "test -L pnpm-workspace.yaml || ln -s pnpm-workspace.dev.yaml pnpm-workspace.yaml ; rm -rf node_modules ; pnpm install",
+        "stc:link": "test -L pnpm-workspace.yaml || ln -s pnpm-workspace.yaml.dev pnpm-workspace.yaml ; rm -rf node_modules ; pnpm install",
         "stc:unlink": "rm -f pnpm-workspace.yaml ; rm -rf node_modules ; pnpm install",
         "lint": "next lint",
         "test": "vitest run",
