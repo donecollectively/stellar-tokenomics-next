@@ -132,15 +132,15 @@ export default [
             },
         ],
         pluginsAfter: [
-            execute({
-                sync: true,
-                commands: [
-                    "pnpm exec api-extractor run --local -c api-extractor.json",
-                    "echo '   ✅ stellar-tokenomics.d.ts' ; echo ''  ",
-                    "echo",
-                    "echo -n 'build ready: ' ; date",
-                ],
-            }),
+            // execute({
+            //     sync: true,
+            //     commands: [
+            //         "pnpm exec api-extractor run --local -c api-extractor.json",
+            //         "echo '   ✅ stellar-tokenomics.d.ts' ; echo ''  ",
+            //         "echo",
+            //         "echo -n 'build ready: ' ; date",
+            //     ],
+            // }),
         ],
     }),
 ];

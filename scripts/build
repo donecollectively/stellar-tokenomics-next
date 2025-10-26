@@ -8,7 +8,10 @@ startTime=$(date)
 
 playStartSound
 
-# inBackground "type-checking" tsc & 
+# echo "tsc --traceResolution -p ./tsconfig.dts.json"
+# tsc --traceResolution -p ./tsconfig.dts.json
+# exit
+
 inBackground "typecheck all, prep for doc-gen and main .d.ts" \
     tsc -p ./tsconfig.dts.json  &
 {
@@ -20,16 +23,24 @@ inBackground "typecheck all, prep for doc-gen and main .d.ts" \
 } || logProblemWith "dAPI build with rollup"
 
 wait
+find src -type d | tail -n +2 | while read a ; do { mkdir -p .stellar/api/$a ; } done
+find src -name \*.typeInfo.d.ts | grep -v '/tests/' | while read a ; do { cp $a .stellar/api/$a ; } done
+
+echo "build started at  $startTime"
+date
 exitIfError
 playCheckpointSound
 
+
 echo -n "build finished at "
 date
+# inBackground "dAPI docs" api-extractor run --local --verbose --diagnostics &
 inBackground "dAPI docs" api-extractor run --local --verbose &
+
 wait
-exitIfError
 echo "build started at  $startTime"
 echo "build finished at $(date)"
+exitIfError
 
 playSuccessSound
 
