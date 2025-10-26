@@ -33,6 +33,8 @@ import type {
     updateActivityFunc,
     seedActivityFunc,
     Capo,
+    CapoDelegateBundle,
+    DelegatedDataBundle,
 } from "@donecollectively/stellar-contracts";
 import {
     makeDummyAddress,
@@ -40,17 +42,26 @@ import {
     type MintingPolicyHash,
     type Value,
 } from "@helios-lang/ledger";
-import MarketSaleBundle from "./MarketSaleBundle.js";
-// import ConcreteMarketSaleBundle from "./MarketSale.concrete.hlb.js";
-import type {
+
+// import type {
+//     ErgoMarketSaleData,
+//     MarketSaleData,
+//     MarketSaleDataLike,
+//     minimalMarketSaleData,
+// } from "./MarketSale.generic.typeInfo.js";
+// import MarketSalePolicyDataBridge from "./MarketSale.generic.bridge.js";
+// import type MarketSaleBundle from "./MarketSale.generic.hlb.js";
+import { encodeUtf8 } from "@helios-lang/codec-utils";
+import { MarketSaleDataWrapper } from "./MarketSaleDataWrapper.js";
+import type MarketSaleBundle from "./MarketSale.hlb.js";
+export type {
     ErgoMarketSaleData,
     MarketSaleData,
     MarketSaleDataLike,
     minimalMarketSaleData,
-} from "./MarketSale.concrete.typeInfo.js";
-import { encodeUtf8 } from "@helios-lang/codec-utils";
-import { MarketSaleDataWrapper } from "./MarketSaleDataWrapper.js";
-import MarketSalePolicyDataBridge from "./MarketSale.concrete.bridge.js";
+} from "./MarketSale.typeInfo.js";
+import MarketSalePolicyDataBridge from "./MarketSale.bridge.js";
+import type { MarketSaleData, MarketSaleDataLike, minimalMarketSaleData } from "./MarketSale.typeInfo.js";
 
 /**
  * @public
@@ -63,7 +74,7 @@ export type PurchaseContext = {
 
 /**
  * @public
- */ 
+ */
 export class MarketSaleController extends WrappedDgDataContract<
     MarketSaleData,
     MarketSaleDataLike,
@@ -75,20 +86,18 @@ export class MarketSaleController extends WrappedDgDataContract<
         return "mktSale";
     }
 
-    get abstractBundleClass() {
-        return MarketSaleBundle;
-    }
+    // get abstractBundleClass() {
+    //     return MarketSaleBundle;
+    // }
 
     get idPrefix() {
         return "mktSale";
     }
 
-    scriptBundle() {
-        // throw new Error(`must be implemented by subclass`);
-        const capoBundle = this.capo!.scriptBundle()!.constructor as any;
-        return MarketSaleBundle.usingCapoBundleClass(
-            capoBundle
-        ).create();
+    async scriptBundleClass() {
+        const module = await import("./MarketSale.hlb.js");
+
+        return module.MarketSaleBundle;
     }
 
     exampleData(): minimalMarketSaleData {
@@ -96,63 +105,71 @@ export class MarketSaleController extends WrappedDgDataContract<
         const mph = this.capo.mph;
         const units = 1000n;
         const startTime = new Date().getTime();
-        return {
+        const data : minimalMarketSaleData = {
             // id: "mktSale_123",
             // type: "mktSale",
             name: "Sample marketSale",
-            moreFields: {
-                fixedSaleDetails: {
-                    settings: {
-                        targetPrice: 1,
-                        targetedSellingTime: 75 * 60 * 1_000,
+            details: {
+                V1: {
+                    fixedSaleDetails: {
+                        settings: {
+                            targetPrice: 1,
+                            targetedSellingTime: 75 * 60 * 1_000,
 
-                        minPrice: 0.5,
-                        maxPrice: 4.2,
+                            minPrice: 0.5,
+                            maxPrice: 4.2,
 
-                        progressPricingDiscountFloorPoint: 0.2,
-                        progressPricingDiscountWhenSlow: 0.25,
-                        progressPricingExpansionWhenFast: 0.2,
+                            progressPricingDiscountFloorPoint: 0.2,
+                            progressPricingDiscountWhenSlow: 0.25,
+                            progressPricingExpansionWhenFast: 0.2,
 
-                        dynaPaceFasterSaleWeight: 0.3,
-                        dynaPaceIdleDecayRate: 0.5,
+                            dynaPaceFasterSaleWeight: 0.3,
+                            dynaPaceIdleDecayRate: 0.5,
+                            
 
-                        pricingWeightDynaPace: 5,
+                            pricingWeightDynaPace: 5,
+                        },
+                        startAt: startTime,
+                        vxfTokensTo: undefined,
+                        vxfFundsTo: {
+                            Anywhere: {},
+                        },
                     },
-                    startAt: startTime,
-                    vxfTokensTo: undefined,
-                    vxfFundsTo: {
-                        Anywhere: {}
-                    }
-                },
-                saleAssets: {
-                    primaryAssetMph: mph,
-                    primaryAssetName: tn,
-                    primaryAssetTargetCount: 100_000_000n,
-                    totalSaleUnits: units,
-                    saleUnitAssets: makeValue(mph, tn, 100_000_000n / units),
-                    singleBuyMaxUnits: 25n,
-                },
-                saleState: {
-                    progressDetails: {
-                        lastPurchaseAt: startTime,
-                        prevPurchaseAt: startTime,
-                        chunkUnitCount: units,
-                        chunkUnitsSold: 0n,
+                    saleAssets: {
+                        primaryAssetMph: mph,
+                        primaryAssetName: tn,
+                        primaryAssetTargetCount: 100_000_000n,
+                        totalSaleUnits: units,
+                        saleUnitAssets: makeValue(
+                            mph,
+                            tn,
+                            100_000_000n / units
+                        ),
+                        singleBuyMaxUnits: 25n,
                     },
-                    salePace: 1,
-                    state: { Pending: {}},
-                },
-                threadInfo: {
-                    chunkForkedAt: 0n,
-                    nestedThreads: 0n,
-                    retiredThreads: 0n,
-                    parentChunkId: encodeUtf8(""),
-                    // is changed to match the sale `id` on creation
-                    // ... or to parentChunkId's saleId, if this is a split chunk
-                    saleId: encodeUtf8("mktSale-123"),
+                    saleState: {
+                        progressDetails: {
+                            lastPurchaseAt: startTime,
+                            prevPurchaseAt: startTime,
+                            chunkUnitCount: units,
+                            chunkUnitsSold: 0n,
+                        },
+                        salePace: 1,
+                        state: { Pending: {} },
+                    },
+                    threadInfo: {
+                        chunkForkedAt: 0n,
+                        nestedThreads: 0n,
+                        retiredThreads: 0n,
+                        parentChunkId: encodeUtf8(""),
+                        // is changed to match the sale `id` on creation
+                        // ... or to parentChunkId's saleId, if this is a split chunk
+                        saleId: encodeUtf8("mktSale-123"),
+                    },
                 },
             },
         };
+        return data;
     }
 
     // mkDatumAdapter() {
@@ -184,24 +201,24 @@ export class MarketSaleController extends WrappedDgDataContract<
             predicate(utxo, data) {
                 if (
                     !!saleId &&
-                    data.moreFields.threadInfo.saleId != targetSaleId
+                    data.details.V1.threadInfo.saleId != targetSaleId
                 )
                     return false;
                 if (
                     !!parentId &&
-                    data.moreFields.threadInfo.parentChunkId != targetParentId
+                    data.details.V1.threadInfo.parentChunkId != targetParentId
                 )
                     return false;
-                if (!!isRoot && data.id != data.moreFields.threadInfo.saleId)
+                if (!!isRoot && data.id != data.details.V1.threadInfo.saleId)
                     return false;
 
                 {
                     let stateMatch = false;
-                    if (pending && "Pending" in data.moreFields.saleState.state)
+                    if (pending && "Pending" in data.details.V1.saleState.state)
                         stateMatch = true;
-                    if (active && "Active" in data.moreFields.saleState.state)
+                    if (active && "Active" in data.details.V1.saleState.state)
                         stateMatch = true;
-                    if (retired && "Retired" in data.moreFields.saleState.state)
+                    if (retired && "Retired" in data.details.V1.saleState.state)
                         stateMatch = true;
                     if (!pending && !active && !retired) stateMatch = true;
 
@@ -338,7 +355,7 @@ export class MarketSaleController extends WrappedDgDataContract<
 
     beforeCreate(data: MarketSaleData) {
         debugger;
-        data.moreFields.threadInfo.saleId = data.id;
+        data.details.V1.threadInfo.saleId = data.id;
         return data;
     }
 
@@ -359,28 +376,30 @@ export class MarketSaleController extends WrappedDgDataContract<
             mktSale,
             {
                 activity: this.activity.SpendingActivities.Activating(
-                    mktSale.data!.moreFields.threadInfo.saleId
+                    mktSale.data!.details.V1.threadInfo.saleId
                 ),
                 updatedFields: {
                     ...newAttrs,
-                    moreFields: {
-                        ...newAttrs.moreFields,
-                        saleState: {
-                            ...mktSale.data!.moreFields.saleState,
-                            ...newAttrs.moreFields?.saleState,
-                            state: { Active: {} },
-                        },
-                        fixedSaleDetails: {
-                            ...mktSale.data!.moreFields.fixedSaleDetails,
-                            ...newAttrs.moreFields?.fixedSaleDetails,
-                        },
-                        saleAssets: {
-                            ...mktSale.data!.moreFields.saleAssets,
-                            ...newAttrs.moreFields?.saleAssets,
-                        },
-                        threadInfo: {
-                            ...mktSale.data!.moreFields.threadInfo,
-                            ...newAttrs.moreFields?.threadInfo,
+                    details: {
+                        V1: {
+                            ...newAttrs.details?.V1,
+                            saleState: {
+                                ...mktSale.data!.details.V1.saleState,
+                                ...newAttrs.details?.V1?.saleState,
+                                state: { Active: {} },
+                            },
+                            fixedSaleDetails: {
+                                ...mktSale.data!.details.V1.fixedSaleDetails,
+                                ...newAttrs.details?.V1?.fixedSaleDetails,
+                            },
+                            saleAssets: {
+                                ...mktSale.data!.details.V1.saleAssets,
+                                ...newAttrs.details?.V1?.saleAssets,
+                            },
+                            threadInfo: {
+                                ...mktSale.data!.details.V1.threadInfo,
+                                ...newAttrs.details?.V1?.threadInfo,
+                            },
                         },
                     },
                 },
@@ -420,14 +439,14 @@ export class MarketSaleController extends WrappedDgDataContract<
         const newTnString = bytesToText(newTnBytes);
         const primaryTnString =
             "string" ===
-            typeof existingSale.moreFields.saleAssets.primaryAssetName
-                ? existingSale.moreFields.saleAssets.primaryAssetName
+            typeof existingSale.details.V1.saleAssets.primaryAssetName
+                ? existingSale.details.V1.saleAssets.primaryAssetName
                 : bytesToText(
-                      existingSale.moreFields.saleAssets.primaryAssetName
+                      existingSale.details.V1.saleAssets.primaryAssetName
                   );
         const isPrimary =
             addedTokenMph.isEqual(
-                existingSale.moreFields.saleAssets.primaryAssetMph
+                existingSale.details.V1.saleAssets.primaryAssetMph
             ) && newTnString == primaryTnString;
         const existingTokensInContract =
             mktSale.utxo.value.assets.getPolicyTokenQuantity(
@@ -439,7 +458,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             existingTokensInContract
         );
         const previousSaleUnit =
-            existingSale.moreFields.saleAssets.saleUnitAssets;
+            existingSale.details.V1.saleAssets.saleUnitAssets;
         console.log("    -- previousSaleUnit", dumpAny(previousSaleUnit));
         const prevSaleUnitCountThisToken =
             previousSaleUnit.assets.getPolicyTokenQuantity(
@@ -460,7 +479,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         // for non-primary tokens added, the unit-size is updated to reflect the new deposted-token-amount
         const updatedUnitCount = isPrimary
             ? prevSaleUnitCountThisToken
-            : updatedCount / existingSale.moreFields.saleAssets.totalSaleUnits;
+            : updatedCount / existingSale.details.V1.saleAssets.totalSaleUnits;
 
         const newSaleUnitThisTokenValue = makeValue(
             addedTokenMph,
@@ -479,7 +498,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         console.log("    -- ℹ️  new saleUnitAssets", dumpAny(saleUnitAssets));
         console.log(
             "    -- ℹ️  totalSaleUnits",
-            existingSale.moreFields.saleAssets.totalSaleUnits
+            existingSale.details.V1.saleAssets.totalSaleUnits
         );
         if (isPrimary) {
             console.log(
@@ -487,7 +506,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                     Math.floor(
                         (Number(updatedCount) /
                             Number(
-                                existingSale.moreFields.saleAssets
+                                existingSale.details.V1.saleAssets
                                     .primaryAssetTargetCount
                             )) *
                             1_000_000
@@ -497,7 +516,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         } else {
             if (
                 updatedCount %
-                    existingSale.moreFields.saleAssets.totalSaleUnits !=
+                    existingSale.details.V1.saleAssets.totalSaleUnits !=
                 0n
             ) {
                 throw new Error(
@@ -511,7 +530,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             mktSale,
             {
                 activity: this.activity.SpendingActivities.AddingToSale({
-                    id: existingSale.moreFields.threadInfo.saleId,
+                    id: existingSale.details.V1.threadInfo.saleId,
                     mph: addedTokenMph,
                     tn:
                         "string" === typeof addedTokenName
@@ -519,20 +538,22 @@ export class MarketSaleController extends WrappedDgDataContract<
                             : addedTokenName,
                 }),
                 updatedFields: {
-                    moreFields: {
-                        ...mktSale.data!.moreFields,
-                        saleAssets: {
-                            ...mktSale.data!.moreFields.saleAssets,
-                            saleUnitAssets,
-                        },
-                        fixedSaleDetails: {
-                            ...mktSale.data!.moreFields.fixedSaleDetails,
-                        },
-                        threadInfo: {
-                            ...mktSale.data!.moreFields.threadInfo,
-                        },
-                        saleState: {
-                            ...mktSale.data!.moreFields.saleState,
+                    details: {
+                        V1: {
+                            ...mktSale.data!.details.V1,
+                            saleAssets: {
+                                ...mktSale.data!.details.V1.saleAssets,
+                                saleUnitAssets,
+                            },
+                            fixedSaleDetails: {
+                                ...mktSale.data!.details.V1.fixedSaleDetails,
+                            },
+                            threadInfo: {
+                                ...mktSale.data!.details.V1.threadInfo,
+                            },
+                            saleState: {
+                                ...mktSale.data!.details.V1.saleState,
+                            },
                         },
                     },
                 },
@@ -547,7 +568,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         itemDetails: FoundDatumUtxo<MarketSaleData>,
         sellingUnitQuantity: number | bigint = 1
     ) {
-        return itemDetails.data!.moreFields.saleAssets.saleUnitAssets.multiply(
+        return itemDetails.data!.details.V1.saleAssets.saleUnitAssets.multiply(
             sellingUnitQuantity
         );
     }
@@ -617,7 +638,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             unitCount: BigInt(sellingUnitQuantity),
         };
         console.log("🏒 buying from mktSale");
-        debugger
+        debugger;
         const unitPrice = mktSaleObj.getUnitPrice(pCtx);
         console.log("    -- unit price", unitPrice);
 
@@ -637,7 +658,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         console.log("    -- payment", dumpAny(pmtValue));
 
         const { lastPurchaseAt: prevPurchaseAt } =
-            mktSaleData.moreFields.saleState.progressDetails;
+            mktSaleData.details.V1.saleState.progressDetails;
 
         debugger;
         const tcx2 = tcx.validFor(
@@ -659,7 +680,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
 
         const { chunkUnitCount, chunkUnitsSold } =
-            mktSale.data!.moreFields.saleState.progressDetails;
+            mktSale.data!.details.V1.saleState.progressDetails;
 
         const activity =
             delegateActivity ??
@@ -676,19 +697,21 @@ export class MarketSaleController extends WrappedDgDataContract<
                 addedUtxoValue,
                 updatedFields: this.mkUpdatedDetails(mktSaleData, {
                     // state: "Active",
-                    moreFields: {
-                        ...mktSaleData.moreFields,
-                        saleState: {
-                            ...mktSaleData.moreFields.saleState,
-                            progressDetails: this.mkUpdatedProgressDetails({
-                                lastPurchaseAt: thisPurchaseAt.getTime(),
-                                prevPurchaseAt,
-                                chunkUnitCount,
-                                chunkUnitsSold:
-                                    chunkUnitsSold +
-                                    BigInt(sellingUnitQuantity),
-                            }),
-                            salePace: nextSalePace,
+                    details: {
+                        V1: {
+                            ...mktSaleData.details.V1,
+                            saleState: {
+                                ...mktSaleData.details.V1.saleState,
+                                progressDetails: this.mkUpdatedProgressDetails({
+                                    lastPurchaseAt: thisPurchaseAt.getTime(),
+                                    prevPurchaseAt,
+                                    chunkUnitCount,
+                                    chunkUnitsSold:
+                                        chunkUnitsSold +
+                                        BigInt(sellingUnitQuantity),
+                                }),
+                                salePace: nextSalePace,
+                            },
                         },
                     },
                     // prevSaleAt: mktSale.datum.lastSaleAt,
@@ -716,7 +739,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         prevPurchaseAt,
         chunkUnitCount,
         chunkUnitsSold,
-    }: MarketSaleData["moreFields"]["saleState"]["progressDetails"]): MarketSaleData["moreFields"]["saleState"]["progressDetails"] {
+    }: MarketSaleData["details"]["V1"]["saleState"]["progressDetails"]): MarketSaleData["details"]["V1"]["saleState"]["progressDetails"] {
         return {
             lastPurchaseAt,
             prevPurchaseAt,

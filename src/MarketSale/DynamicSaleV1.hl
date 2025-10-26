@@ -15,7 +15,7 @@ import {
 } from DynamicSaleV1Settings
 
 import {
-    SaleProgressDetails
+    SaleProgressDetailsV1
 } from SaleProgressDetails
 
 // struct DynamicSaleV1State {
@@ -49,7 +49,7 @@ struct DTS_PurchaseInfo {
     // dynamicPace: Real
     prevSalePace: Real
 
-    totalProgress: SaleProgressDetails
+    totalProgress: SaleProgressDetailsV1
 
     // func inferredPace(self) -> Real {
     //      p : Real = 
@@ -75,7 +75,7 @@ struct DTS_PurchaseInfo {
         purchaseTime: Time, 
         prevPurchaseTime: Time,
         prevSalePace: Real,
-        totalProgress: SaleProgressDetails
+        totalProgress: SaleProgressDetailsV1
     ) -> DTS_PurchaseInfo {
         // using Ratio adds some library size to the bundle
         // hoursSinceLastPurchase  = Ratio::new(
@@ -171,7 +171,7 @@ struct DynamicSaleV1 {
 
         REQT("The sale settings must not be changed");
         prevSettings : DynamicSaleV1Settings = self.settings;
-        nextSettings = upd.moreFields.fixedSaleDetails.settings;
+        nextSettings = upd.v1details().fixedSaleDetails.settings;
         assert(
             (
                 prevSettings == nextSettings
@@ -180,7 +180,7 @@ struct DynamicSaleV1 {
         );
 
         expectedPace : Real = self.nextSalePace();
-        nextPace : Real = upd.moreFields.saleState.salePace;
+        nextPace : Real = upd.v1details().saleState.salePace;
 
         // prevState : SaleProgressDetails = self.purchase.totalProgress;
 
@@ -194,8 +194,8 @@ struct DynamicSaleV1 {
         );
 
         REQT("Guards against underflow in dynamic pace calculations, by enforcing a minimum chunk age");
-        chunkAge : Duration = upd.moreFields.saleState.progressDetails.lastPurchaseAt
-            - self.sale.moreFields.saleState.progressDetails.lastPurchaseAt;
+        chunkAge : Duration = upd.v1details().saleState.progressDetails.lastPurchaseAt
+            - self.sale.v1details().saleState.progressDetails.lastPurchaseAt;
 
         print("  ---- chunkAge: " + chunkAge.show());
         assert(
@@ -209,7 +209,7 @@ struct DynamicSaleV1 {
     func actualSellingPace(self) -> Real {
         t : Real = (
             self.purchase.unitsPurchased
-            + self.sale.moreFields.saleState.progressDetails.chunkUnitsSold 
+            + self.sale.v1details().saleState.progressDetails.chunkUnitsSold 
         ) / self.elapsedSaleHours();
         print("    ---- actualSellingPace " + t.show());
         t
@@ -235,7 +235,7 @@ struct DynamicSaleV1 {
 
     func elapsedSaleHours(self) -> Real {
         h : Real = 
-        ( self.purchase.purchaseTime - self.sale.moreFields.fixedSaleDetails.startAt ) * 1_000_000 / Duration::HOUR / 1_000_000.0
+        ( self.purchase.purchaseTime - self.sale.v1details().fixedSaleDetails.startAt ) * 1_000_000 / Duration::HOUR / 1_000_000.0
         ;print("    ---- elapsedSaleHours " + h.show());
         h
     }

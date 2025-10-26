@@ -17,7 +17,7 @@ import {
 } from DynamicSaleV1Settings
 
 import {
-    SaleProgressDetails
+    SaleProgressDetailsV1
 } from SaleProgressDetails
 
 import {
@@ -31,7 +31,7 @@ enum MarketSaleState {
     SoldOut
 }
 
-struct SaleAssets {
+struct SaleAssetsV1 {
     saleUnitAssets: Value
     singleBuyMaxUnits: Int
     primaryAssetMph: MintingPolicyHash
@@ -40,7 +40,7 @@ struct SaleAssets {
     totalSaleUnits: Int
 }
 
-struct FixedSaleDetails {
+struct FixedSaleDetailsV1 {
     settings: DynamicSaleV1Settings
     // ^ was saleStrategy: AnySaleStrategy "strat" 
     startAt: Time
@@ -50,8 +50,8 @@ struct FixedSaleDetails {
     vxfFundsTo: Option[VxfDestination] 
 }
 
-struct OtherSaleState {
-    progressDetails: SaleProgressDetails
+struct OtherSaleStateV1 {
+    progressDetails: SaleProgressDetailsV1
     salePace: Real
     state: MarketSaleState 
     // ^ was saleStrategyState: AnySaleState "stratState" 
@@ -73,7 +73,7 @@ struct OtherSaleState {
     }
 }
 
-struct ThreadInfo {
+struct ThreadInfoV1 {
     // These details will always start with zero values.  
     // They act as reference-counters, and they increment during split/join transactions
     nestedThreads: Int
@@ -88,28 +88,37 @@ struct ThreadInfo {
     saleId: ByteArray 
 }
 
-struct MoreFields {
-    saleState: OtherSaleState 
-    fixedSaleDetails: FixedSaleDetails 
-    saleAssets: SaleAssets 
-    threadInfo: ThreadInfo 
+enum MktSaleDetails {
+    4000: V1 {
+        saleState: OtherSaleStateV1
+        fixedSaleDetails: FixedSaleDetailsV1
+        saleAssets: SaleAssetsV1
+        threadInfo: ThreadInfoV1 
+    }
 }
 
 struct MarketSaleData {
     id: ByteArray  "@id"
     type: String "tpe"
     name: String
-    moreFields: MoreFields "mo"
+    details: MktSaleDetails "dtl"
 
     // func totalSaleSize(self) -> Value {
     //     self.moreFields.saleAssets.saleUnitAssets * self.moreFields.saleAssets.totalSaleUnits
     // }
 
+    func v1details(self) -> MktSaleDetails::V1 {
+        self.details.switch {
+            v1: V1 => v1
+            // _ => error("expected V1 details")
+        }
+    }
+
     func validate(self) -> Bool {
         print("mktSale: validate()");
         assert(self.type == "mktSale", "wrong type");
         assert(self.name.serialize().length > 10, "name must be at least 10 characters");
-        saleAssets = self.moreFields.saleAssets;
+        saleAssets = self.v1details().saleAssets;
         assert(
             saleAssets.totalSaleUnits *
             saleAssets.saleUnitAssets
@@ -132,7 +141,7 @@ struct MarketSaleData {
 
     func validatePendingDetails(self) -> Bool {
         print("mktSale: validatePendingDetails()");
-        threadInfo = self.moreFields.threadInfo;
+        threadInfo = self.v1details().threadInfo;
         assert(threadInfo.parentChunkId == #, "parentChunkId must be empty");
         assert(threadInfo.saleId == self.id, "saleId must be equal to id");
         assert(threadInfo.nestedThreads == 0, "nestedThreads must be zero");
@@ -143,11 +152,11 @@ struct MarketSaleData {
 
     func validateCreatedDetails(self) -> Bool {
         print("mktSale: validateCreatedDetails()");
-        saleState = self.moreFields.saleState;
+        saleState = self.v1details().saleState;
         assert(saleState.salePace == 1.0, "salePace must be initialized to 1.0");
         // assert(self.weightedPace == 0 * Duration::SECOND, "weightedPace must be zero");
-        saleDetails = self.moreFields.fixedSaleDetails;
-        saleAssets = self.moreFields.saleAssets;
+        saleDetails = self.v1details().fixedSaleDetails;
+        saleAssets = self.v1details().saleAssets;
         true
         && saleState.mustBePending("created").trace("must be Pending? ")
         && saleDetails.settings.validateCreatedDetails()
@@ -174,10 +183,10 @@ struct MarketSaleData {
 
         assert(self.name == prevMktSale.name, "name must not change");
         assert(
-            prevMktSale.moreFields.saleState.mustBePending("old"), 
+            prevMktSale.v1details().saleState.mustBePending("old"), 
             "previous sale not Pending"
         );
-        assert(self.moreFields.saleState.state == MarketSaleState::Active, "state must be Active");
+        assert(self.v1details().saleState.state == MarketSaleState::Active, "state must be Active");
         // ok to change the sale start time
         // assert(self.startAt == prevMktSale.startAt, "startAt must not change");
 
@@ -195,10 +204,10 @@ struct MarketSaleData {
         print("expected assets: ");
         print(assets.show());
 
-        assert(self.moreFields.saleAssets.saleUnitAssets * self.moreFields.saleAssets.totalSaleUnits == assets, "utxo must contain the supply of tokens to be sold");
+        assert(self.v1details().saleAssets.saleUnitAssets * self.v1details().saleAssets.totalSaleUnits == assets, "utxo must contain the supply of tokens to be sold");
 
         REQT("validates VxfDestination in vxfTokensTo field");
-        self.moreFields.fixedSaleDetails.vxfTokensTo.switch {
+        self.v1details().fixedSaleDetails.vxfTokensTo.switch {
             Some{vxf} => {
                 assert(vxf.validate("vxfTokensTo"), "<-- that fails; this can't");
             },
@@ -210,7 +219,7 @@ struct MarketSaleData {
         REQT("validates VxfDestination in vxfFundsTo field");
         assert(
             (
-                self.moreFields.fixedSaleDetails.vxfFundsTo.unwrap().validate("vxfFundsTo")
+                self.v1details().fixedSaleDetails.vxfFundsTo.unwrap().validate("vxfFundsTo")
             ).trace("  -- vxfFundsTo ok? "), 
             "^^^ that fails; this can't"
         );
@@ -239,10 +248,10 @@ struct MarketSaleData {
                 // print("primary mph" + self.primaryAssetMph.show());
                 // print("this mph: " + mph.show());
 
-        currentAssets = self.moreFields.saleAssets;
-        currentState = self.moreFields.saleState;
-        nextAssets = updated.moreFields.saleAssets;
-        nextState = updated.moreFields.saleState;
+        currentAssets = self.v1details().saleAssets;
+        currentState = self.v1details().saleState;
+        nextAssets = updated.v1details().saleAssets;
+        nextState = updated.v1details().saleState;
         isPrimary : Bool = ( true
             && ( mph == currentAssets.primaryAssetMph )
                 .trace("    -- is primary mph? ")

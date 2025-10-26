@@ -75,15 +75,15 @@ import {
 import {
     MarketSaleData,
     MarketSaleState,
-    SaleAssets,
-    OtherSaleState,
-    FixedSaleDetails,
-    ThreadInfo,
-    MoreFields
+    SaleAssetsV1,
+    OtherSaleStateV1,
+    FixedSaleDetailsV1,
+    ThreadInfoV1,
+    MktSaleDetails
 } from MarketSaleData
 
 import {
-    SaleProgressDetails
+    SaleProgressDetailsV1
 } from SaleProgressDetails
 
 import {
@@ -377,8 +377,8 @@ enum DelegateActivity {
                     // gets the new MarketSaleData record
                     updated : MarketSaleData = MarketSaleData::updated(mktSaleDD);
 
-                    prevState : OtherSaleState = previous.moreFields.saleState
-                    nextState : OtherSaleState = updated.moreFields.saleState
+                    prevState = previous.v1details().saleState
+                    nextState = updated.v1details().saleState
 
                     newValue : Value = mktSaleDD.output().value;
                     true
@@ -405,36 +405,36 @@ enum DelegateActivity {
                     updated = MarketSaleData::updated(mktSaleDD);
 
                     correctActiveState = true
-                    && previous.moreFields.saleState.mustBeActive("old").trace("sale was Active? ")
-                    && updated.moreFields.saleState.mustBeActive("new").trace("sale is still Active? ")
+                    && previous.v1details().saleState.mustBeActive("old").trace("sale was Active? ")
+                    && updated.v1details().saleState.mustBeActive("new").trace("sale is still Active? ")
 
                     REQT("doesn't sell before the start date")
                     nowRange = getTimeRange(5*Duration::MINUTE);
                     print("   --- now start: " + nowRange.start.show());
-                    print("   --- startAt:   " + previous.moreFields.fixedSaleDetails.startAt.show());
+                    print("   --- startAt:   " + previous.v1details().fixedSaleDetails.startAt.show());
                     print("   --- now end:   " + nowRange.end.show());
 
                     assert(
                         nowRange.is_after(
-                            previous.moreFields.fixedSaleDetails.startAt
+                            previous.v1details().fixedSaleDetails.startAt
                         ), 
                         "sale not yet started"
                     );
 
                     assert(sellingUnitQuantity > 0, "must sell at least one unit");
-                    assert(sellingUnitQuantity <= previous.moreFields.saleAssets.singleBuyMaxUnits, 
+                    assert(sellingUnitQuantity <= previous.v1details().saleAssets.singleBuyMaxUnits, 
                         "attempted to buy too many units"
                     );
-                    prevProgress : SaleProgressDetails = previous.moreFields.saleState.progressDetails;
-                    nextProgress : SaleProgressDetails = updated.moreFields.saleState.progressDetails;
+                    prevProgress = previous.v1details().saleState.progressDetails;
+                    nextProgress = updated.v1details().saleState.progressDetails;
 
                     TODO("don't gather the payments to the mktSale, but follow the VxfDestination instead");
                     oldValue : Value = mktSaleDD.input().value;
                     newValue : Value = mktSaleDD.output().value;
 
-                    purchasedTokens : Value = previous.moreFields.saleAssets.saleUnitAssets * sellingUnitQuantity;
+                    purchasedTokens : Value = previous.v1details().saleAssets.saleUnitAssets * sellingUnitQuantity;
 
-                    totalProgress = SaleProgressDetails{
+                    totalProgress = SaleProgressDetailsV1{
                         lastPurchaseAt: nowRange.start,
                         prevPurchaseAt: prevProgress.lastPurchaseAt,
                         chunkUnitCount: nextProgress.chunkUnitCount,
@@ -442,17 +442,17 @@ enum DelegateActivity {
                     };
 
                     pricingStrategy = DynamicSaleV1{
-                        settings: previous.moreFields.fixedSaleDetails.settings,
+                        settings: previous.v1details().fixedSaleDetails.settings,
                         purchase: DTS_PurchaseInfo::create(
                             unitsPurchased: sellingUnitQuantity,
                             purchaseTime: nowRange.start,
                             prevPurchaseTime: prevProgress.lastPurchaseAt,
-                            prevSalePace: previous.moreFields.saleState.salePace,
+                            prevSalePace: previous.v1details().saleState.salePace,
                             totalProgress: totalProgress
                         ),
                         sale: previous,
                         updatedSale: Option[MarketSaleData]::Some{updated}
-                        // prevSalePace: previous.moreFields.saleState.salePace,
+                        // prevSalePace: previous.v1details().saleState.salePace,
                         // updatedSettings: Option[DynamicSaleV1Settings]::None
                     };
                     
