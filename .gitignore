@@ -2,12 +2,8 @@
 pnpm-workspace.yaml
 
 .stellar/
-*.hlBundled.mjs
 zz_disabled/
 zz_junk/
-// for api-extractor's input files:
-doc-gen/d.ts/
-doc-gen/temp/
 .vscode/
 .cursor/
 

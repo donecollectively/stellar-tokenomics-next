@@ -29,7 +29,7 @@
         "experimentalDecorators": true,
         // "emitDecoratorMetadata": false,
 
-        "outDir": "./doc-gen/d.ts",
+        "outDir": "./.stellar/api",
         // "outFile": none!
         "importHelpers": true,
         "rootDir": ".",
@@ -43,7 +43,7 @@
         "preserveSymlinks": false,
         // "resolvePackageJsonExports": true,
         "jsx": "preserve",
-        // "outFile": "doc-gen/d.ts/stellar-tokenomics-raw.d.ts",
+        // "outFile": "./.stellar/api/stellar-tokenomics-raw.d.ts",
         "paths": {
             "@/*": ["./src/*"],
             // "@donecollectively/stellar-contracts": [

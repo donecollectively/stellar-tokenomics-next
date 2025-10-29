@@ -28,8 +28,8 @@
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         
-        "outDir": "./doc-gen/d.ts",        
-        // "outFile": "doc-gen/d.ts/stellar-tokenomics-raw.d.ts",
+        "outDir": "./.stellar/api",        
+        // "outFile": "./.stellar/api/stellar-tokenomics-raw.d.ts",
         // "importHelpers": true,
         "rootDir": ".",
         
@@ -53,8 +53,8 @@
         // "outFile": "dist/index.d.ts",
     },
     "files": [ 
-        // "./src/index.ts",
-        "./doc-gen/d.ts/src/index.d.ts",
+        "./src/index.ts",
+        // "./.stellar/api/src/index.d.ts",
         "./heliosModule.d.ts",
     ],
     "include": [
