@@ -20,6 +20,7 @@ import type {
 import { STokMintDelegate } from "./STokMintDelegate.js";
 import { makeTxOutput, type Address, type TxInput } from "@helios-lang/ledger";
 import type { CapoDatum$Ergo$CharterData } from "./STokMintDelegate.typeInfo.js";
+import type { MarketSaleController } from "./MarketSale/MarketSaleController.js";
 
 // import { FundedPurposeSettings } from "./FundedPurpose/FundedPurposeAdapter.js";
 // import { FundedPurposeSettingsModule } from "./FundedPurpose/FundedPurposeSettingsModule.js";
@@ -217,6 +218,18 @@ export abstract class StellarTokenomicsCapo<
     //     };
 
     // }
+    
+    async getMarketSaleController(this: SELF,
+        charterData?: CapoDatum$Ergo$CharterData,
+    ): Promise<MarketSaleController> {
+        if (!charterData) {
+            charterData = await this.findCharterData();
+        }
+        return this.getDgDataController("Agreement", {
+            charterData: charterData as CapoDatum$Ergo$CharterData,
+        }) as Promise<MarketSaleController>;
+    }
+    
 
     mkUutName(purpose: string, txin: TxInput) {
         const tokenNames = txin.value.assets
