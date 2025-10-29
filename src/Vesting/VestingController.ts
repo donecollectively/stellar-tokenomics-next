@@ -18,8 +18,15 @@ import type {
 } from "@donecollectively/stellar-contracts";
 
 import type GenericVestingBundle from "./Vesting.generic.hlb.js";
-import type { ErgoVestingData, VestingData, VestingDataLike } from "./Vesting.generic.typeInfo.js";
-import VestingPolicyDataBridge, { VestingStateHelper } from "./Vesting.generic.bridge.js";
+import type {
+    ErgoVestingData,
+    minimalVestingData,
+    VestingData,
+    VestingDataLike,
+} from "./Vesting.generic.typeInfo.js";
+import VestingPolicyDataBridge, {
+    VestingStateHelper,
+} from "./Vesting.generic.bridge.js";
 import AbstractVestingBundle from "./Vesting.abstractBundle.js";
 
 export type PartialPartialData<T extends AnyDataTemplate<any, any>> = Partial<{
@@ -30,11 +37,12 @@ export type PartialPartialData<T extends AnyDataTemplate<any, any>> = Partial<{
         : T[K];
 }>;
 
-export type minimalVestingData = minimalData<ErgoVestingData>;
-
 export type partialMinimalData<T extends AnyDataTemplate<any, any>> =
     PartialPartialData<minimalData<T>>;
 
+/**
+ * @public
+ */
 export class VestingController extends DelegatedDataContract<
     VestingData,
     VestingDataLike
@@ -42,15 +50,16 @@ export class VestingController extends DelegatedDataContract<
     dataBridgeClass = VestingPolicyDataBridge;
 
     async scriptBundleClass() {
+        // TODO: replicate this pattern within DelegatedDataContract,
+        // so that every derived class can just return its unbound bundle class,
+        // the base class will take care of binding it to the capo.
         const capoBundle = await this.capo!.mkScriptBundle();
 
         const msb: typeof GenericVestingBundle = await import(
             "./Vesting.generic.hlb.js"
         ).then((m) => m.GenericVestingBundle);
 
-        return msb.usingCapoBundleClass(
-            capoBundle.constructor as any
-        )
+        return msb.usingCapoBundleClass(capoBundle.constructor as any);
     }
     idPrefix = "vest";
 
@@ -64,41 +73,43 @@ export class VestingController extends DelegatedDataContract<
 
     exampleData(): minimalVestingData {
         return {
-            beneficiary: {                
+            beneficiary: {
                 RelativeLink: {
                     link: {
                         config: textToBytes("{}"),
                         uutName: "member-XXX",
-                        delegateValidatorHash: undefined                        
+                        delegateValidatorHash: undefined,
                     },
-                    vxfActivity: undefined
-                }
+                    vxfActivity: undefined,
+                },
             },
-            ownerToken: textToBytes("member-YYY"),            
-            state: {Initializing: {}},
+            ownerToken: textToBytes("member-YYY"),
+            state: { Initializing: {} },
 
             vestingDetails: {
                 StraightLine: {
                     totalValue: makeValue(100_000n),
                     fullMaturity: Date.now() + 365 * 24 * 60 * 60 * 1000,
                     vestingStart: Date.now(),
-                    frequency: { Interval: {
-                        interval: BigInt(30 * 24 * 60 * 60 * 1000),
-                        count: 36n,
-                    }},
+                    frequency: {
+                        Interval: {
+                            interval: BigInt(30 * 24 * 60 * 60 * 1000),
+                            count: 36n,
+                        },
+                    },
                     vestingProgress: {
                         lastPartialMaturity: Date.now(),
                         vestedValue: makeValue(0n),
                         vestedFreqUnits: 0.0,
-                    }
-                }
-            }
-        }
+                    },
+                },
+            },
+        };
     }
 
     async mkTxnCreatingVesting(
         this: VestingController,
-        recData: minimalVestingData,
+        recData: minimalVestingData
         // initialVaultStake: bigint
     ) {
         const mintDelegate = await this.capo.getMintDelegate();
@@ -113,7 +124,7 @@ export class VestingController extends DelegatedDataContract<
                     // memberToken: tcx.state.memberToken.name,
                 },
                 // addedUtxoValue: makeValue(initialVaultStake),
-            },
+            }
             // tcx
         );
     }
