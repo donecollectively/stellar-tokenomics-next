@@ -53,15 +53,19 @@ import {
 // import type MarketSaleBundle from "./MarketSale.generic.hlb.js";
 import { encodeUtf8 } from "@helios-lang/codec-utils";
 import { MarketSaleDataWrapper } from "./MarketSaleDataWrapper.js";
-import type MarketSaleBundle from "./MarketSale.hlb.js";
+import MarketSalePolicyDataBridge from "./MarketSale.bridge.js";
+import type {
+    ErgoMarketSaleData,
+    MarketSaleData,
+    MarketSaleDataLike,
+    minimalMarketSaleData,
+} from "./MarketSale.typeInfo.js";
 export type {
     ErgoMarketSaleData,
     MarketSaleData,
     MarketSaleDataLike,
     minimalMarketSaleData,
 } from "./MarketSale.typeInfo.js";
-import MarketSalePolicyDataBridge from "./MarketSale.bridge.js";
-import type { MarketSaleData, MarketSaleDataLike, minimalMarketSaleData } from "./MarketSale.typeInfo.js";
 
 /**
  * @public
@@ -105,7 +109,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         const mph = this.capo.mph;
         const units = 1000n;
         const startTime = new Date().getTime();
-        const data : minimalMarketSaleData = {
+        const data: minimalMarketSaleData = {
             // id: "mktSale_123",
             // type: "mktSale",
             name: "Sample marketSale",
@@ -125,7 +129,6 @@ export class MarketSaleController extends WrappedDgDataContract<
 
                             dynaPaceFasterSaleWeight: 0.3,
                             dynaPaceIdleDecayRate: 0.5,
-                            
 
                             pricingWeightDynaPace: 5,
                         },
