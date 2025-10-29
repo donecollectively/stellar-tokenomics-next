@@ -10,7 +10,7 @@ import type {
     ErgoMarketSaleData,
     MarketSaleData,
     MarketSaleDataLike,
-} from "./MarketSale.concrete.typeInfo.js";
+} from "./MarketSale.typeInfo.js";
 import type {
     MarketSaleController,
     PurchaseContext,
@@ -53,7 +53,7 @@ export class MarketSaleDataWrapper {
 
     getDynamicUnitPrice(pCtx: PurchaseContext) {
         const { prevSale: sale, now, unitCount } = pCtx;
-        const s = sale.data.moreFields.fixedSaleDetails.settings;
+        const s = sale.data.details.V1.fixedSaleDetails.settings;
 
         console.log("    ---- targetPrice", s.targetPrice);
         const a = realMul(
@@ -74,7 +74,7 @@ export class MarketSaleDataWrapper {
 
     pricingFactorOverallProgress(pCtx: PurchaseContext) {
         const settings =
-            pCtx.prevSale.data.moreFields.fixedSaleDetails.settings;
+            pCtx.prevSale.data.details.V1.fixedSaleDetails.settings;
         const overallPacingProgress =
             this.overallPaceIncludingThisPurchase(pCtx);
         const discountEarned = realMul(
@@ -110,7 +110,7 @@ export class MarketSaleDataWrapper {
         //     ) / ( prevWeight +nextWeight )
         //   ))))
         //   ))
-        const s = pCtx.prevSale.data.moreFields.fixedSaleDetails.settings;
+        const s = pCtx.prevSale.data.details.V1.fixedSaleDetails.settings;
         const prevWeight = 1;
         const nextPace = this.computeNextSalePace(pCtx);
         const prevPace = this.prevSalePace(pCtx);
@@ -135,14 +135,14 @@ export class MarketSaleDataWrapper {
     }
 
     prevSalePace(pCtx: PurchaseContext): number {
-        return pCtx.prevSale.data.moreFields.saleState.salePace;
+        return pCtx.prevSale.data.details.V1.saleState.salePace;
     }
 
     targetSellingPace(pCtx: PurchaseContext): number {
         const { prevSale: sale } = pCtx;
-        const s = sale.data.moreFields.fixedSaleDetails.settings;
+        const s = sale.data.details.V1.fixedSaleDetails.settings;
         const { chunkUnitCount } =
-            sale.data.moreFields.saleState.progressDetails;
+            sale.data.details.V1.saleState.progressDetails;
         // console.log("  -- chunkUnitCount", chunkUnitCount);
         // console.log("  -- targetedSellingTime", s.targetedSellingTime);
         const tsp = realDiv(
@@ -169,7 +169,7 @@ export class MarketSaleDataWrapper {
         //        + prev_dyna_pace
         //      ) / (1+nextWeight)
         //   )
-        const s = pCtx.prevSale.data.moreFields.fixedSaleDetails.settings;
+        const s = pCtx.prevSale.data.details.V1.fixedSaleDetails.settings;
         const inferredPace = this.inferredPace(pCtx);
         const prevSalePace = this.prevSalePace(pCtx);
         if (inferredPace > prevSalePace) {
@@ -233,7 +233,7 @@ export class MarketSaleDataWrapper {
         const h = debugMath(() => {
             return realDiv(
                 pCtx.now.getTime() -
-                    pCtx.prevSale.data.moreFields.saleState.progressDetails
+                    pCtx.prevSale.data.details.V1.saleState.progressDetails
                         .lastPurchaseAt,
                 60 * 60 * 1000
             );
@@ -241,7 +241,7 @@ export class MarketSaleDataWrapper {
         console.log("    ---- hoursSinceLastPurchase", {
             now: pCtx.now,
             lastPurchaseAt:
-                pCtx.prevSale.data.moreFields.saleState.progressDetails
+                pCtx.prevSale.data.details.V1.saleState.progressDetails
                     .lastPurchaseAt,
             result: h,
         });
@@ -260,7 +260,7 @@ export class MarketSaleDataWrapper {
     actualSellingPace(pCtx: PurchaseContext): number {
         const unitsPurchased = pCtx.unitCount;
         const alreadySold =
-            pCtx.prevSale.data.moreFields.saleState.progressDetails
+            pCtx.prevSale.data.details.V1.saleState.progressDetails
                 .chunkUnitsSold;
         const sp = realDiv(
             Number(unitsPurchased) + Number(alreadySold),
@@ -273,7 +273,7 @@ export class MarketSaleDataWrapper {
     elapsedSaleHours(pCtx: PurchaseContext): number {
         const eh = realDiv(
             pCtx.now.getTime() -
-                pCtx.prevSale.data.moreFields.fixedSaleDetails.startAt,
+                pCtx.prevSale.data.details.V1.fixedSaleDetails.startAt,
             60 * 60 * 1000
         );
         console.log("    ---- elapsedSaleHours", eh);
