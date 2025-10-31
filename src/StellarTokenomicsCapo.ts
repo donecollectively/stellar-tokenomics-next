@@ -8,6 +8,7 @@ import {
     UutName,
     textToBytes,
     mkValuesEntry,
+    mergesInheritedReqts,
 } from "@donecollectively/stellar-contracts";
 
 import type {
@@ -15,6 +16,7 @@ import type {
     CapoFeatureFlags,
     FoundUut,
     hasSeedUtxo,
+    ReqtsMap,
 } from "@donecollectively/stellar-contracts";
 
 import { STokMintDelegate } from "./STokMintDelegate.js";
@@ -376,7 +378,7 @@ export abstract class StellarTokenomicsCapo<
     requirements() {
         // note that these requirements augment the essential capabilities
         // ... and requirements of the base Capo class.
-        return hasReqts({
+        return mergesInheritedReqts(super.requirements(), {
             "Provides a single entry point dApps can use to get tokenomics for their project":
                 {
                     purpose:
