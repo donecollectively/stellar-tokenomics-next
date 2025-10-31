@@ -35,14 +35,13 @@
         
         // "exactOptionalPropertyTypes": true,        
         "noImplicitAny": false,
-        // "noErrorTruncation": true,
+        "noErrorTruncation": true,
 
         // "importHelpers": true,
         // "baseUrl": ".",
 
         // "skipLibCheck": true,
 
-        // "emitDeclarationOnly": true,
         // "noResolve": true,
         // "disableReferencedProjectLoad": false,
         "paths": {

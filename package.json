@@ -1,6 +1,6 @@
 {
     "name": "stellar-tokenomics",
-    "version": "0.8.0-beta.2",
+    "version": "0.8.0-beta.4",
     "engine-strict": true,
     "engines": {
         "node": ">=20",
@@ -65,7 +65,7 @@
     },
     "browserslist": "defaults, not ie <= 11",
     "peerDependencies": {
-        "@donecollectively/stellar-contracts": "^0.9.3-beta.1",
+        "@donecollectively/stellar-contracts": "^0.9.3-beta.3",
         "@helios-lang/cbor": "^0.3.1",
         "@helios-lang/codec-utils": "^0.3.4",
         "@helios-lang/compiler": "^0.17.30",
@@ -93,7 +93,7 @@
     },
     "devDependencies": {
         "@babel/runtime": ">=7.26.10",
-        "@donecollectively/stellar-contracts": "github:donecollectively/stellar-contracts#semver:0.9.3-beta.1",
+        "@donecollectively/stellar-contracts": "github:donecollectively/stellar-contracts#semver:0.9.3-beta.3",
         "@helios-lang/cbor": "^0.3.1",
         "@helios-lang/codec-utils": "^0.3.4",
         "@helios-lang/compiler": "^0.17.30",

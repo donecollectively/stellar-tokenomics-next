@@ -10255,7 +10255,7 @@ F extends CapoFeatureFlags = GenericTokenomicsFeatureFlags> extends Capo<SELF, F
      **/
     mkTxnMintParticipantToken(addr: Address): Promise<hasUutContext<"member"> & StellarTxnContext<anyState> & hasSeedUtxo>;
     txnMintingFungibleTokens<TCX extends StellarTxnContext>(tcx: TCX, tokenName: string | number[], tokenCount: bigint): Promise<TCX & hasCharterRef & hasGovAuthority>;
-    requirements(): ReqtsMap<"Provides a single entry point dApps can use to get tokenomics for their project" | "Uses the Capo (leader) to gather tokenomics-related contracts together" | "Defines a tokenomics minting delegate" | "Has a settings data structure where tokenomics plugins can store protocol parameters" | "issues 'membership card' tokens to participants" | "Can upgrade the Settings data" | "the settings data can be updated to have new details if backward compatible" | "Can find membership card tokens for participants", never>;
+    requirements(): any;
 }
 
 /**

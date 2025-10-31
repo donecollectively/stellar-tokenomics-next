@@ -1,4 +1,4 @@
-import { BasicMintDelegate, Capo, bytesToText, UutName, textToBytes, mkValuesEntry, hasReqts, partialTxn, txn, realMul, toFixedReal, debugMath, realDiv, ContractDataBridge, EnumBridge, impliedSeedActivityMaker, DataBridgeReaderClass, WrappedDgDataContract, dumpAny, displayTokenName, DelegatedDataContract } from '@donecollectively/stellar-contracts';
+import { BasicMintDelegate, Capo, bytesToText, UutName, textToBytes, mkValuesEntry, mergesInheritedReqts, partialTxn, txn, realMul, toFixedReal, debugMath, realDiv, ContractDataBridge, EnumBridge, impliedSeedActivityMaker, DataBridgeReaderClass, WrappedDgDataContract, dumpAny, displayTokenName, hasReqts, DelegatedDataContract } from '@donecollectively/stellar-contracts';
 import { makeCast } from '@helios-lang/contract-utils';
 import { makeTxOutput, makeInlineTxOutputDatum, makeValue } from '@helios-lang/ledger';
 export { makeSTokMintDelegateBundle } from './contracts-preprod/STokMintDelegate.hlb.mjs';
@@ -279,7 +279,8 @@ class StellarTokenomicsCapo extends Capo {
     );
   }
   requirements() {
-    return hasReqts({
+    const inherited = super.requirements();
+    return mergesInheritedReqts(inherited, {
       "Provides a single entry point dApps can use to get tokenomics for their project": {
         purpose: "to provide a single point of access to tokenomics functions",
         details: [

@@ -378,7 +378,8 @@ export abstract class StellarTokenomicsCapo<
     requirements() {
         // note that these requirements augment the essential capabilities
         // ... and requirements of the base Capo class.
-        return mergesInheritedReqts(super.requirements(), {
+        const inherited = super.requirements();
+        return mergesInheritedReqts(inherited, {
             "Provides a single entry point dApps can use to get tokenomics for their project":
                 {
                     purpose:
