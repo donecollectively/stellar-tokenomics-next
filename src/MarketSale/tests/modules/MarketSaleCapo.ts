@@ -10,9 +10,8 @@ import {
 } from "@donecollectively/stellar-contracts";
 import MarketSaleCapoBundle from "./MarketSaleCapo.hlb.js";
 import { MarketSaleController } from "../../MarketSaleController.js";
-import ConcreteMarketSaleBundle from "../../MarketSale.concrete.hlb.js";
 import { STokMintDelegate } from "../../../STokMintDelegate.js";
-import type { CapoDatum$Ergo$CharterData } from "../../MarketSale.concrete.typeInfo.js";
+import type { CapoDatum$Ergo$CharterData } from "../../MarketSale.typeInfo.js";
 
 import {STokMintDelegateDataBridge as msCapoMintDelegateDataBridge} from "./msCapoMintDelegate.bridge.js";
 import msCapoMintDelegateBundle from "./msCapoMintDelegate.hlb.js";
@@ -23,9 +22,9 @@ type MktSaleFeatures = {
 
 class ConcreteMSC extends MarketSaleController {
     async scriptBundleClass() {
-        const capoBundle = await this.capo.scriptBundleClass()
-
-        return ConcreteMarketSaleBundle.usingCapoBundleClass(capoBundle)
+        const module = await import("../../MarketSale.hlb.js");
+        
+        return module.MarketSaleBundle
     }
 }
 

@@ -58,6 +58,13 @@ export default defineConfig({
         testTimeout: 1000000,
         hookTimeout: 780000,
         teardownTimeout: 23000,
+
+        poolOptions: {        
+            forks: {
+                minForks: 1,
+                maxForks: 1
+            }
+        }
         
         // browser: {
         //     enabled: true,

@@ -72,18 +72,18 @@ describe("MarketSale plugin", async () => {
             if (!mktSale) throw new Error("for TS");
 
             expect(mktSale.name).toEqual(exampleData.name);
-            expect(mktSale.moreFields.saleAssets.totalSaleUnits).toEqual(
-                exampleData.moreFields.saleAssets.totalSaleUnits
+            expect(mktSale.details.V1.saleAssets.totalSaleUnits).toEqual(
+                exampleData.details.V1.saleAssets.totalSaleUnits
             );
-            expect(mktSale.moreFields.threadInfo.saleId).toEqual(mktSale.id);
+            expect(mktSale.details.V1.threadInfo.saleId).toEqual(mktSale.id);
 
             // it doesn't have any of the indicated tokens (yet)
             expect(
                 utxo.value.isGreaterOrEqual(
                     capo.tokenAsValue(
-                        exampleData.moreFields.saleAssets.primaryAssetName,
+                        exampleData.details.V1.saleAssets.primaryAssetName,
                         BigInt(
-                            exampleData.moreFields.saleAssets
+                            exampleData.details.V1.saleAssets
                                 .primaryAssetTargetCount
                         )
                     )
@@ -107,14 +107,14 @@ describe("MarketSale plugin", async () => {
             h.ts("find first sale");
 
             const now = Date.now();
-            expect(mktSale.moreFields.fixedSaleDetails.startAt).toBeCloseTo(
+            expect(mktSale.details.V1.fixedSaleDetails.startAt).toBeCloseTo(
                 now,
                 -5
             ); // within ~10 seconds is close enough to absorb txn-building time
             // starts with lastSaleAt = startDate
             expect(
-                mktSale.moreFields.saleState.progressDetails.lastPurchaseAt
-            ).toEqual(mktSale.moreFields.fixedSaleDetails.startAt);
+                mktSale.details.V1.saleState.progressDetails.lastPurchaseAt
+            ).toEqual(mktSale.details.V1.fixedSaleDetails.startAt);
         });
 
         it("has key details of price, sale-sizes and token to be sold", async (context: STOK_TC) => {
@@ -142,21 +142,21 @@ describe("MarketSale plugin", async () => {
             //     mktSale.tokenPolicy.eq(capo.mph),
             //     "token policy should be the capo's mph"
             // ).toBeTruthy();
-            expect(mktSale.moreFields.saleState.salePace).toEqual(1.0);
+            expect(mktSale.details.V1.saleState.salePace).toEqual(1.0);
             // expect(mktSale.tokenName).toEqual(sampleMarketSale.tokenName);
             const expectedSaleAsset = makeValue(
                 capo.mintingPolicyHash,
-                exampleData.moreFields.saleAssets.primaryAssetName,
+                exampleData.details.V1.saleAssets.primaryAssetName,
                 BigInt(
-                    exampleData.moreFields.saleAssets.primaryAssetTargetCount
-                ) / BigInt(exampleData.moreFields.saleAssets.totalSaleUnits)
+                    exampleData.details.V1.saleAssets.primaryAssetTargetCount
+                ) / BigInt(exampleData.details.V1.saleAssets.totalSaleUnits)
             );
             expect(
-                mktSale.moreFields.saleAssets.saleUnitAssets.isEqual(
+                mktSale.details.V1.saleAssets.saleUnitAssets.isEqual(
                     expectedSaleAsset
                 ),
                 `saleUnitAssets ${dumpAny(
-                    mktSale.moreFields.saleAssets.saleUnitAssets
+                    mktSale.details.V1.saleAssets.saleUnitAssets
                 )} should have the expected sale tokens:\n  ${dumpAny(
                     expectedSaleAsset
                 )}`
@@ -165,12 +165,12 @@ describe("MarketSale plugin", async () => {
             // expect(mktSale.totalTokenCount).toEqual(sampleMarketSale.totalTokenCount);
             // expect(mktSale.totalTokenCount).toEqual(sampleMarketSale.totalTokenCount);
             // expect(mktSale.minSaleSize).toEqual(sampleMarketSale.minSaleSize);
-            expect(mktSale.moreFields.saleAssets.singleBuyMaxUnits).toEqual(
-                exampleData.moreFields.saleAssets.singleBuyMaxUnits
+            expect(mktSale.details.V1.saleAssets.singleBuyMaxUnits).toEqual(
+                exampleData.details.V1.saleAssets.singleBuyMaxUnits
             );
-            expect(mktSale.moreFields.threadInfo.nestedThreads).toEqual(0n);
-            expect(mktSale.moreFields.threadInfo.retiredThreads).toEqual(0n);
-            expect(mktSale.moreFields.threadInfo.parentChunkId).toEqual([]);
+            expect(mktSale.details.V1.threadInfo.nestedThreads).toEqual(0n);
+            expect(mktSale.details.V1.threadInfo.retiredThreads).toEqual(0n);
+            expect(mktSale.details.V1.threadInfo.parentChunkId).toEqual([]);
             // expect(mktSale.currentUnitPrice).toEqual(
             //     exampleData.currentUnitPrice
             // );
@@ -252,24 +252,21 @@ describe("MarketSale plugin", async () => {
     // })
 
     describe("Activity:AddTokens allows additional tokens to be added to a Pending mktSale", () => {
-        it(
-            "can't AddTokens unless the sale is Pending",
-            async (context: STOK_TC) => {
-                const {
-                    h,
-                    h: { network, actors, delay, state },
-                } = context;
+        it("can't AddTokens unless the sale is Pending", async (context: STOK_TC) => {
+            const {
+                h,
+                h: { network, actors, delay, state },
+            } = context;
 
-                await h.reusableBootstrap();
-                await h.snapToFirstMarketSaleActivated();
-                const marketSale = await h.findFirstMarketSale();
-    
-                const minting = h.mintAndAddAssets(marketSale, "KRILL", 1000n);
-                await expect(minting).rejects.toThrow(
-                    /AddTokens.* must be Pending/
-                );
-            }
-        );
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const marketSale = await h.findFirstMarketSale();
+
+            const minting = h.mintAndAddAssets(marketSale, "KRILL", 1000n);
+            await expect(minting).rejects.toThrow(
+                /AddTokens.* must be Pending/
+            );
+        });
 
         it("can AddTokens to a Pending sale", async (context: STOK_TC) => {
             const {
@@ -344,7 +341,7 @@ describe("MarketSale plugin", async () => {
             const exampleData = controller.exampleData();
 
             const mintTokenName =
-                exampleData.moreFields.saleAssets.primaryAssetName;
+                exampleData.details.V1.saleAssets.primaryAssetName;
             const mintTokenCount = 1000n;
             const tcx1 = await capo.txnMintingFungibleTokens(
                 capo.mkTcx("separate mint using gov authority"),
@@ -398,7 +395,7 @@ describe("MarketSale plugin", async () => {
             const marketSale = await h.findFirstMarketSale();
             // @ts-ignore cast to more convenient type
             const data = marketSale.data! as ErgoMarketSaleData;
-            expect(data.moreFields.saleState.state.Pending).toBeTruthy();
+            expect(data.details.V1.saleState.state.Pending).toBeTruthy();
         });
 
         it("moves to Active state when ActivatingSale", async (context: STOK_TC) => {
@@ -415,13 +412,13 @@ describe("MarketSale plugin", async () => {
 
             const tcx2 = await h.activateMarketSale(marketSale, {
                 mintTokenName:
-                    exampleData.moreFields.saleAssets.primaryAssetName,
+                    exampleData.details.V1.saleAssets.primaryAssetName,
             });
 
             const updatedSale = await h.findFirstMarketSale();
             // @ts-ignore cast to more convenient type
             const data = updatedSale.data! as ErgoMarketSaleData;
-            expect(data.moreFields.saleState.state.Active).toBeTruthy();
+            expect(data.details.V1.saleState.state.Active).toBeTruthy();
         });
 
         it("won't activate if the txfFundsTo setting doesn't validate", async (context: STOK_TC) => {
@@ -435,13 +432,17 @@ describe("MarketSale plugin", async () => {
 
             const marketSale = await h.findFirstMarketSale();
             const mktSaleData = marketSale.data!;
-            
-            mktSaleData.moreFields.fixedSaleDetails.vxfFundsTo = { NotYetDefined: {} }
+
+            mktSaleData.details.V1.fixedSaleDetails.vxfFundsTo = {
+                NotYetDefined: {},
+            };
             const submitting = h.activateMarketSale(marketSale, {
                 mintTokenName:
-                    mktSaleData.moreFields.saleAssets.primaryAssetName,
+                    mktSaleData.details.V1.saleAssets.primaryAssetName,
             });
-            await expect(submitting).rejects.toThrow("VxfDestination: vxfFundsTo: NotYetDefined");
+            await expect(submitting).rejects.toThrow(
+                "VxfDestination: vxfFundsTo: NotYetDefined"
+            );
         });
 
         it.todo(
@@ -538,9 +539,9 @@ describe("MarketSale plugin", async () => {
             const initialMarketSale = await h.findFirstMarketSale();
             await h.mintAndAddAssets(
                 initialMarketSale,
-                exampleData.moreFields.saleAssets.primaryAssetName,
+                exampleData.details.V1.saleAssets.primaryAssetName,
                 BigInt(
-                    exampleData.moreFields.saleAssets.primaryAssetTargetCount
+                    exampleData.details.V1.saleAssets.primaryAssetTargetCount
                 )
             );
             const fundedSale = await h.findFirstMarketSale();
@@ -577,20 +578,22 @@ describe("MarketSale plugin", async () => {
                 marketSale,
                 {
                     mintTokenName:
-                        mktSaleData.moreFields.saleAssets.primaryAssetName,
+                        mktSaleData.details.V1.saleAssets.primaryAssetName,
                     txnDescription: "ACTIVATES SALE WITH FUTURE DATE",
                     // futureDate
                 },
                 {
-                    moreFields: {
-                        ...mktSaleData.moreFields,
+                    details: {
+                        V1: {
+                        ...mktSaleData.details.V1,
                         fixedSaleDetails: {
-                            ...mktSaleData.moreFields.fixedSaleDetails,
+                            ...mktSaleData.details.V1.fixedSaleDetails,
                             startAt: futureDate.getTime(),
                             // lastSaleAt: futureDate
                         },
+                        },
                     },
-                }
+                },
             );
             const activatedSale = await h.findFirstMarketSale();
             console.log(
@@ -648,7 +651,7 @@ describe("MarketSale plugin", async () => {
 
             const buyExcessive = h.buyFromMktSale(
                 activeSale,
-                BigInt(exampleData.moreFields.saleAssets.singleBuyMaxUnits) +
+                BigInt(exampleData.details.V1.saleAssets.singleBuyMaxUnits) +
                     1n,
                 "case 3: buying too many units FAILS",
                 {
@@ -660,7 +663,7 @@ describe("MarketSale plugin", async () => {
 
             const buyingMax = await h.buyFromMktSale(
                 activeSale,
-                exampleData.moreFields.saleAssets.singleBuyMaxUnits,
+                exampleData.details.V1.saleAssets.singleBuyMaxUnits,
                 "case 4: buying the max number of units WORKS",
                 {
                     futureDate,
@@ -710,7 +713,7 @@ describe("MarketSale plugin", async () => {
                 "won't sell from a sale chunk less than 10 minutes old",
                 {
                     futureDate: new Date(
-                        activatedSale.data!.moreFields.saleState.progressDetails
+                        activatedSale.data!.details.V1.saleState.progressDetails
                             .lastPurchaseAt +
                             1000 * 60 * 9
                     ),
@@ -758,11 +761,11 @@ describe("MarketSale plugin", async () => {
 
             let updatedSale = await h.findFirstMarketSale();
             expect(
-                updatedSale.data!.moreFields.saleState.progressDetails
+                updatedSale.data!.details.V1.saleState.progressDetails
                     .lastPurchaseAt
             ).toEqual(tcx.txnTime.getTime());
             expect(
-                updatedSale.data!.moreFields.saleState.progressDetails
+                updatedSale.data!.details.V1.saleState.progressDetails
                     .chunkUnitsSold
             ).toEqual(1n);
 
@@ -779,7 +782,7 @@ describe("MarketSale plugin", async () => {
             );
             updatedSale = await h.findFirstMarketSale();
             expect(
-                updatedSale.data!.moreFields.saleState.progressDetails
+                updatedSale.data!.details.V1.saleState.progressDetails
                     .chunkUnitsSold
             ).toEqual(20n);
 
@@ -812,7 +815,7 @@ describe("MarketSale plugin", async () => {
 
             updatedSale = await h.findFirstMarketSale();
             expect(
-                updatedSale.data!.moreFields.saleState.progressDetails
+                updatedSale.data!.details.V1.saleState.progressDetails
                     .chunkUnitsSold
             ).toEqual(60n);
         });
@@ -855,20 +858,27 @@ describe("MarketSale plugin", async () => {
                     // console.log(msd, pmsd)
                     return {
                         ...msd,
-                        moreFields: {
-                            ...msd.moreFields,
-                            ...pmsd.moreFields,
-                            fixedSaleDetails: {
-                                ...(msd.moreFields!.fixedSaleDetails),
-                                ...(pmsd.moreFields!.fixedSaleDetails),
-                                settings: {
-                                    ...(msd.moreFields!.fixedSaleDetails!.settings),
-                                    ...(pmsd.moreFields!.fixedSaleDetails!.settings),
-                                    progressPricingDiscountFloorPoint:
-                                        (
-                                            msd.moreFields.fixedSaleDetails
-                                                .settings as any
-                                        ).progressPricingDiscountFloorPoint + 0.01,
+                        details: {
+                            V1: {
+                                ...msd.details.V1,
+                                ...pmsd.details!.V1,
+
+                                fixedSaleDetails: {
+                                    ...msd.details.V1.fixedSaleDetails,
+                                    ...pmsd.details!.V1.fixedSaleDetails,
+                                    settings: {
+                                        ...msd.details.V1.fixedSaleDetails!
+                                            .settings,
+                                        ...pmsd.details!.V1.fixedSaleDetails!
+                                            .settings,
+                                        progressPricingDiscountFloorPoint:
+                                            (
+                                                msd.details.V1.fixedSaleDetails
+                                                    .settings as any
+                                            )
+                                                .progressPricingDiscountFloorPoint +
+                                            0.01,
+                                    },
                                 },
                             },
                         },
@@ -903,7 +913,7 @@ describe("MarketSale plugin", async () => {
 
             const updatedSale = await h.findFirstMarketSale();
             expect(
-                updatedSale.data!.moreFields.saleState.salePace
+                updatedSale.data!.details.V1.saleState.salePace
             ).toBeGreaterThan(0);
         });
 
@@ -952,10 +962,12 @@ describe("MarketSale plugin", async () => {
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
             const buying = h.buyFromMktSale(marketSale, 26n, undefined, {
-                futureDate, 
+                futureDate,
                 expectError: true,
             });
-            await expect(buying).rejects.toThrow("attempted to buy too many units");
+            await expect(buying).rejects.toThrow(
+                "attempted to buy too many units"
+            );
         });
     });
 

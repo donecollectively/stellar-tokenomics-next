@@ -49,6 +49,10 @@ import {
     type IntersectedEnum,
 } from "@donecollectively/stellar-contracts"
 
+
+/**
+ * @public
+ */
 export type TimeLike = IntLike;
 
 
@@ -100,7 +104,7 @@ import type * as types from "./GenericTokenomicsCapo.typeInfo.js";
 * method is the normal way to locate and decode on-chain data without needing to explicitly use the data-bridge helper classes.
 * 
 * ##### customizing the bridge class name
-* Note that you may override `get dataBridgeName() { return "..." }` to customize the name of this bridge class
+* Note that you may override `get bridgeClassName() { return "..." }` to customize the name of this bridge class
 * @public
  */
 export class GenericTokenomicsCapoBridge extends ContractDataBridge {
@@ -242,7 +246,7 @@ export class GenericTokenomicsCapoBridge extends ContractDataBridge {
 }
 export default GenericTokenomicsCapoBridge;
 
-/*
+/**
  * @public
  */
 export class GenericTokenomicsCapoBridgeReader extends DataBridgeReaderClass {
@@ -1114,223 +1118,6 @@ export class CapoDatumHelper extends EnumBridge<JustAnEnum> {
 
 
 /**
- * Helper class for generating UplcData for variants of the ***DelegateRole*** enum type.
- * @public
- * @remarks
- * this class is not intended to be used directly.  Its methods are available through automatic accesors in the parent struct, contract-datum- or contract-activity-bridges. */
-export class DelegateRoleHelperNested extends EnumBridge<JustAnEnum> {
-    /*mkEnumHelperClass*/
-    /**
-            * @internal
-            *  uses unicode U+1c7a - sorts to the end */
-    ᱺᱺcast = makeCast<DelegateRole, DelegateRoleLike>(
-        DelegateRoleSchema,
-        { isMainnet: this.isMainnet, unwrapSingleFieldEnumVariants: true }
-    );
-
-/**
- * (property getter): UplcData for ***"CapoDelegateHelpers::DelegateRole.MintDgt"***
- * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#0***
- */
-    get MintDgt() {
-        const uplc = this.mkUplcData({ MintDgt: {} }, 
-            "CapoDelegateHelpers::DelegateRole.MintDgt");
-        return uplc;
-    } /* tagOnly variant accessor */
-
-/**
- * (property getter): UplcData for ***"CapoDelegateHelpers::DelegateRole.SpendDgt"***
- * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#1***
- */
-    get SpendDgt() {
-        const uplc = this.mkUplcData({ SpendDgt: {} }, 
-            "CapoDelegateHelpers::DelegateRole.SpendDgt");
-        return uplc;
-    } /* tagOnly variant accessor */
-
-/**
- * (property getter): UplcData for ***"CapoDelegateHelpers::DelegateRole.MintInvariant"***
- * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#2***
- */
-    get MintInvariant() {
-        const uplc = this.mkUplcData({ MintInvariant: {} }, 
-            "CapoDelegateHelpers::DelegateRole.MintInvariant");
-        return uplc;
-    } /* tagOnly variant accessor */
-
-/**
- * (property getter): UplcData for ***"CapoDelegateHelpers::DelegateRole.SpendInvariant"***
- * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#3***
- */
-    get SpendInvariant() {
-        const uplc = this.mkUplcData({ SpendInvariant: {} }, 
-            "CapoDelegateHelpers::DelegateRole.SpendInvariant");
-        return uplc;
-    } /* tagOnly variant accessor */
-
-    /**
-     * generates  UplcData for ***"CapoDelegateHelpers::DelegateRole.DgDataPolicy"***
-    * @remarks
-    * #### Nested activity: 
-    * this is connected to a nested-activity wrapper, so the details are piped through 
-    * the parent's uplc-encoder, producing a single uplc object with 
-    * a complete wrapper for this inner activity detail.
-     */
-    DgDataPolicy(
-        name: string
-    ) : UplcData {
-        const uplc = this.mkUplcData({ 
-           DgDataPolicy: name
-        }, "CapoDelegateHelpers::DelegateRole.DgDataPolicy"); /*singleField enum variant*/
-       return uplc;
-    }
-
-    /**
-     * generates  UplcData for ***"CapoDelegateHelpers::DelegateRole.OtherNamedDgt"***
-    * @remarks
-    * #### Nested activity: 
-    * this is connected to a nested-activity wrapper, so the details are piped through 
-    * the parent's uplc-encoder, producing a single uplc object with 
-    * a complete wrapper for this inner activity detail.
-     */
-    OtherNamedDgt(
-        name: string
-    ) : UplcData {
-        const uplc = this.mkUplcData({ 
-           OtherNamedDgt: name
-        }, "CapoDelegateHelpers::DelegateRole.OtherNamedDgt"); /*singleField enum variant*/
-       return uplc;
-    }
-
-/**
- * (property getter): UplcData for ***"CapoDelegateHelpers::DelegateRole.BothMintAndSpendDgt"***
- * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#6***
- */
-    get BothMintAndSpendDgt() {
-        const uplc = this.mkUplcData({ BothMintAndSpendDgt: {} }, 
-            "CapoDelegateHelpers::DelegateRole.BothMintAndSpendDgt");
-        return uplc;
-    } /* tagOnly variant accessor */
-
-/**
- * (property getter): UplcData for ***"CapoDelegateHelpers::DelegateRole.HandledByCapoOnly"***
- * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#7***
- */
-    get HandledByCapoOnly() {
-        const uplc = this.mkUplcData({ HandledByCapoOnly: {} }, 
-            "CapoDelegateHelpers::DelegateRole.HandledByCapoOnly");
-        return uplc;
-    } /* tagOnly variant accessor */
-}/*mkEnumHelperClass*/
-
-
-/**
- * Helper class for generating UplcData for variants of the ***ManifestActivity*** enum type.
- * @public
- * @remarks
- * this class is not intended to be used directly.  Its methods are available through automatic accesors in the parent struct, contract-datum- or contract-activity-bridges. */
-export class ManifestActivityHelperNested extends EnumBridge<isActivity> {
-    /*mkEnumHelperClass*/
-    /**
-            * @internal
-            *  uses unicode U+1c7a - sorts to the end */
-    ᱺᱺcast = makeCast<ManifestActivity, ManifestActivityLike>(
-        ManifestActivitySchema,
-        { isMainnet: this.isMainnet, unwrapSingleFieldEnumVariants: true }
-    );
-
-    /**
-     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.retiringEntry"***
-    * @remarks
-    * #### Nested activity: 
-    * this is connected to a nested-activity wrapper, so the details are piped through 
-    * the parent's uplc-encoder, producing a single uplc object with 
-    * a complete wrapper for this inner activity detail.
-     */
-    retiringEntry(
-        key: string
-    ) : isActivity {
-        const uplc = this.mkUplcData({ 
-           retiringEntry: key
-        }, "CapoDelegateHelpers::ManifestActivity.retiringEntry"); /*singleField enum variant*/
-       return uplc;
-    }
-
-    /**
-     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.updatingEntry"***
-     * @remarks - ***ManifestActivity$updatingEntryLike*** is the same as the expanded field-types.
-    * ##### Nested activity: 
-    * this is connected to a nested-activity wrapper, so the details are piped through 
-    * the parent's uplc-encoder, producing a single uplc object with 
-    * a complete wrapper for this inner activity detail.
-     */
-    updatingEntry(fields: ManifestActivity$updatingEntryLike | { 
-        key: string,
-        tokenName: number[]
-    }) : isActivity {
-        const uplc = this.mkUplcData({
-            updatingEntry: fields 
-        }, "CapoDelegateHelpers::ManifestActivity.updatingEntry");
-       return uplc;
-    } /*multiFieldVariant enum accessor*/
-
-    /**
-     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.addingEntry"***
-     * @remarks - ***ManifestActivity$addingEntryLike*** is the same as the expanded field-types.
-    * ##### Nested activity: 
-    * this is connected to a nested-activity wrapper, so the details are piped through 
-    * the parent's uplc-encoder, producing a single uplc object with 
-    * a complete wrapper for this inner activity detail.
-     */
-    addingEntry(fields: ManifestActivity$addingEntryLike | { 
-        key: string,
-        tokenName: number[]
-    }) : isActivity {
-        const uplc = this.mkUplcData({
-            addingEntry: fields 
-        }, "CapoDelegateHelpers::ManifestActivity.addingEntry");
-       return uplc;
-    } /*multiFieldVariant enum accessor*/
-
-    /**
-     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.forkingThreadToken"***
-     * @remarks - ***ManifestActivity$forkingThreadTokenLike*** is the same as the expanded field-types.
-    * ##### Nested activity: 
-    * this is connected to a nested-activity wrapper, so the details are piped through 
-    * the parent's uplc-encoder, producing a single uplc object with 
-    * a complete wrapper for this inner activity detail.
-     */
-    forkingThreadToken(fields: ManifestActivity$forkingThreadTokenLike | { 
-        key: string,
-        newThreadCount: IntLike
-    }) : isActivity {
-        const uplc = this.mkUplcData({
-            forkingThreadToken: fields 
-        }, "CapoDelegateHelpers::ManifestActivity.forkingThreadToken");
-       return uplc;
-    } /*multiFieldVariant enum accessor*/
-
-    /**
-     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.burningThreadToken"***
-     * @remarks - ***ManifestActivity$burningThreadTokenLike*** is the same as the expanded field-types.
-    * ##### Nested activity: 
-    * this is connected to a nested-activity wrapper, so the details are piped through 
-    * the parent's uplc-encoder, producing a single uplc object with 
-    * a complete wrapper for this inner activity detail.
-     */
-    burningThreadToken(fields: ManifestActivity$burningThreadTokenLike | { 
-        key: string,
-        burnedThreadCount: IntLike
-    }) : isActivity {
-        const uplc = this.mkUplcData({
-            burningThreadToken: fields 
-        }, "CapoDelegateHelpers::ManifestActivity.burningThreadToken");
-       return uplc;
-    } /*multiFieldVariant enum accessor*/
-}/*mkEnumHelperClass*/
-
-
-/**
  * Helper class for generating UplcData for variants of the ***CapoLifecycleActivity*** enum type.
  * @public
  * @remarks
@@ -1419,21 +1206,7 @@ export class CapoLifecycleActivityHelper extends EnumBridge<JustAnEnum> {
         return uplc;
     } /* tagOnly variant accessor */
 
-    /**
-     * access to different variants of the ***nested DelegateRole*** type needed for ***CapoLifecycleActivity:removePendingChange***.
-     */
-    get removePendingChange() {
-        const nestedAccessor = new DelegateRoleHelperNested({
-            isMainnet: this.isMainnet, isNested: true, isActivity: false 
-        });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
-        nestedAccessor.mkDataVia(
-            (role: DelegateRoleLike) => {
-                return  this.mkUplcData({ removePendingChange: role }, 
-            "CapoDelegateHelpers::CapoLifecycleActivity.removePendingChange");
-        });
-        return nestedAccessor;
-    } /* nested enum accessor */
+
 
 /**
  * (property getter): UplcData for ***"CapoDelegateHelpers::CapoLifecycleActivity.commitPendingChanges"***
@@ -1573,21 +1346,7 @@ export class CapoLifecycleActivityHelper extends EnumBridge<JustAnEnum> {
     /* coda: seeded helper in same multiFieldVariant/seeded */
 
 
-    /**
-     * access to different variants of the ***nested ManifestActivity*** type needed for ***CapoLifecycleActivity:updatingManifest***.
-     */
-    get updatingManifest() {
-        const nestedAccessor = new ManifestActivityHelperNested({
-            isMainnet: this.isMainnet, isNested: true, isActivity: false 
-        });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
-        nestedAccessor.mkDataVia(
-            (activity: ManifestActivityLike) => {
-                return  this.mkUplcData({ updatingManifest: activity }, 
-            "CapoDelegateHelpers::CapoLifecycleActivity.updatingManifest");
-        });
-        return nestedAccessor;
-    } /* nested enum accessor */
+
 }/*mkEnumHelperClass*/
 
 
@@ -1703,6 +1462,112 @@ export class ActivityDelegateRoleHelperNested extends EnumBridge<isActivity> {
 
 
 /**
+ * Helper class for generating UplcData for variants of the ***ManifestActivity*** enum type.
+ * @public
+ * @remarks
+ * this class is not intended to be used directly.  Its methods are available through automatic accesors in the parent struct, contract-datum- or contract-activity-bridges. */
+export class ManifestActivityHelperNested extends EnumBridge<isActivity> {
+    /*mkEnumHelperClass*/
+    /**
+            * @internal
+            *  uses unicode U+1c7a - sorts to the end */
+    ᱺᱺcast = makeCast<ManifestActivity, ManifestActivityLike>(
+        ManifestActivitySchema,
+        { isMainnet: this.isMainnet, unwrapSingleFieldEnumVariants: true }
+    );
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.retiringEntry"***
+    * @remarks
+    * #### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    retiringEntry(
+        key: string
+    ) : isActivity {
+        const uplc = this.mkUplcData({ 
+           retiringEntry: key
+        }, "CapoDelegateHelpers::ManifestActivity.retiringEntry"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.updatingEntry"***
+     * @remarks - ***ManifestActivity$updatingEntryLike*** is the same as the expanded field-types.
+    * ##### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    updatingEntry(fields: ManifestActivity$updatingEntryLike | { 
+        key: string,
+        tokenName: number[]
+    }) : isActivity {
+        const uplc = this.mkUplcData({
+            updatingEntry: fields 
+        }, "CapoDelegateHelpers::ManifestActivity.updatingEntry");
+       return uplc;
+    } /*multiFieldVariant enum accessor*/
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.addingEntry"***
+     * @remarks - ***ManifestActivity$addingEntryLike*** is the same as the expanded field-types.
+    * ##### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    addingEntry(fields: ManifestActivity$addingEntryLike | { 
+        key: string,
+        tokenName: number[]
+    }) : isActivity {
+        const uplc = this.mkUplcData({
+            addingEntry: fields 
+        }, "CapoDelegateHelpers::ManifestActivity.addingEntry");
+       return uplc;
+    } /*multiFieldVariant enum accessor*/
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.forkingThreadToken"***
+     * @remarks - ***ManifestActivity$forkingThreadTokenLike*** is the same as the expanded field-types.
+    * ##### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    forkingThreadToken(fields: ManifestActivity$forkingThreadTokenLike | { 
+        key: string,
+        newThreadCount: IntLike
+    }) : isActivity {
+        const uplc = this.mkUplcData({
+            forkingThreadToken: fields 
+        }, "CapoDelegateHelpers::ManifestActivity.forkingThreadToken");
+       return uplc;
+    } /*multiFieldVariant enum accessor*/
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"CapoDelegateHelpers::ManifestActivity.burningThreadToken"***
+     * @remarks - ***ManifestActivity$burningThreadTokenLike*** is the same as the expanded field-types.
+    * ##### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    burningThreadToken(fields: ManifestActivity$burningThreadTokenLike | { 
+        key: string,
+        burnedThreadCount: IntLike
+    }) : isActivity {
+        const uplc = this.mkUplcData({
+            burningThreadToken: fields 
+        }, "CapoDelegateHelpers::ManifestActivity.burningThreadToken");
+       return uplc;
+    } /*multiFieldVariant enum accessor*/
+}/*mkEnumHelperClass*/
+
+
+/**
  * Helper class for generating UplcData for variants of the ***CapoLifecycleActivity*** enum type.
  * @public
  * @remarks
@@ -1806,7 +1671,6 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
         const nestedAccessor = new ActivityDelegateRoleHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (role: DelegateRoleLike) => {
                 return  this.mkUplcData({ removePendingChange: role }, 
@@ -1976,7 +1840,6 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
         const nestedAccessor = new ManifestActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: ManifestActivityLike) => {
                 return  this.mkUplcData({ updatingManifest: activity }, 
@@ -2009,7 +1872,6 @@ export class CapoActivityHelper extends EnumBridge<isActivity> {
         const nestedAccessor = new CapoLifecycleActivityHelperNested({
             isMainnet: this.isMainnet, isNested: true, isActivity: true 
         });
-        //@ts-expect-error drilling through the protected accessor.  See more comments about that above
         nestedAccessor.mkDataVia(
             (activity: CapoLifecycleActivityLike) => {
                 return  this.mkUplcData({ capoLifecycleActivity: activity }, 

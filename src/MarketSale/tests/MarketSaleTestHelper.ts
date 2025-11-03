@@ -12,7 +12,7 @@ import type {
     MarketSaleData,
     MarketSaleDataLike,
     minimalMarketSaleData,
-} from "../MarketSale.concrete.typeInfo.js";
+} from "../MarketSale.typeInfo.js";
 import {
     textToBytes,
     type FoundDatumUtxo,
@@ -115,7 +115,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         const marketSale = await this.findFirstMarketSale();
         return this.activateMarketSale(marketSale, {
             mintTokenName:
-                marketSale.data!.moreFields.saleAssets.primaryAssetName,
+                marketSale.data!.details.V1.saleAssets.primaryAssetName,
         });
     }
 
@@ -144,8 +144,8 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         let remainingNeededTokenCount = 0n;
         if (mintTokenName) {
             const totalNeeded =
-                marketSale.data!.moreFields.saleAssets.saleUnitAssets.multiply(
-                    marketSale.data!.moreFields.saleAssets.totalSaleUnits
+                marketSale.data!.details.V1.saleAssets.saleUnitAssets.multiply(
+                    marketSale.data!.details.V1.saleAssets.totalSaleUnits
                 );
             const needThisTokenCount = totalNeeded.assets
                 .getPolicyTokens(capo.mph)

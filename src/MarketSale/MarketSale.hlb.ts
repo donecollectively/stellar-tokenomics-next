@@ -22,7 +22,7 @@ export class MarketSaleBundle extends DelegatedDataBundle.usingCapoBundleClass(
     specializedDelegateModule = MarketSalePolicy;
     requiresGovAuthority = true;
 
-    get modules(): Source[] {
+    get modules() {
         return [
             ...super.modules,
             MarketSaleData,
