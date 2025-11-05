@@ -24,7 +24,7 @@ No warranty of suitability or fitness for any purpose is provided.
 
 3. Install the package as a dependency, using a github: url
 ```
-pnpm add donecollectively/stellar-tokenomics#semver:^0.7.0-beta.1
+pnpm add donecollectively/stellar-tokenomics#semver:^0.8.0-beta.8
 ```
 ... or the version appropriate for your needs.
 

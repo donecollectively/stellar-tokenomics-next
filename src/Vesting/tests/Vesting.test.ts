@@ -54,7 +54,7 @@ describe("Vesting plugin", async () => {
     });
 
     describe("It's created with key details", () => {
-        fit("has expected labels and other high-level details", async (context: STOK_TC) => {
+        it("has expected labels and other high-level details", async (context: STOK_TC) => {
             const {
                 h,
                 h: { network, actors, delay, state },
