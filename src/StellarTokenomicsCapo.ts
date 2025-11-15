@@ -227,7 +227,7 @@ export abstract class StellarTokenomicsCapo<
         if (!charterData) {
             charterData = await this.findCharterData();
         }
-        return this.getDgDataController("Agreement", {
+        return this.getDgDataController("mktSale", {
             charterData: charterData as CapoDatum$Ergo$CharterData,
         }) as Promise<MarketSaleController>;
     }

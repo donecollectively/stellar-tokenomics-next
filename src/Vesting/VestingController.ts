@@ -68,7 +68,7 @@ export class VestingController extends DelegatedDataContract<
     }
 
     get recordTypeName() {
-        return "vesting";
+        return "vesting" as const;
     }
 
     exampleData(): minimalVestingData {

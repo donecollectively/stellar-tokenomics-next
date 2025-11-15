@@ -87,7 +87,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     dataBridgeClass = MarketSalePolicyDataBridge;
 
     get recordTypeName() {
-        return "mktSale";
+        return "mktSale" as const;
     }
 
     // get abstractBundleClass() {
