@@ -25,11 +25,11 @@
         "./contracts-mainnet/*.hlb": {
             "default": "./dist/contracts-mainnet/*.hlb.mjs"
         },
-        "./contracts/deployed/*.hlDeployed": {
-            "network-preview": "./dist/contracts-preview/*.hlDeployed.json",
-            "network-preprod": "./dist/contracts-preprod/*.hlDeployed.json",
-            "network-mainnet": "./dist/contracts-mainnet/*.hlDeployed.json",
-            "default": "./dist/contracts/preprod/*.hlDeployed.json"
+        "./contracts/deployed/*.compiled": {
+            "network-preview": "./dist/contracts-preview/*.compiled.hlb.mjs",
+            "network-preprod": "./dist/contracts-preprod/*.compiled.hlb.mjs",
+            "network-mainnet": "./dist/contracts-mainnet/*.compiled.hlb.mjs",
+            "default": "./dist/contracts/preprod/*.compiled.hlb.mjs"
         }
     },
     "homepage": "https://stellar-contracts.org/stellar-tokenomics",
@@ -50,7 +50,9 @@
         "testing:debug": "vitest --inspect --watch --poolOptions.forks.singleFork watch",
         "testing": "vitest watch",
         "test:ui": "vitest --ui",
-        "test:run": "vitest run"
+        "test:run": "vitest run",
+        "docs:build": "tsc -p ./tsconfig.all.dts.json ; pnpm docs:generate",
+        "docs:generate": "typedoc --cleanOutputDir --tsconfig tsconfig.all.dts.json src/index.ts --json docs/info.json --html docs/html"
     },
     "type": "module",
     "postcss": {
@@ -65,7 +67,7 @@
     },
     "browserslist": "defaults, not ie <= 11",
     "peerDependencies": {
-        "@donecollectively/stellar-contracts": "^0.9.3-beta.8",
+        "@donecollectively/stellar-contracts": "^0.9.3-beta.9",
         "@helios-lang/cbor": "^0.3.1",
         "@helios-lang/codec-utils": "^0.3.4",
         "@helios-lang/compiler": "^0.17.30",
@@ -126,6 +128,8 @@
         "tailwindcss": "^3.3.5",
         "ts-node": "^10.9.2",
         "tslib": "^2.8.1",
+        "typedoc": "^0.28.14",
+        "typedoc-plugin-markdown": "^4.9.0",
         "typescript": "^5.7.0",
         "vite-tsconfig-paths": "^4.3.2",
         "vitest": "^3.2.4"

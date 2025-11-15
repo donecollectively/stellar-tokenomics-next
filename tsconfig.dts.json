@@ -13,22 +13,23 @@
         "skipLibCheck": true,
 
         "target": "ESNext",
-        "lib": ["esnext", "dom"],
-        "module": "nodenext",
-        "esModuleInterop": true,
+         // "lib": ‹defaut›
+        //  "module": "ESNext",
+         "module": "preserve",
+         "esModuleInterop": true,
         "types": ["node"],
-        "verbatimModuleSyntax": true,
+        // "verbatimModuleSyntax": true,
 
-        "moduleResolution": "nodenext",
+        "moduleResolution": "bundler",
         "customConditions": ["dev"],
-        "baseUrl": ".",
+        "baseUrl": "dist/",
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
         // "isolatedModules": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         
-        "outDir": "./.stellar/api",        
+        "outDir": "./dist/types",        
         // "outFile": "./.stellar/api/stellar-tokenomics-raw.d.ts",
         // "importHelpers": true,
         "rootDir": ".",
@@ -45,16 +46,14 @@
         // "noResolve": true,
         // "disableReferencedProjectLoad": false,
         "paths": {
-            "stellar-tokenomics": ["./src/index.ts"],
-            // "src/*": ["./src/*"]
+            // "stellar-tokenomics": ["./src/index.ts"],
+            "src/*": ["./src/*"]
         }
         // "plugins": [],
         // "outFile": "dist/index.d.ts",
     },
-    "files": [ 
-        "./src/index.ts",
-        // "./.stellar/api/src/index.d.ts",
-        "./heliosModule.d.ts",
+    "files": [
+        "./heliosModule.d.ts"
     ],
     "include": [
         // "lib/**/*.json", 

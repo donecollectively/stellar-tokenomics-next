@@ -7,13 +7,24 @@ startTime=$(date)
 #//! EXPECTS to be run in context of `pnpm exec`
 
 playStartSound
+{
+    pushd dist.overlay >/dev/null
+    find . -type f | while read a ; do {
+        cp $a ../dist/$a    
+        touch ../dist/$a    
+    } done
+    popd >/dev/null
 
 # echo "tsc --traceResolution -p ./tsconfig.dts.json"
 # tsc --traceResolution -p ./tsconfig.dts.json
 # exit
+    inBackground "typecheck all, create .d.ts types for all packages" \
+        tsc -p ./tsconfig.all.dts.json  &
 
-inBackground "typecheck all, prep for doc-gen and main .d.ts" \
-    tsc -p ./tsconfig.dts.json  &
+    inBackground "build docs" \
+        pnpm docs:generate &
+}  
+
 {
     rollup \
       --config rollup.config.ts \
@@ -23,8 +34,9 @@ inBackground "typecheck all, prep for doc-gen and main .d.ts" \
 } || logProblemWith "dAPI build with rollup"
 
 wait
-find src -type d | tail -n +2 | while read a ; do { mkdir -p .stellar/api/$a ; } done
-find src -name \*.typeInfo.d.ts | grep -v '/tests/' | while read a ; do { cp $a .stellar/api/$a ; } done
+# Copy typeInfo.d.ts files to dist/types/ for api-extractor
+find src -type d | tail -n +2 | while read a ; do { mkdir -p dist/types/$a ; } done
+find src -name \*.typeInfo.d.ts | grep -v '/tests/' | while read a ; do { cp $a dist/types/$a ; } done
 
 echo "build started at  $startTime"
 date
