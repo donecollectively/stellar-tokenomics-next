@@ -14,7 +14,7 @@ import {
  * The VxfExpectedActivity enum is used to capture details of how the vesting contract can
  * enforce the required smart contract to which funds may be distributed after they vest.
  * It is used in the Vxf Sealing process to establish a positive linkage to a receiving contract, 
- * or to a collaborating (Vxf Transfer agent) contract that has a stake or policy to be enforced 
+ * or to a collaborating (Vxf Transfer actor) contract that has a stake or policy to be enforced 
  * during the funds distribution.
  *
  * the appData field can include additional details which are transparent to the vesting contract,

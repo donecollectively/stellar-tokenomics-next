@@ -9,7 +9,7 @@ import MarketSaleData from "./MarketSaleData.hl";
 import SaleProgressDetails from "./SaleProgressDetails.hl";
 import DynamicSaleV1 from "./DynamicSaleV1.hl";
 import DynamicSaleV1Settings from "./DynamicSaleV1Settings.hl";
-import VxfProtocol from "../Vesting/VxfProtocol.hl";
+import VxfProtocol from "../VxfProtocol/VxfProtocol.hl";
 import type { Source } from "@helios-lang/compiler-utils";
 
 /**

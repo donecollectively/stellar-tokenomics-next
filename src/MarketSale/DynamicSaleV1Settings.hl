@@ -1,7 +1,10 @@
 module DynamicSaleV1Settings
 
 struct DynamicSaleV1Settings {
-    targetPrice: Real  // same as targetPriceBenchmark
+    targetPrice: Real  
+    //TODO: add pricing unit
+    // pricingUnit: AssetClass
+    
     targetedSellingTime: Duration  
 
     minPrice: Real  // same as minSalePrice

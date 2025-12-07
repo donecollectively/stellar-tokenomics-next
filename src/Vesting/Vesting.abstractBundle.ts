@@ -2,7 +2,7 @@ import { DelegatedDataBundle } from "@donecollectively/stellar-contracts"
 import VestingPolicy from "./VestingPolicy.hl"
 
 import VestingData from "./VestingData.hl";
-import VxfProtocol from "./VxfProtocol.hl";
+import VxfProtocol from "../VxfProtocol/VxfProtocol.hl";
 import type { Source } from "@helios-lang/compiler-utils";
 
 export default class AbstractVestingBundle 
