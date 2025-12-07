@@ -118,7 +118,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                     fixedSaleDetails: {
                         settings: {
                             targetPrice: 1,
-                            targetedSellingTime: 75 * 60 * 1_000,
+                            targetedSellingTime: 4.5 * 24 * 3600 * 1_000 /** 4.5 days */,
 
                             minPrice: 0.5,
                             maxPrice: 4.2,
@@ -147,8 +147,10 @@ export class MarketSaleController extends WrappedDgDataContract<
                             mph,
                             tn,
                             100_000_000n / units
+                        ).add(
+                            makeValue(mph, textToBytes("KRILL"), 1000n)
                         ),
-                        singleBuyMaxUnits: 25n,
+                    singleBuyMaxUnits: 25n,
                     },
                     saleState: {
                         progressDetails: {
@@ -357,7 +359,6 @@ export class MarketSaleController extends WrappedDgDataContract<
     // }
 
     beforeCreate(data: MarketSaleData) {
-        debugger;
         data.details.V1.threadInfo.saleId = data.id;
         return data;
     }
