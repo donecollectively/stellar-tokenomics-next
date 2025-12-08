@@ -361,7 +361,6 @@ enum DelegateActivity {
 
                     mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
                     
-                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
                     next : MarketSaleData = MarketSaleData::updated(mktSaleDD);
 
                     true

@@ -178,8 +178,13 @@ describe("MarketSale plugin", async () => {
 
         it("rejects creation when saleUnitAssets include non-primary tokens", async (context: STOK_TC) => {
             const { h } = context;
+            await h.reusableBootstrap();
             const controller = await h.mktSaleDgt();
             const example = controller.exampleData();
+
+            const primaryPerUnit =
+                BigInt(example.details.V1.saleAssets.primaryAssetTargetCount) /
+                BigInt(example.details.V1.saleAssets.totalSaleUnits);
 
             const badSale = {
                 ...example,
@@ -188,9 +193,11 @@ describe("MarketSale plugin", async () => {
                         ...example.details.V1,
                         saleAssets: {
                             ...example.details.V1.saleAssets,
-                            saleUnitAssets: example.details.V1.saleAssets.saleUnitAssets.add(
-                                makeValue(h.capo.mph, textToBytes("EXTRA"), 1n)
-                            ),
+                            saleUnitAssets: makeValue(
+                                h.capo.mph,
+                                example.details.V1.saleAssets.primaryAssetName,
+                                primaryPerUnit
+                            ).add(makeValue(h.capo.mph, textToBytes("EXTRA"), 1n)),
                         },
                     },
                 },
@@ -1816,9 +1823,9 @@ describe("MarketSale plugin", async () => {
                 "update that changes value",
                 marketSale,
                 {
-                    activity: mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale({
-                        id: marketSale.data!.details.V1.threadInfo.saleId,
-                    }),
+                    activity: mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale(
+                        marketSale.data!.details.V1.threadInfo.saleId
+                    ),
                     updatedFields: {
                         name: "Changing value should fail",
                     },

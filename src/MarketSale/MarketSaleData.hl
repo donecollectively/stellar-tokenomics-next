@@ -164,7 +164,25 @@ struct MarketSaleData {
             saleDetails.startAt, 
             saleAssets.totalSaleUnits
         ).trace("progress details OK? ")
+        && self.validatePrimaryAssetOnlyOnCreation()
         && true
+    }
+
+    func validatePrimaryAssetOnlyOnCreation(self) -> Bool {
+        saleAssets = self.v1details().saleAssets;
+        primaryPerUnit : Int = saleAssets.primaryAssetTargetCount / saleAssets.totalSaleUnits;
+        expectedPrimaryOnly : Value = Value::new(
+            AssetClass::new(
+                saleAssets.primaryAssetMph,
+                saleAssets.primaryAssetName
+            ),
+            primaryPerUnit
+        );
+        assert(
+            saleAssets.saleUnitAssets == expectedPrimaryOnly,
+            "saleUnitAssets must only reference the primary asset when created"
+        );
+        true
     }
 
     func validateActivating(self, utxoValue: Value, DDdetails : DgDataDetails ) -> Bool {
@@ -324,28 +342,28 @@ struct MarketSaleData {
         
         prevState = prevDetails.saleState;
         nextState = nextDetails.saleState;
-        prevFixed = prevDetails.fixedSaleDetails;
         nextFixed = nextDetails.fixedSaleDetails;
         prevAssets = prevDetails.saleAssets;
         nextAssets = nextDetails.saleAssets;
-        prevThread = prevDetails.threadInfo;
-        nextThread = nextDetails.threadInfo;
+        prevUtxoValue : Value = ddd.input().value;
                 
-        // Core constraints
-        bREQT("UTxO value MUST remain unchanged", 
+        // Core constraints (diagnostic-friendly)
+        REQT(
+            "UTxO value MUST remain unchanged",
             ddd.input().value == ddd.output().value,
             "UTxO value changed; delta= " + (ddd.output().value - ddd.input().value).show()
         );
 
-        bREQT("previous sale MUST be in Pending state", prevState.mustBePending("old: UpdatingPendingSale").trace("input sale must be Pending: "));
-        
-        bREQT("saleState must be Pending unchanged (must stay Pending)", 
-            prevDetails.saleState.switch { 
-                Pending => nextDetails.mustBePending("UpdatingPendingSale: updated record"), 
-                _ => false 
-        });
-
-        bREQT("threadInfo must remain unchanged", prevDetails.threadInfo == nextDetails.threadInfo);
+        REQT(
+            "The sale must be in Pending state and remain there",
+            prevState.mustBePending("UpdatingPendingSale: previous record") 
+            && nextState.mustBePending("UpdatingPendingSale: updated record")
+        );
+    
+        REQT(
+            "threadInfo must remain unchanged",
+            prevDetails.threadInfo == nextDetails.threadInfo
+        );
         
         // Primary asset identity change logic
         primaryAssetChanged : Bool = (
@@ -356,7 +374,7 @@ struct MarketSaleData {
         
         if (primaryAssetChanged) {
             REQT("if primary asset changes, check if old primary asset tokens exist in previous UTxO");
-            prevUtxoAssets : Assets = prevUtxoValue.get_assets() - ddd.uutValue();
+            prevUtxoAssets : Value = prevUtxoValue - ddd.uutValue();
             oldPrimaryAssetCount : Int = prevUtxoAssets
                 .get_policy(prevAssets.primaryAssetMph)
                 .get(prevAssets.primaryAssetName);
@@ -414,7 +432,7 @@ struct MarketSaleData {
         expectedTargetCount : Int = nextAssets.totalSaleUnits * nextPrimaryPerUnit;
         assert(
             nextAssets.primaryAssetTargetCount == expectedTargetCount,
-            "primaryAssetTargetCount must equal totalSaleUnits * saleUnitAssets[primary]"
+            "primaryAssetTargetCount must equal totalSaleUnits * saleUnitAssets@primary"
         );
         
         // Validate VxfDestination fields
