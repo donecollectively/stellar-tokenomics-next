@@ -252,4 +252,37 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
         return this.submitTxnWithBlock(tcx2, submitOptions);
     }
+
+    async updatePendingMarketSale(
+        marketSale: FoundDatumUtxo<MarketSaleData>,
+        updatedFields: Partial<MarketSaleDataLike>,
+        description: string = "updating pending market sale",
+        submitOptions: TestHelperSubmitOptions = {}
+    ) {
+        const { capo } = this;
+        const mktSaleDgt = await this.mktSaleDgt();
+        if (description) {
+            console.log("  ----- ⚗️ " + description);
+        }
+
+        const tcx = capo.mkTcx(description);
+        const existingSale = marketSale.data!;
+        if (!existingSale) {
+            throw new Error("mktSale not found");
+        }
+
+        const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
+            description,
+            marketSale,
+            {
+                activity: mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale({
+                    id: existingSale.details.V1.threadInfo.saleId,
+                }),
+                updatedFields,
+            },
+            tcx
+        );
+
+        return this.submitTxnWithBlock(tcx2, submitOptions);
+    }
 }

@@ -310,4 +310,156 @@ struct MarketSaleData {
         && updated.validatePendingDetails()
         && true
     }
+
+    //! Validates updates to a MarketSale while it's in Pending state.
+    //  This function enforces which fields may be updated and which must remain unchanged.
+    func validateUpdatePendingSale(self, ddd : DgDataDetails) -> Bool {
+        print("mktSale: validateUpdatePendingSale()");
+        prevMktSale : MarketSaleData = MarketSaleData::from_data(
+            ddd.inputData()
+        );
+        
+        prevDetails = prevMktSale.v1details();
+        nextDetails = self.v1details();
+        
+        prevState = prevDetails.saleState;
+        nextState = nextDetails.saleState;
+        prevFixed = prevDetails.fixedSaleDetails;
+        nextFixed = nextDetails.fixedSaleDetails;
+        prevAssets = prevDetails.saleAssets;
+        nextAssets = nextDetails.saleAssets;
+        prevThread = prevDetails.threadInfo;
+        nextThread = nextDetails.threadInfo;
+                
+        // Core constraints
+        bREQT("UTxO value MUST remain unchanged", 
+            ddd.input().value == ddd.output().value,
+            "UTxO value changed; delta= " + (ddd.output().value - ddd.input().value).show()
+        );
+
+        bREQT("previous sale MUST be in Pending state", prevState.mustBePending("old: UpdatingPendingSale").trace("input sale must be Pending: "));
+        
+        bREQT("saleState must be Pending unchanged (must stay Pending)", 
+            prevDetails.saleState.switch { 
+                Pending => nextDetails.mustBePending("UpdatingPendingSale: updated record"), 
+                _ => false 
+        });
+
+        bREQT("threadInfo must remain unchanged", prevDetails.threadInfo == nextDetails.threadInfo);
+        
+        // Primary asset identity change logic
+        primaryAssetChanged : Bool = (
+            nextAssets.primaryAssetMph != prevAssets.primaryAssetMph
+        ) || (
+            nextAssets.primaryAssetName != prevAssets.primaryAssetName
+        );
+        
+        if (primaryAssetChanged) {
+            REQT("if primary asset changes, check if old primary asset tokens exist in previous UTxO");
+            prevUtxoAssets : Assets = prevUtxoValue.get_assets() - ddd.uutValue();
+            oldPrimaryAssetCount : Int = prevUtxoAssets
+                .get_policy(prevAssets.primaryAssetMph)
+                .get(prevAssets.primaryAssetName);
+            
+            hasOldPrimaryTokens : Bool = oldPrimaryAssetCount > 0;
+            
+            if (hasOldPrimaryTokens) {
+                REQT("if old primary asset tokens exist, saleUnitAssets must continue to reference old primary");
+                nextSaleUnitOldPrimary : Int = nextAssets.saleUnitAssets
+                    .get_assets()
+                    .get_policy(prevAssets.primaryAssetMph)
+                    .get(prevAssets.primaryAssetName);
+                
+                REQT("old primary asset quantity in saleUnitAssets must divide evenly by totalSaleUnits");
+                assert(
+                    oldPrimaryAssetCount % nextAssets.totalSaleUnits == 0,
+                    "old primary asset quantity must divide evenly by totalSaleUnits"
+                );
+                
+                expectedOldPrimaryPerUnit : Int = oldPrimaryAssetCount / nextAssets.totalSaleUnits;
+                assert(
+                    nextSaleUnitOldPrimary == expectedOldPrimaryPerUnit,
+                    "saleUnitAssets must reference old primary asset with correct per-unit quantity"
+                );
+            } else {
+                REQT("if no old primary asset tokens, saleUnitAssets must reference new primary and not old");
+                nextSaleUnitOldPrimary : Int = nextAssets.saleUnitAssets
+                    .get_assets()
+                    .get_policy(prevAssets.primaryAssetMph)
+                    .get(prevAssets.primaryAssetName);
+                
+                assert(
+                    nextSaleUnitOldPrimary == 0,
+                    "saleUnitAssets must not reference old primary asset when no old tokens exist"
+                );
+                
+                nextSaleUnitNewPrimary : Int = nextAssets.saleUnitAssets
+                    .get_assets()
+                    .get_policy(nextAssets.primaryAssetMph)
+                    .get(nextAssets.primaryAssetName);
+                
+                assert(
+                    nextSaleUnitNewPrimary > 0,
+                    "saleUnitAssets must reference new primary asset"
+                );
+            }
+        }
+        
+        // Primary asset target count consistency
+        REQT("primaryAssetTargetCount must maintain consistency with totalSaleUnits and saleUnitAssets");
+        nextPrimaryPerUnit : Int = nextAssets.saleUnitAssets
+            .get_assets()
+            .get_policy(nextAssets.primaryAssetMph)
+            .get(nextAssets.primaryAssetName);
+        expectedTargetCount : Int = nextAssets.totalSaleUnits * nextPrimaryPerUnit;
+        assert(
+            nextAssets.primaryAssetTargetCount == expectedTargetCount,
+            "primaryAssetTargetCount must equal totalSaleUnits * saleUnitAssets[primary]"
+        );
+        
+        // Validate VxfDestination fields
+        REQT("validates VxfDestination in vxfTokensTo if Some");
+        nextFixed.vxfTokensTo.switch {
+            Some{vxf} => {
+                assert(vxf.validate("vxfTokensTo"), "vxfTokensTo must be valid");
+            },
+            None => {
+                print("  -- vxfTokensTo is None (allowed)");
+            }
+        }
+        
+        REQT("validates VxfDestination in vxfFundsTo if Some");
+        nextFixed.vxfFundsTo.switch {
+            Some{vxf} => {
+                assert(vxf.validate("vxfFundsTo"), "vxfFundsTo must be valid");
+            },
+            None => {
+                print("  -- vxfFundsTo is None (allowed for pending updates)");
+            }
+        }
+        
+        // Final validations
+        REQT("validates updated record passes all general validations");
+        assert(self.validate(), "updated record must pass general validation");
+        
+        REQT("validates updated record passes pending-specific validations");
+        assert(self.validatePendingDetails(), "updated record must pass pending validations");
+        
+        REQT("validates settings");
+        assert(
+            nextFixed.settings.validateCreatedDetails(),
+            "updated settings must pass validation"
+        );
+        
+        REQT("validates progressDetails still matches startAt and totalSaleUnits");
+        assert(
+            nextState.progressDetails.validateCreatedDetails(
+                nextFixed.startAt,
+                nextAssets.totalSaleUnits
+            ),
+            "progressDetails must be consistent with startAt and totalSaleUnits"
+        );
+        
+        true
+    }
 }

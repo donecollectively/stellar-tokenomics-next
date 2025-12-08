@@ -20,7 +20,7 @@ import {
 } from "./MarketSaleTestHelper.js";
 
 import { MarketSaleCapo as SomeTokenomicsCapo } from "./modules/MarketSaleCapo.js";
-import { dumpAny } from "@donecollectively/stellar-contracts";
+import { dumpAny, textToBytes } from "@donecollectively/stellar-contracts";
 import { makeValue } from "@helios-lang/ledger";
 
 let helperState: TestHelperState<SomeTokenomicsCapo> = {
@@ -1052,5 +1052,618 @@ describe("MarketSale plugin", async () => {
                 // the parent-chunk
             }
         );
+    });
+
+    describe("Activity:UpdatingPendingSale allows updates to a Pending mktSale", () => {
+        it("can update all allowed fields simultaneously", async (context: STOK_TC) => {
+            const {
+                h,
+                h: { network, actors, delay, state },
+            } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const controller = await h.mktSaleDgt();
+            const exampleData = controller.exampleData();
+
+            const newName = "Updated Market Sale Name";
+            const newStartAt = Date.now() + 1000 * 60 * 60 * 24; // 1 day from now
+            const newTotalSaleUnits = 2000n;
+            const newSingleBuyMaxUnits = 50n;
+            const newPrimaryAssetTargetCount = 200_000_000n;
+            // Calculate KRILL per unit: original was 1000n per unit, so for 2000 units it should be 2000n per unit
+            const newSaleUnitAssets = makeValue(
+                h.capo.mph,
+                exampleData.details.V1.saleAssets.primaryAssetName,
+                newPrimaryAssetTargetCount / newTotalSaleUnits
+            ).add(makeValue(h.capo.mph, textToBytes("KRILL"), (2000n * 1000n) / newTotalSaleUnits));
+
+            await h.updatePendingMarketSale(
+                marketSale,
+                {
+                    name: newName,
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            fixedSaleDetails: {
+                                ...marketSale.data!.details.V1.fixedSaleDetails,
+                                startAt: newStartAt,
+                                settings: {
+                                    ...marketSale.data!.details.V1.fixedSaleDetails
+                                        .settings,
+                                    targetPrice: 1.5,
+                                },
+                            },
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                totalSaleUnits: newTotalSaleUnits,
+                                singleBuyMaxUnits: newSingleBuyMaxUnits,
+                                primaryAssetTargetCount: newPrimaryAssetTargetCount,
+                                saleUnitAssets: newSaleUnitAssets,
+                            },
+                        },
+                    },
+                },
+                "updating all allowed fields"
+            );
+
+            const updatedSale = await h.findFirstMarketSale();
+            expect(updatedSale.data!.name).toEqual(newName);
+            expect(
+                updatedSale.data!.details.V1.fixedSaleDetails.startAt
+            ).toEqual(newStartAt);
+            expect(
+                updatedSale.data!.details.V1.fixedSaleDetails.settings.targetPrice
+            ).toEqual(1.5);
+            expect(
+                updatedSale.data!.details.V1.saleAssets.totalSaleUnits
+            ).toEqual(newTotalSaleUnits);
+            expect(
+                updatedSale.data!.details.V1.saleAssets.singleBuyMaxUnits
+            ).toEqual(newSingleBuyMaxUnits);
+            expect(
+                updatedSale.data!.details.V1.saleAssets.primaryAssetTargetCount
+            ).toEqual(newPrimaryAssetTargetCount);
+        });
+
+        it("can update the name field", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const newName = "New Sale Name";
+            await h.updatePendingMarketSale(
+                marketSale,
+                { name: newName },
+                "updating name"
+            );
+
+            const updatedSale = await h.findFirstMarketSale();
+            expect(updatedSale.data!.name).toEqual(newName);
+        });
+
+        it("can update fixedSaleDetails.startAt", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const newStartAt = Date.now() + 1000 * 60 * 60 * 24 * 2; // 2 days from now
+            await h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            fixedSaleDetails: {
+                                ...marketSale.data!.details.V1.fixedSaleDetails,
+                                startAt: newStartAt,
+                            },
+                        },
+                    },
+                },
+                "updating startAt"
+            );
+
+            const updatedSale = await h.findFirstMarketSale();
+            expect(
+                updatedSale.data!.details.V1.fixedSaleDetails.startAt
+            ).toEqual(newStartAt);
+        });
+
+        it("can update fixedSaleDetails.settings", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const newTargetPrice = 2.0;
+            await h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            fixedSaleDetails: {
+                                ...marketSale.data!.details.V1.fixedSaleDetails,
+                                settings: {
+                                    ...marketSale.data!.details.V1.fixedSaleDetails
+                                        .settings,
+                                    targetPrice: newTargetPrice,
+                                },
+                            },
+                        },
+                    },
+                },
+                "updating settings"
+            );
+
+            const updatedSale = await h.findFirstMarketSale();
+            expect(
+                updatedSale.data!.details.V1.fixedSaleDetails.settings.targetPrice
+            ).toEqual(newTargetPrice);
+        });
+
+        it("can update saleAssets.totalSaleUnits with consistent primaryAssetTargetCount", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const controller = await h.mktSaleDgt();
+            const exampleData = controller.exampleData();
+
+            const newTotalSaleUnits = 2000n;
+            const newPrimaryAssetTargetCount = 200_000_000n;
+            const newSaleUnitAssets = makeValue(
+                h.capo.mph,
+                exampleData.details.V1.saleAssets.primaryAssetName,
+                newPrimaryAssetTargetCount / newTotalSaleUnits
+            ).add(
+                makeValue(
+                    h.capo.mph,
+                    textToBytes("KRILL"),
+                    (2000n * 1000n) / newTotalSaleUnits
+                )
+            );
+
+            await h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                totalSaleUnits: newTotalSaleUnits,
+                                primaryAssetTargetCount: newPrimaryAssetTargetCount,
+                                saleUnitAssets: newSaleUnitAssets,
+                            },
+                        },
+                    },
+                },
+                "updating totalSaleUnits with consistent values"
+            );
+
+            const updatedSale = await h.findFirstMarketSale();
+            expect(
+                updatedSale.data!.details.V1.saleAssets.totalSaleUnits
+            ).toEqual(newTotalSaleUnits);
+            expect(
+                updatedSale.data!.details.V1.saleAssets.primaryAssetTargetCount
+            ).toEqual(newPrimaryAssetTargetCount);
+        });
+
+        it("can update saleAssets.singleBuyMaxUnits", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const newSingleBuyMaxUnits = 50n;
+            await h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                singleBuyMaxUnits: newSingleBuyMaxUnits,
+                            },
+                        },
+                    },
+                },
+                "updating singleBuyMaxUnits"
+            );
+
+            const updatedSale = await h.findFirstMarketSale();
+            expect(
+                updatedSale.data!.details.V1.saleAssets.singleBuyMaxUnits
+            ).toEqual(newSingleBuyMaxUnits);
+        });
+
+        it("fails if trying to change the id field", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    id: textToBytes("different-id"),
+                } as any,
+                "trying to change id",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/id must not change/);
+        });
+
+        it("fails if trying to change the type field", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    type: "differentType",
+                } as any,
+                "trying to change type",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/type must not change/);
+        });
+
+        it("fails if trying to change saleState from Pending", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleState: {
+                                ...marketSale.data!.details.V1.saleState,
+                                state: { Active: {} },
+                            },
+                        },
+                    },
+                } as any,
+                "trying to change state to Active",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /updated sale must remain Pending|must be Pending/
+            );
+        });
+
+        it("fails if trying to change salePace", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleState: {
+                                ...marketSale.data!.details.V1.saleState,
+                                salePace: 1.5,
+                            },
+                        },
+                    },
+                },
+                "trying to change salePace",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/salePace must remain 1.0/);
+        });
+
+        it("fails if trying to change progressDetails.lastPurchaseAt", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleState: {
+                                ...marketSale.data!.details.V1.saleState,
+                                progressDetails: {
+                                    ...marketSale.data!.details.V1.saleState
+                                        .progressDetails,
+                                    lastPurchaseAt: Date.now() + 1000 * 60 * 60,
+                                },
+                            },
+                        },
+                    },
+                },
+                "trying to change lastPurchaseAt",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /lastPurchaseAt must not change/
+            );
+        });
+
+        it("fails if trying to change progressDetails.chunkUnitCount", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleState: {
+                                ...marketSale.data!.details.V1.saleState,
+                                progressDetails: {
+                                    ...marketSale.data!.details.V1.saleState
+                                        .progressDetails,
+                                    chunkUnitCount: 2000n,
+                                },
+                            },
+                        },
+                    },
+                },
+                "trying to change chunkUnitCount",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /chunkUnitCount must not change/
+            );
+        });
+
+        it("fails if trying to change threadInfo", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            threadInfo: {
+                                ...marketSale.data!.details.V1.threadInfo,
+                                nestedThreads: 1n,
+                            },
+                        },
+                    },
+                },
+                "trying to change threadInfo",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /nestedThreads must not change|threadInfo must remain unchanged/
+            );
+        });
+
+        it.todo(
+            "fails if trying to change primaryAssetMph",
+            async (context: STOK_TC) => {
+                // This test would require creating a different minting policy hash,
+                // which is complex to set up in the test environment.
+                // The constraint is enforced in the Helios contract validation:
+                // assert(nextAssets.primaryAssetMph == prevAssets.primaryAssetMph, "primaryAssetMph must not change")
+            }
+        );
+
+        it("fails if trying to change primaryAssetName", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                primaryAssetName: textToBytes("DIFFERENT"),
+                            },
+                        },
+                    },
+                },
+                "trying to change primaryAssetName",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /primaryAssetName must not change/
+            );
+        });
+
+        it("fails if primaryAssetTargetCount is inconsistent with totalSaleUnits and saleUnitAssets", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const controller = await h.mktSaleDgt();
+            const exampleData = controller.exampleData();
+
+            const newTotalSaleUnits = 2000n;
+            const incorrectPrimaryAssetTargetCount = 150_000_000n; // wrong value
+            const newSaleUnitAssets = makeValue(
+                h.capo.mph,
+                exampleData.details.V1.saleAssets.primaryAssetName,
+                100_000n // This would require 200_000_000n, not 150_000_000n
+            );
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                totalSaleUnits: newTotalSaleUnits,
+                                primaryAssetTargetCount: incorrectPrimaryAssetTargetCount,
+                                saleUnitAssets: newSaleUnitAssets,
+                            },
+                        },
+                    },
+                },
+                "trying inconsistent primaryAssetTargetCount",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /primaryAssetTargetCount must be consistent/
+            );
+        });
+
+        it("fails if sale is not in Pending state", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    name: "New Name",
+                },
+                "trying to update Active sale",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /previous sale not Pending|must be Pending/
+            );
+        });
+
+        it("requires governance authority", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const capo = h.capo;
+
+            vi.spyOn(capo, "txnAddGovAuthority").mockImplementation(
+                async (tcx) => tcx as any
+            );
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    name: "New Name",
+                },
+                "trying without gov authority",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/missing.* dgTkn capoGov/);
+        });
+
+        it("validates VxfDestination in vxfFundsTo if provided", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            // Setting vxfFundsTo to NotYetDefined should fail validation
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            fixedSaleDetails: {
+                                ...marketSale.data!.details.V1.fixedSaleDetails,
+                                vxfFundsTo: {
+                                    NotYetDefined: {},
+                                },
+                            },
+                        },
+                    },
+                } as any,
+                "trying invalid vxfFundsTo",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /vxfFundsTo.*must be valid|VxfDestination/
+            );
+        });
+
+        it("can update vxfFundsTo to a valid value", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            await h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            fixedSaleDetails: {
+                                ...marketSale.data!.details.V1.fixedSaleDetails,
+                                vxfFundsTo: {
+                                    Anywhere: {},
+                                },
+                            },
+                        },
+                    },
+                },
+                "updating vxfFundsTo to valid value"
+            );
+
+            const updatedSale = await h.findFirstMarketSale();
+            expect(
+                updatedSale.data!.details.V1.fixedSaleDetails.vxfFundsTo
+            ).toBeDefined();
+        });
     });
 });

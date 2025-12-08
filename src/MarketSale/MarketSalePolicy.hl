@@ -165,6 +165,9 @@ enum SpendingActivity {
         mph: MintingPolicyHash
         tn: ByteArray
     }
+    UpdatingPendingSale {
+        id: ByteArray
+    }
     Activating {
         id: ByteArray
     }
@@ -352,6 +355,20 @@ enum DelegateActivity {
             },
             SpendingActivities{x} => x.switch {
                 UpdatingRecord => error("use more specific spending activity"),
+                UpdatingPendingSale {saleId} => {
+                    TODO("UpdatingPendingSale mktSale: test this code path");
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+                    
+                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
+                    next : MarketSaleData = MarketSaleData::updated(mktSaleDD);
+
+                    true
+                    && next.validateUpdatePendingSale(mktSaleDD)
+                    && cctx.requiresGovAuthority().orFail()
+                },
+
                 AddingToSale {saleId, mph, tn} => {
                     TODO("AddingToSale mktSale: test this code path");
                     assert(cctx.withCharterRef().orFail(), "can't");
