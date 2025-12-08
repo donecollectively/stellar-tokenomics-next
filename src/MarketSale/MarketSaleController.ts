@@ -834,7 +834,13 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "has expected labels and other high-level details",
                     "has initial timestamps",
                     "has key details of price, sale-sizes and token to be sold",
+                    "rejects creation when saleUnitAssets contains any tokens other than the primary asset",
                 ],
+                deltas: {
+                    "0.8.0-beta.10": [
+                        "constrains the saleUnitAssets to only contain the primary asset when created"
+                    ]
+                },
                 requires: [],
             },
             "participates in the Txf protocol for getting paid": {
@@ -845,6 +851,12 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "During a sale, it checks that the destination (a delegate's UUT) is participating as a Txf receiver",
                     "See more elsewhere about the Txf protocol",
                 ],
+                deltas: {
+                    initial: [
+                        "not yet implemented, or in progress"
+                    ]
+                },
+
                 mech: [
                     "can seal the Txf setup in the 'txfFundsTo' field if the receiver is participating",
                     "won't seal the funds-receiver without the receiver's participation",
@@ -860,6 +872,12 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "During a sale, it checks that the destination (a delegate's UUT) is participating as a Txf receiver",
                     "See more elsewhere about the Txf protocol",
                 ],
+                deltas: {
+                    initial: [
+                        "not yet implemented, or in progress"
+                    ]
+                },
+
                 mech: [
                     "can seal the Vxf setup in the 'vxfTokensTo' field if the receiver is participating",
                     "won't seal the tokens-receiver without the receiver's participation",
@@ -932,6 +950,11 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "When tokens have been deposited, they shouldn't be removed from the saleAssets",
                     "The primary asset for the sale can be changed, if everything remains consistent",
                 ],
+                deltas: {
+                    initial: [
+                        "not yet implemented, or in progress"
+                    ]
+                },
                 mech: [
                     "can update saleAssets.totalSaleUnits if primaryAssetTargetCount remains evenly divisible for consistent lot sizes",
                     "if the value in the UTxO contains tokens of the old primary asset, the saleUnitAssets must still reference them with a per-unit count not less than depositedTokens/totalSaleUnits",
@@ -948,6 +971,11 @@ export class MarketSaleController extends WrappedDgDataContract<
                 details: [
                     "Basic validation allows sale assets to be changed when needed, but always forces consistency",
                 ],
+                deltas: {
+                    initial: [
+                        "not yet implemented"
+                    ]
+                },
                 mech: [
                     "saleUnitAssets MUST NOT contain any tokens other than the primary asset when first created",
                     "saleUnitAssets MUST always contain the primary asset, even if no tokens have been deposited yet",
