@@ -175,6 +175,30 @@ describe("MarketSale plugin", async () => {
             //     exampleData.currentUnitPrice
             // );
         });
+
+        it("rejects creation when saleUnitAssets include non-primary tokens", async (context: STOK_TC) => {
+            const { h } = context;
+            const controller = await h.mktSaleDgt();
+            const example = controller.exampleData();
+
+            const badSale = {
+                ...example,
+                details: {
+                    V1: {
+                        ...example.details.V1,
+                        saleAssets: {
+                            ...example.details.V1.saleAssets,
+                            saleUnitAssets: example.details.V1.saleAssets.saleUnitAssets.add(
+                                makeValue(h.capo.mph, textToBytes("EXTRA"), 1n)
+                            ),
+                        },
+                    },
+                },
+            };
+
+            const creating = h.createMarketSale(badSale, { submit: true });
+            await expect(creating).rejects.toThrow(/saleUnitAssets.*primary/i);
+        });
     });
 
     // describe("participates in the Txf protocol for distributing the tokens", () => {
@@ -297,6 +321,21 @@ describe("MarketSale plugin", async () => {
             await expect(minting).rejects.toThrow(
                 "token count not divisible by total sale units"
             );
+        });
+
+        it("can't add primary tokens if the amount isn't divisible by totalSaleUnits", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const mktSale = await h.findFirstMarketSale();
+
+            const minting = h.mintAndAddAssets(
+                mktSale,
+                mktSale.data!.details.V1.saleAssets.primaryAssetName,
+                1001n // not divisible by default totalSaleUnits (1000)
+            );
+            await expect(minting).rejects.toThrow(/divisible|lot count|total sale units/i);
         });
 
         it.todo(
@@ -443,6 +482,100 @@ describe("MarketSale plugin", async () => {
             await expect(submitting).rejects.toThrow(
                 "VxfDestination: vxfFundsTo: NotYetDefined"
             );
+        });
+
+        it("won't activate if saleUnitAssets expect extra tokens that aren't deposited", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const mktSaleData = marketSale.data!;
+
+            const updatedSaleUnitAssets = mktSaleData.details.V1.saleAssets.saleUnitAssets.add(
+                makeValue(h.capo.mph, textToBytes("KRILL"), 1n)
+            );
+
+            const submitting = h.activateMarketSale(
+                marketSale,
+                {
+                    mintTokenName: mktSaleData.details.V1.saleAssets.primaryAssetName,
+                    txnDescription: "ACTIVATES SALE WITH MISSING KRILL",
+                },
+                {
+                    details: {
+                        V1: {
+                            ...mktSaleData.details.V1,
+                            saleAssets: {
+                                ...mktSaleData.details.V1.saleAssets,
+                                saleUnitAssets: updatedSaleUnitAssets,
+                            },
+                        },
+                    },
+                }
+            );
+
+            await expect(submitting).rejects.toThrow(/totalSaleUnits.*saleUnitAssets|evenly divisible|missing/i);
+        });
+
+        it("won't activate if primaryAssetTargetCount is not divisible by lot count", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const mktSaleData = marketSale.data!;
+
+            const badTarget = mktSaleData.details.V1.saleAssets.totalSaleUnits * 100_000n + 1n;
+
+            const submitting = h.activateMarketSale(
+                marketSale,
+                {
+                    mintTokenName: mktSaleData.details.V1.saleAssets.primaryAssetName,
+                    txnDescription: "ACTIVATES SALE WITH NON-DIVISIBLE TARGET",
+                },
+                {
+                    details: {
+                        V1: {
+                            ...mktSaleData.details.V1,
+                            saleAssets: {
+                                ...mktSaleData.details.V1.saleAssets,
+                                primaryAssetTargetCount: badTarget,
+                            },
+                        },
+                    },
+                }
+            );
+
+            await expect(submitting).rejects.toThrow(/divisible|primaryAssetTargetCount|lot count/i);
+        });
+
+        it("won't activate if deposited primary tokens aren't evenly divisible by lot count", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const mktSaleData = marketSale.data!;
+
+            // deposit a non-divisible amount of primary tokens
+            const minting = h.mintAndAddAssets(
+                marketSale,
+                mktSaleData.details.V1.saleAssets.primaryAssetName,
+                1001n
+            );
+            await expect(minting).rejects.toThrow(/divisible|lot count|total sale units/i);
+        });
+
+        it("won't activate if deposited non-primary tokens aren't evenly divisible by lot count", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const minting = h.mintAndAddAssets(marketSale, "KRILL", 1001n);
+            await expect(minting).rejects.toThrow(/divisible|lot count|total sale units/i);
         });
 
         it.todo(
@@ -1556,6 +1689,118 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(
                 /primaryAssetTargetCount|divisible|lot count/
             );
+        });
+
+        it("fails if saleUnitAssets drops the primary asset entry", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                saleUnitAssets: makeValue(
+                                    h.capo.mph,
+                                    textToBytes("KRILL"),
+                                    1000n
+                                ),
+                            },
+                        },
+                    },
+                },
+                "dropping primary asset from saleUnitAssets",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/primary.*saleUnitAssets|must.*contain.*primary/i);
+        });
+
+        it("fails when changing primary asset without old tokens, but keeping old primary in saleUnitAssets", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const newPrimaryName = textToBytes("NEWPRIMARY");
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                primaryAssetName: newPrimaryName,
+                                // incorrectly keep old primary reference in saleUnitAssets
+                                saleUnitAssets: makeValue(
+                                    h.capo.mph,
+                                    marketSale.data!.details.V1.saleAssets.primaryAssetName,
+                                    100_000n / marketSale.data!.details.V1.saleAssets.totalSaleUnits
+                                ),
+                            },
+                        },
+                    },
+                },
+                "changing primary but still referencing old primary in saleUnitAssets",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/old primary|must not reference|saleUnitAssets/i);
+        });
+
+        it("fails if saleUnitAssets token counts are not divisible by totalSaleUnits", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const controller = await h.mktSaleDgt();
+            const exampleData = controller.exampleData();
+
+            const newTotalSaleUnits = 2000n;
+            const newPrimaryAssetTargetCount = 200_000_000n;
+            // set KRILL amount not divisible by lot count
+            const newSaleUnitAssets = makeValue(
+                h.capo.mph,
+                exampleData.details.V1.saleAssets.primaryAssetName,
+                newPrimaryAssetTargetCount / newTotalSaleUnits
+            ).add(
+                makeValue(
+                    h.capo.mph,
+                    textToBytes("KRILL"),
+                    1001n // not divisible by 2000
+                )
+            );
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                totalSaleUnits: newTotalSaleUnits,
+                                primaryAssetTargetCount: newPrimaryAssetTargetCount,
+                                saleUnitAssets: newSaleUnitAssets,
+                            },
+                        },
+                    },
+                },
+                "non-divisible saleUnitAssets counts",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/divisible|lot count|even/i);
         });
 
         it("fails if the UTxO value changes during update", async (context: STOK_TC) => {
