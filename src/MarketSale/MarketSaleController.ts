@@ -147,8 +147,6 @@ export class MarketSaleController extends WrappedDgDataContract<
                             mph,
                             tn,
                             100_000_000n / units
-                        ).add(
-                            makeValue(mph, textToBytes("KRILL"), 1000n)
                         ),
                     singleBuyMaxUnits: 25n,
                     },
