@@ -1527,11 +1527,11 @@ describe("MarketSale plugin", async () => {
             const exampleData = controller.exampleData();
 
             const newTotalSaleUnits = 2000n;
-            const incorrectPrimaryAssetTargetCount = 150_000_000n; // wrong value
+            const incorrectPrimaryAssetTargetCount = 200_000_001n; // not divisible by lot count
             const newSaleUnitAssets = makeValue(
                 h.capo.mph,
                 exampleData.details.V1.saleAssets.primaryAssetName,
-                100_000n // This would require 200_000_000n, not 150_000_000n
+                100_000n // would require 200_000_000n target
             );
 
             const updating = h.updatePendingMarketSale(
@@ -1554,8 +1554,77 @@ describe("MarketSale plugin", async () => {
             );
 
             await expect(updating).rejects.toThrow(
-                /primaryAssetTargetCount must be consistent/
+                /primaryAssetTargetCount|divisible|lot count/
             );
+        });
+
+        it("fails if the UTxO value changes during update", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+            const mktSaleDgt = await h.mktSaleDgt();
+
+            const tcx = h.capo.mkTcx("update that changes value");
+            const updating = mktSaleDgt.mkTxnUpdateRecord(
+                "update that changes value",
+                marketSale,
+                {
+                    activity: mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale({
+                        id: marketSale.data!.details.V1.threadInfo.saleId,
+                    }),
+                    updatedFields: {
+                        name: "Changing value should fail",
+                    },
+                    // Add 1 lovelace to change the UTxO value (should be rejected)
+                    addedUtxoValue: makeValue(1n),
+                },
+                tcx
+            );
+
+            await expect(updating).rejects.toThrow(/value.*must remain/i);
+        });
+
+        it("fails when changing primary asset while old primary tokens remain without keeping old per-unit reference", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            // Deposit some of the existing primary tokens to the sale
+            const controller = await h.mktSaleDgt();
+            const exampleData = controller.exampleData();
+            const primaryName = exampleData.details.V1.saleAssets.primaryAssetName;
+            await h.mintAndAddAssets(marketSale, primaryName, 10_000n);
+
+            const newPrimaryName = textToBytes("NEWPRIMARY");
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    details: {
+                        V1: {
+                            ...marketSale.data!.details.V1,
+                            saleAssets: {
+                                ...marketSale.data!.details.V1.saleAssets,
+                                primaryAssetName: newPrimaryName,
+                                // Incorrectly drop reference to old primary in saleUnitAssets
+                                saleUnitAssets: makeValue(
+                                    h.capo.mph,
+                                    newPrimaryName,
+                                    1000n
+                                ),
+                            },
+                        },
+                    },
+                },
+                "changing primary without keeping old tokens referenced",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(/primary|old.*token|divisible|saleUnitAssets/i);
         });
 
         it("fails if sale is not in Pending state", async (context: STOK_TC) => {

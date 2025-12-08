@@ -819,6 +819,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                 requires: [
                     "it's created with key details of a sale",
                     "Activity:AddTokens allows additional tokens to be added to a Pending mktSale",
+                    "Activity:UpdatingPendingSale allows updates to a Pending mktSale",
                     "has a state machine for sale lifecycle",
                     "Will sell its tokens when conditions are right",
                     "updates appropriate sale details as a result of each sale",
@@ -829,7 +830,8 @@ export class MarketSaleController extends WrappedDgDataContract<
             },
             "it's created with key details of a sale": {
                 purpose: "Supports accurate administration of the sale process",
-                details: [],
+                details: [
+                ],
                 mech: [
                     "has expected labels and other high-level details",
                     "has initial timestamps",
@@ -873,11 +875,20 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "Manages the addition of tokens to a pending market sale",
                     details: [
                         "Ensures that tokens can be added to a pending sale under the correct conditions",
+                        "Depositing tokens enforces even distribution of the tokens across the sale-units",
+                        "saleAssets can get out of sync with even token distribution when tokens are NOT being added",
+                        "^ e.g. by doing a partial deposit of primary token, then changing the primary asset name",
+                        "^ or, by doing a partial deposit of non-primary token, then changing the lot-count/totalSaleUnits",
+                        "Enforcing resync of even values during deposit ensures things are ok before starting the sale"
                     ],
                     mech: [
+                        "saleUnitAssets MUST NOT contain any tokens other than the primary asset when first created",
                         "can AddTokens to a Pending sale",
                         "can't add non-primary tokens if the sale-assets aren't even",
                         "requires the gov authority to AddTokens",
+                        "the number of tokens in the UTxO must be evenly divisible by the lot count (totalSaleUnits) when depositing those tokens",
+                        "starting the sale fails if the sale assets are not evenly divisible by the lot count (totalSaleUnits)",
+                        "starting the sale fails if the deposited Value doesn't match the totalSalUnits * saleUnitAssets"
                     ],
                     requires: [],
                 },
@@ -889,6 +900,62 @@ export class MarketSaleController extends WrappedDgDataContract<
                 mech: [
                     "starts in Pending state",
                     "moves to Active state when ActivatingSale",
+                ],
+                requires: [],
+            },
+            "Activity:UpdatingPendingSale allows updates to a Pending mktSale": {
+                purpose:
+                    "Manages updates to pending market sales while maintaining data integrity",
+                details: [
+                    "Allows updating allowed fields in a pending sale while enforcing immutability constraints",
+                    "Ensures that core identity fields, state, and progress details remain unchanged",
+                    "Validates consistency of asset counts and proportions when updating sale configuration",
+                ],
+                mech: [
+                    "requires governance authority to update the sale details",
+                    "can update saleAssets, fixedSaleDetails, and name fields",
+                    "can update saleAssets.totalSaleUnits with consistent primaryAssetTargetCount",
+                    "prevents the sale from leaving Pending state",
+                    "requires the entire record to validate according to normal rules",
+                    "doesn't allow changing sale pace, progress details, or thread info",
+                    "fails if primaryAssetTargetCount is not divisible by the lot count (totalSaleUnits)",
+                    "fails if the Value in the UTxO is modified during the update",
+                ],
+                requires: [
+                    "Updating a pending sale keeps the saleAssets consistent",
+                ],
+            },
+            "Updating a pending sale keeps the saleAssets consistent": {
+                purpose:
+                    "Allows sensible updates without allowing things to get weird",
+                details: [
+                    "Ensures that the saleAssets are consistent after an update",
+                    "The saleAssets need to remain consistent with even selling-unit/lot size",
+                    "When tokens have been deposited, they shouldn't be removed from the saleAssets",
+                    "The primary asset for the sale can be changed, if everything remains consistent",
+                ],
+                mech: [
+                    "can update saleAssets.totalSaleUnits if primaryAssetTargetCount remains evenly divisible for consistent lot sizes",
+                    "if the value in the UTxO contains tokens of the old primary asset, the saleUnitAssets must still reference them with a per-unit count not less than depositedTokens/totalSaleUnits",
+                    "if old primary tokens exist and primaryAsset changes, the new primary token must be included in the saleUnitAssets (tokens need not be deposited yet)",
+                    "if the UTxO value does not have the old primary tokens, and the primaryAsset changes, saleUnitAssets must NOT reference the old primary token",
+                ],
+                requires: [
+                    "Maintains consistency of saleAssets"
+                ],
+            },
+            "Maintains consistency of saleAssets": {
+                purpose:
+                    "Ensures that the saleAssets are always consistent prior to starting the sale",
+                details: [
+                    "Basic validation allows sale assets to be changed when needed, but always forces consistency",
+                ],
+                mech: [
+                    "saleUnitAssets MUST NOT contain any tokens other than the primary asset when first created",
+                    "saleUnitAssets MUST always contain the primary asset, even if no tokens have been deposited yet",
+                    "in all validations, the count of saleUnitAssets‹primaryAsset› must equal primaryAssetTargetCount / totalSaleUnits",
+                    "in all validations, the primaryAssetTargetCount must be evenly divisible by totalSaleUnits",
+                    "when depositing tokens, the number of those tokens in the UTxO must always divide evenly by the lot count (totalSaleUnits)",
                 ],
                 requires: [],
             },
