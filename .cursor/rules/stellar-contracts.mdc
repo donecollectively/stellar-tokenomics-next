@@ -1,0 +1,20 @@
+---
+description: always
+globs: src/**/*.ts
+alwaysApply: true
+---
+
+# Stellar Contracts
+
+When working on off-chain code for Stellar Contracts, you should study node_modules/@donecollectively/stellar-contracts/reference/essential-stellar-offchain.md and follow referenced documentation from there depending on the task at hand.
+
+When working with on-chain code for dApps built on Stellar Contracts, you should study node_modules/@donecollectively/stellar-contracts/reference/essential-stellar-onchain.md and follow referenced documentation from there depending on the task at hand.
+
+When dealing with questions about Stellar Contracts or Helios, you should be sure you're clear about whether the context is for off-chain or on-chain code, and reference the indicated documentation according to instructions above.
+
+When dealing with any questions or work tasks about Stellar Contracts or Helios, you MUST ALWAYS check for freshness and update your knowledge when needed.
+
+When faced with questions or tasks about Stellar Contracts or Helios, you should consult the source material first and you should NOT reference the local repository to provide any guidance.  You MAY consult the local respository when there is a specific question or task involving specific local code/implementation details.
+
+
+
