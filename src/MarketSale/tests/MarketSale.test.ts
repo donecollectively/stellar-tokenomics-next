@@ -366,7 +366,7 @@ describe("MarketSale plugin", async () => {
             await h.mintAndAddAssets(mktSale, "PLANKTON", 50_000n);
 
             await h.snapToFirstMarketSale();
-            await h.mintAndAddAssets(mktSale, "PLANKTON", 49_999n);
+            await h.mintAndAddAssets(mktSale, "PLANKTON", 49_000n);
         });
 
         it.todo(
@@ -522,7 +522,7 @@ describe("MarketSale plugin", async () => {
                 }
             );
 
-            await expect(submitting).rejects.toThrow(/totalSaleUnits.*saleUnitAssets|evenly divisible|missing/i);
+            await expect(submitting).rejects.toThrow(/must contain the supply of tokens/i);
         });
 
         it("won't activate if primaryAssetTargetCount is not divisible by lot count", async (context: STOK_TC) => {
@@ -699,7 +699,7 @@ describe("MarketSale plugin", async () => {
                 }
             );
             // await buying;
-            await expect(buying).rejects.toThrow("old: state must be Active");
+            await expect(buying).rejects.toThrow("previous sale: state must be Active");
         });
 
         it("doesn't sell tokens before the start date", async (context: STOK_TC) => {
