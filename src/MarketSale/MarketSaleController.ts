@@ -825,6 +825,17 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "participates in the Txf protocol for distributing the tokens",
                     "Splits the sale into chunks for scaling",
                 ],
+                deltas: {
+                    "wip": ["ongoing development"],
+                    "0.8.0-beta.9": [
+                        "basics implemented previously to beta.9",
+                    ],
+                    "0.8.0-beta.10": [
+                        "added UpdatingPendingSale activity",
+                        "adjusted policies for expressing the token bundle/lot contents",
+                        "added constraints on AddTokens activity",
+                    ],
+                },
             },
             "it's created with key details of a sale": {
                 purpose: "Supports accurate administration of the sale process",
@@ -837,6 +848,9 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "rejects creation when saleUnitAssets contains any tokens other than the primary asset",
                 ],
                 deltas: {
+                    "0.8.0-beta.9": [
+                        "basics implemented previously to beta.9",
+                    ],
                     "0.8.0-beta.10": [
                         "constrains the saleUnitAssets to only contain the primary asset when created"
                     ]
@@ -851,18 +865,18 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "During a sale, it checks that the destination (a delegate's UUT) is participating as a Txf receiver",
                     "See more elsewhere about the Txf protocol",
                 ],
-                deltas: {
-                    initial: [
-                        "not yet implemented, or in progress"
-                    ]
-                },
-
                 mech: [
                     "can seal the Txf setup in the 'txfFundsTo' field if the receiver is participating",
                     "won't seal the funds-receiver without the receiver's participation",
                     "requires the gov authority to seal the Txf for funds",
                     "requires the Txf funds-receiver's participation during a sale, if so configured",
                 ],
+                deltas: {
+                    "0.8.0-beta.9": [
+                        "requires the payment to be deposited with the sale's UUT",
+                    ],
+                },
+
             },
             "participates in the Txf protocol for distributing the tokens": {
                 purpose:
@@ -872,11 +886,6 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "During a sale, it checks that the destination (a delegate's UUT) is participating as a Txf receiver",
                     "See more elsewhere about the Txf protocol",
                 ],
-                deltas: {
-                    initial: [
-                        "not yet implemented, or in progress"
-                    ]
-                },
 
                 mech: [
                     "can seal the Vxf setup in the 'vxfTokensTo' field if the receiver is participating",
@@ -884,6 +893,12 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "requires the gov authority to seal the Vxf for tokens",
                     "requires the Vxf tokens-receiver's participation during a sale, if so configured",
                 ],
+                deltas: {
+                    "0.8.0-beta.9": [
+                        "no constraints on distribution of the tokens",
+                    ],
+                },
+
             },
             "Activity:AddTokens allows additional tokens to be added to a Pending mktSale":
                 {
@@ -904,9 +919,20 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "requires the gov authority to AddTokens",
                         "the number of tokens in the UTxO must be evenly divisible by the lot count (totalSaleUnits) when depositing those tokens",
                         "starting the sale fails if the sale assets are not evenly divisible by the lot count (totalSaleUnits)",
-                        "starting the sale fails if the deposited Value doesn't match the totalSalUnits * saleUnitAssets"
+                        "starting the sale fails if the deposited Value doesn't match the totalSaleUnits * saleUnitAssets",
                     ],
                     requires: [],
+                    deltas: {
+                        "0.8.0-beta.9": [
+                            "implemented previously to beta.9",
+                        ],
+                        "0.8.0-beta.10": [
+                            "forces newly-deposited tokens to achieve an even multiple of the lot count (totalSaleUnits)",
+                            "allows the primary asset to be changed, if everything remains consistent",
+
+                        ],
+                    },
+    
                 },
             "has a state machine for sale lifecycle": {
                 purpose: "Manages the state transitions of a market sale",
@@ -918,29 +944,42 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "moves to Active state when ActivatingSale",
                 ],
                 requires: [],
+                deltas: {
+                    "0.8.0-beta.9": [
+                        "implemented previously to beta.9",
+                    ],
+                },
+
             },
-            "Activity:UpdatingPendingSale allows updates to a Pending mktSale": {
-                purpose:
-                    "Manages updates to pending market sales while maintaining data integrity",
-                details: [
-                    "Allows updating allowed fields in a pending sale while enforcing immutability constraints",
-                    "Ensures that core identity fields, state, and progress details remain unchanged",
-                    "Validates consistency of asset counts and proportions when updating sale configuration",
-                ],
-                mech: [
-                    "requires governance authority to update the sale details",
-                    "can update saleAssets, fixedSaleDetails, and name fields",
-                    "can update saleAssets.totalSaleUnits with consistent primaryAssetTargetCount",
-                    "prevents the sale from leaving Pending state",
-                    "requires the entire record to validate according to normal rules",
-                    "doesn't allow changing sale pace, progress details, or thread info",
-                    "fails if primaryAssetTargetCount is not divisible by the lot count (totalSaleUnits)",
-                    "fails if the Value in the UTxO is modified during the update",
-                ],
-                requires: [
-                    "Updating a pending sale keeps the saleAssets consistent",
-                ],
-            },
+            "Activity:UpdatingPendingSale allows updates to a Pending mktSale":
+                {
+                    purpose:
+                        "Manages updates to pending market sales while maintaining data integrity",
+                    details: [
+                        "Allows updating allowed fields in a pending sale while enforcing immutability constraints",
+                        "Ensures that core identity fields, state, and progress details remain unchanged",
+                        "Validates consistency of asset counts and proportions when updating sale configuration",
+                    ],
+                    mech: [
+                        "requires governance authority to update the sale details",
+                        "can update saleAssets, fixedSaleDetails, and name fields",
+                        "can update saleAssets.totalSaleUnits with consistent primaryAssetTargetCount",
+                        "prevents the sale from leaving Pending state",
+                        "requires the entire record to validate according to normal rules",
+                        "doesn't allow changing sale pace, progress details, or thread info",
+                        "fails if primaryAssetTargetCount is not divisible by the lot count (totalSaleUnits)",
+                        "fails if the Value in the UTxO is modified during the update",
+                    ],
+                    requires: [
+                        "Updating a pending sale keeps the saleAssets consistent",
+                    ],
+                    deltas: {
+                        "wip": ["in progress"],
+                        "0.8.0-beta.10": [
+                            "first implemented in beta.10",
+                        ]
+                    },
+                },
             "Updating a pending sale keeps the saleAssets consistent": {
                 purpose:
                     "Allows sensible updates without allowing things to get weird",
@@ -950,20 +989,19 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "When tokens have been deposited, they shouldn't be removed from the saleAssets",
                     "The primary asset for the sale can be changed, if everything remains consistent",
                 ],
-                deltas: {
-                    initial: [
-                        "not yet implemented, or in progress"
-                    ]
-                },
                 mech: [
                     "can update saleAssets.totalSaleUnits if primaryAssetTargetCount remains evenly divisible for consistent lot sizes",
                     "if the value in the UTxO contains tokens of the old primary asset, the saleUnitAssets must still reference them with a per-unit count not less than depositedTokens/totalSaleUnits",
                     "if old primary tokens exist and primaryAsset changes, the new primary token must be included in the saleUnitAssets (tokens need not be deposited yet)",
                     "if the UTxO value does not have the old primary tokens, and the primaryAsset changes, saleUnitAssets must NOT reference the old primary token",
                 ],
-                requires: [
-                    "Maintains consistency of saleAssets"
-                ],
+                requires: ["Maintains consistency of saleAssets"],
+                deltas: {
+                    "wip": ["in progress"],
+                    "0.8.0-beta.10": [
+                        "first implemented in beta.10",
+                    ]
+                },
             },
             "Maintains consistency of saleAssets": {
                 purpose:
@@ -971,11 +1009,6 @@ export class MarketSaleController extends WrappedDgDataContract<
                 details: [
                     "Basic validation allows sale assets to be changed when needed, but always forces consistency",
                 ],
-                deltas: {
-                    initial: [
-                        "not yet implemented"
-                    ]
-                },
                 mech: [
                     "saleUnitAssets MUST NOT contain any tokens other than the primary asset when first created",
                     "saleUnitAssets MUST always contain the primary asset, even if no tokens have been deposited yet",
@@ -983,7 +1016,13 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "in all validations, the primaryAssetTargetCount must be evenly divisible by totalSaleUnits",
                     "when depositing tokens, the number of those tokens in the UTxO must always divide evenly by the lot count (totalSaleUnits)",
                 ],
-                requires: [],
+                requires: [],                
+                deltas: {
+                    "wip": ["in progress"],
+                    "0.8.0-beta.10": [
+                        "first implemented in beta.10",
+                    ]
+                },
             },
             "Will sell its tokens when conditions are right": {
                 purpose:
@@ -999,6 +1038,12 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "won't sell tokens from a sale chunk less than 10 minutes old",
                 ],
                 requires: [],
+                deltas: {
+                    "0.8.0-beta.9": [
+                        "implemented previously to beta.9",
+                    ],
+                },
+
             },
             "updates appropriate sale details as a result of each sale": {
                 purpose: "Updates the sale details after each sale",
@@ -1012,6 +1057,12 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "fails without the correct next dynamicPace",
                 ],
                 requires: [],
+                deltas: {
+                    "0.8.0-beta.9": [
+                        "implemented previously to beta.9",
+                    ],
+                },
+
             },
             "Splits the sale into chunks for scaling": {
                 purpose:
@@ -1028,6 +1079,12 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "won't split off a child chunk without correct updates to the parent",
                 ],
                 requires: [],
+                deltas: {
+                    "0.8.0-beta.9": [
+                        "implemented previously to beta.9",
+                    ],
+                },
+
             },
         });
     }
