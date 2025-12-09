@@ -305,10 +305,11 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         );
     }
 
+    _cachedNow : number = Date.now();
     packagedUpdateDetails() {
         return {
             name: "Updated Market Sale Name",
-            startAt: Date.now() + 1000 * 60 * 60 * 24, // 1 day from now
+            startAt: this._cachedNow + 1000 * 60 * 60 * 24, // 1 day from now
             totalSaleUnits: 2000n,
             singleBuyMaxUnits: 50n,
             primaryAssetTargetCount: 200_000_000n,

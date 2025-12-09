@@ -1223,6 +1223,18 @@ describe("MarketSale plugin", async () => {
             expect(
                 updatedSale.data!.details.V1.saleAssets.primaryAssetTargetCount
             ).toEqual(expectedDetails.primaryAssetTargetCount);
+
+            // Verify fixups happened correctly
+            const startAt = updatedSale.data!.details.V1.fixedSaleDetails.startAt;
+            expect(
+                updatedSale.data!.details.V1.saleState.progressDetails.chunkUnitCount
+            ).toEqual(expectedDetails.totalSaleUnits);
+            expect(
+                updatedSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt
+            ).toEqual(startAt);
+            expect(
+                updatedSale.data!.details.V1.saleState.progressDetails.prevPurchaseAt
+            ).toEqual(startAt);
         });
 
 
@@ -1282,37 +1294,29 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/salePace must remain 1.0/);
         });
 
-        it("fails if trying to change progressDetails.lastPurchaseAt away fromt the startAt", async (context: STOK_TC) => {
+        it("fails if trying to change progressDetails.lastPurchaseAt away from the startAt", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
             await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
+            const mktSaleDgt = await h.mktSaleDgt();
 
-            const updating = h.updatePendingMarketSale(
-                marketSale,
-                {
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            saleState: {
-                                ...marketSale.data!.details.V1.saleState,
-                                progressDetails: {
-                                    ...marketSale.data!.details.V1.saleState
-                                        .progressDetails,
-                                    lastPurchaseAt: Date.now() + 1000 * 60 * 60,
-                                },
-                            },
-                        },
-                    },
-                },
-                "trying to change lastPurchaseAt",
-                { expectError: true }
-            );
+            // Mock enforceLastPurchaseAtStartTime to not fix the value
+            const enforceLastPurchaseAtStartTimeSpy = vi
+                .spyOn(mktSaleDgt, "enforceLastPurchaseAtStartTime")
+                .mockImplementation(function (record) {
+                    return record;
+                });
+
+            const updating = h.packagedPendingUpdate({
+                expectError: true,
+            });
 
             await expect(updating).rejects.toThrow(
                 /lastPurchaseAt must not change/
             );
+
+            enforceLastPurchaseAtStartTimeSpy.mockRestore();
         });
 
         it("fails if trying to change progressDetails.chunkUnitCount", async (context: STOK_TC) => {
@@ -1320,32 +1324,49 @@ describe("MarketSale plugin", async () => {
 
             await h.reusableBootstrap();
             await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
+            const mktSaleDgt = await h.mktSaleDgt();
 
-            const updating = h.updatePendingMarketSale(
-                marketSale,
-                {
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            saleState: {
-                                ...marketSale.data!.details.V1.saleState,
-                                progressDetails: {
-                                    ...marketSale.data!.details.V1.saleState
-                                        .progressDetails,
-                                    chunkUnitCount: 2000n,
-                                },
-                            },
-                        },
-                    },
-                },
-                "trying to change chunkUnitCount",
-                { expectError: true }
-            );
+            // Mock fixChunkUnitCount to not fix the value
+            const fixChunkUnitCountSpy = vi
+                .spyOn(mktSaleDgt, "fixChunkUnitCount")
+                .mockImplementation(function (record) {
+                    return record;
+                });
+
+            const updating = h.packagedPendingUpdate({
+                expectError: true,
+            });
 
             await expect(updating).rejects.toThrow(
                 /chunkUnitCount must not change/
             );
+
+            fixChunkUnitCountSpy.mockRestore();
+        });
+
+        it("fails if trying to change progressDetails.prevPurchaseAt away from the startAt", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const mktSaleDgt = await h.mktSaleDgt();
+
+            // Mock enforcePrevPurchaseAtStartTime to not fix the value
+            const enforcePrevPurchaseAtStartTimeSpy = vi
+                .spyOn(mktSaleDgt, "enforcePrevPurchaseAtStartTime")
+                .mockImplementation(function (record) {
+                    return record;
+                });
+
+            const updating = h.packagedPendingUpdate({
+                expectError: true,
+            });
+
+            await expect(updating).rejects.toThrow(
+                /prevPurchaseAt must not change/
+            );
+
+            enforcePrevPurchaseAtStartTimeSpy.mockRestore();
         });
 
         it("fails if trying to change threadInfo", async (context: STOK_TC) => {
