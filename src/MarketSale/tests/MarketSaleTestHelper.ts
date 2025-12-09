@@ -275,14 +275,96 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
             description,
             marketSale,
             {
-                activity: mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale({
-                    id: existingSale.details.V1.threadInfo.saleId,
-                }),
+                activity:
+                    mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale(
+                        existingSale.details.V1.threadInfo.saleId
+                    ),
                 updatedFields,
             },
             tcx
         );
 
         return this.submitTxnWithBlock(tcx2, submitOptions);
+    }
+
+    @CapoTestHelper.hasNamedSnapshot("packagedPendingUpdate", "tina")
+    snapToPackagedPendingUpdate() {
+        throw new Error("never called");
+        return this.packagedPendingUpdate();
+    }
+    async packagedPendingUpdateXXX(submitOptions?: TestHelperSubmitOptions) {
+        await this.snapToFirstMarketSale();
+        const marketSale = await this.findFirstMarketSale();
+        await this.updatePendingMarketSale(
+            marketSale,
+            {
+                name: "Updated Market Sale Name",
+            },
+            "packagePendingJUpdate",
+            submitOptions
+        );
+    }
+
+    packagedUpdateDetails() {
+        return {
+            name: "Updated Market Sale Name",
+            startAt: Date.now() + 1000 * 60 * 60 * 24, // 1 day from now
+            totalSaleUnits: 2000n,
+            singleBuyMaxUnits: 50n,
+            primaryAssetTargetCount: 200_000_000n,
+            targetPrice: 1.5,
+        };
+
+    }
+
+    async packagedPendingUpdate(
+        submitOptions?: TestHelperSubmitOptions
+    ) {
+        await this.snapToFirstMarketSale();
+        const marketSale = await this.findFirstMarketSale();
+
+        const updateDetails = this.packagedUpdateDetails();
+        // Calculate KRILL per unit: original was 1000n per unit, so for 2000 units it should be 2000n per unit
+        const newSaleUnitAssets = makeValue(
+            this.capo.mph,
+            marketSale.data!.details.V1.saleAssets.primaryAssetName,
+            updateDetails.primaryAssetTargetCount / updateDetails.totalSaleUnits
+        ).add(
+            makeValue(
+                this.capo.mph,
+                textToBytes("KRILL"),
+                (updateDetails.totalSaleUnits * 1000n) / updateDetails.totalSaleUnits
+            )
+        );
+
+        await this.updatePendingMarketSale(
+            marketSale,
+            {
+                name: updateDetails.name,
+                details: {
+                    V1: {
+                        ...marketSale.data!.details.V1,
+                        fixedSaleDetails: {
+                            ...marketSale.data!.details.V1.fixedSaleDetails,
+                            startAt: updateDetails.startAt,
+                            settings: {
+                                ...marketSale.data!.details.V1.fixedSaleDetails
+                                    .settings,
+                                targetPrice: updateDetails.targetPrice,
+                            },
+                        },
+                        saleAssets: {
+                            ...marketSale.data!.details.V1.saleAssets,
+                            totalSaleUnits: updateDetails.totalSaleUnits,
+                            singleBuyMaxUnits: updateDetails.singleBuyMaxUnits,
+                            primaryAssetTargetCount: updateDetails.primaryAssetTargetCount,
+                            saleUnitAssets: newSaleUnitAssets,
+                        },
+                    },
+                },
+            },
+            "updating all allowed fields",
+            submitOptions
+        );
     }
 }

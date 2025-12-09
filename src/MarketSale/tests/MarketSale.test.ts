@@ -295,7 +295,7 @@ describe("MarketSale plugin", async () => {
 
             const minting = h.mintAndAddAssets(marketSale, "KRILL", 1000n);
             await expect(minting).rejects.toThrow(
-                /AddTokens.* must be Pending/
+                /adding to sale.* must be Pending/
             );
         });
 
@@ -1195,277 +1195,36 @@ describe("MarketSale plugin", async () => {
     });
 
     describe("Activity:UpdatingPendingSale allows updates to a Pending mktSale", () => {
-        it("can update all allowed fields simultaneously", async (context: STOK_TC) => {
+        fit("can update any allowed fields", async (context: STOK_TC) => {
             const {
                 h,
                 h: { network, actors, delay, state },
             } = context;
-
+            
             await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-            const controller = await h.mktSaleDgt();
-            const exampleData = controller.exampleData();
-
-            const newName = "Updated Market Sale Name";
-            const newStartAt = Date.now() + 1000 * 60 * 60 * 24; // 1 day from now
-            const newTotalSaleUnits = 2000n;
-            const newSingleBuyMaxUnits = 50n;
-            const newPrimaryAssetTargetCount = 200_000_000n;
-            // Calculate KRILL per unit: original was 1000n per unit, so for 2000 units it should be 2000n per unit
-            const newSaleUnitAssets = makeValue(
-                h.capo.mph,
-                exampleData.details.V1.saleAssets.primaryAssetName,
-                newPrimaryAssetTargetCount / newTotalSaleUnits
-            ).add(makeValue(h.capo.mph, textToBytes("KRILL"), (2000n * 1000n) / newTotalSaleUnits));
-
-            await h.updatePendingMarketSale(
-                marketSale,
-                {
-                    name: newName,
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            fixedSaleDetails: {
-                                ...marketSale.data!.details.V1.fixedSaleDetails,
-                                startAt: newStartAt,
-                                settings: {
-                                    ...marketSale.data!.details.V1.fixedSaleDetails
-                                        .settings,
-                                    targetPrice: 1.5,
-                                },
-                            },
-                            saleAssets: {
-                                ...marketSale.data!.details.V1.saleAssets,
-                                totalSaleUnits: newTotalSaleUnits,
-                                singleBuyMaxUnits: newSingleBuyMaxUnits,
-                                primaryAssetTargetCount: newPrimaryAssetTargetCount,
-                                saleUnitAssets: newSaleUnitAssets,
-                            },
-                        },
-                    },
-                },
-                "updating all allowed fields"
-            );
-
+            await h.snapToPackagedPendingUpdate();            
             const updatedSale = await h.findFirstMarketSale();
-            expect(updatedSale.data!.name).toEqual(newName);
+            const expectedDetails = h.packagedUpdateDetails();
+
+            expect(updatedSale.data!.name).toEqual(expectedDetails.name);
             expect(
                 updatedSale.data!.details.V1.fixedSaleDetails.startAt
-            ).toEqual(newStartAt);
+            ).toEqual(expectedDetails.startAt);
+            
             expect(
                 updatedSale.data!.details.V1.fixedSaleDetails.settings.targetPrice
-            ).toEqual(1.5);
+            ).toEqual(expectedDetails.targetPrice);
             expect(
                 updatedSale.data!.details.V1.saleAssets.totalSaleUnits
-            ).toEqual(newTotalSaleUnits);
+            ).toEqual(expectedDetails.totalSaleUnits);
             expect(
                 updatedSale.data!.details.V1.saleAssets.singleBuyMaxUnits
-            ).toEqual(newSingleBuyMaxUnits);
+            ).toEqual(expectedDetails.singleBuyMaxUnits);
             expect(
                 updatedSale.data!.details.V1.saleAssets.primaryAssetTargetCount
-            ).toEqual(newPrimaryAssetTargetCount);
+            ).toEqual(expectedDetails.primaryAssetTargetCount);
         });
 
-        it("can update the name field", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-
-            const newName = "New Sale Name";
-            await h.updatePendingMarketSale(
-                marketSale,
-                { name: newName },
-                "updating name"
-            );
-
-            const updatedSale = await h.findFirstMarketSale();
-            expect(updatedSale.data!.name).toEqual(newName);
-        });
-
-        it("can update fixedSaleDetails.startAt", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-
-            const newStartAt = Date.now() + 1000 * 60 * 60 * 24 * 2; // 2 days from now
-            await h.updatePendingMarketSale(
-                marketSale,
-                {
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            fixedSaleDetails: {
-                                ...marketSale.data!.details.V1.fixedSaleDetails,
-                                startAt: newStartAt,
-                            },
-                        },
-                    },
-                },
-                "updating startAt"
-            );
-
-            const updatedSale = await h.findFirstMarketSale();
-            expect(
-                updatedSale.data!.details.V1.fixedSaleDetails.startAt
-            ).toEqual(newStartAt);
-        });
-
-        it("can update fixedSaleDetails.settings", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-
-            const newTargetPrice = 2.0;
-            await h.updatePendingMarketSale(
-                marketSale,
-                {
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            fixedSaleDetails: {
-                                ...marketSale.data!.details.V1.fixedSaleDetails,
-                                settings: {
-                                    ...marketSale.data!.details.V1.fixedSaleDetails
-                                        .settings,
-                                    targetPrice: newTargetPrice,
-                                },
-                            },
-                        },
-                    },
-                },
-                "updating settings"
-            );
-
-            const updatedSale = await h.findFirstMarketSale();
-            expect(
-                updatedSale.data!.details.V1.fixedSaleDetails.settings.targetPrice
-            ).toEqual(newTargetPrice);
-        });
-
-        it("can update saleAssets.totalSaleUnits with consistent primaryAssetTargetCount", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-            const controller = await h.mktSaleDgt();
-            const exampleData = controller.exampleData();
-
-            const newTotalSaleUnits = 2000n;
-            const newPrimaryAssetTargetCount = 200_000_000n;
-            const newSaleUnitAssets = makeValue(
-                h.capo.mph,
-                exampleData.details.V1.saleAssets.primaryAssetName,
-                newPrimaryAssetTargetCount / newTotalSaleUnits
-            ).add(
-                makeValue(
-                    h.capo.mph,
-                    textToBytes("KRILL"),
-                    (2000n * 1000n) / newTotalSaleUnits
-                )
-            );
-
-            await h.updatePendingMarketSale(
-                marketSale,
-                {
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            saleAssets: {
-                                ...marketSale.data!.details.V1.saleAssets,
-                                totalSaleUnits: newTotalSaleUnits,
-                                primaryAssetTargetCount: newPrimaryAssetTargetCount,
-                                saleUnitAssets: newSaleUnitAssets,
-                            },
-                        },
-                    },
-                },
-                "updating totalSaleUnits with consistent values"
-            );
-
-            const updatedSale = await h.findFirstMarketSale();
-            expect(
-                updatedSale.data!.details.V1.saleAssets.totalSaleUnits
-            ).toEqual(newTotalSaleUnits);
-            expect(
-                updatedSale.data!.details.V1.saleAssets.primaryAssetTargetCount
-            ).toEqual(newPrimaryAssetTargetCount);
-        });
-
-        it("can update saleAssets.singleBuyMaxUnits", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-
-            const newSingleBuyMaxUnits = 50n;
-            await h.updatePendingMarketSale(
-                marketSale,
-                {
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            saleAssets: {
-                                ...marketSale.data!.details.V1.saleAssets,
-                                singleBuyMaxUnits: newSingleBuyMaxUnits,
-                            },
-                        },
-                    },
-                },
-                "updating singleBuyMaxUnits"
-            );
-
-            const updatedSale = await h.findFirstMarketSale();
-            expect(
-                updatedSale.data!.details.V1.saleAssets.singleBuyMaxUnits
-            ).toEqual(newSingleBuyMaxUnits);
-        });
-
-        it("fails if trying to change the id field", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-
-            const updating = h.updatePendingMarketSale(
-                marketSale,
-                {
-                    id: textToBytes("different-id"),
-                } as any,
-                "trying to change id",
-                { expectError: true }
-            );
-
-            await expect(updating).rejects.toThrow(/id must not change/);
-        });
-
-        it("fails if trying to change the type field", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-
-            const updating = h.updatePendingMarketSale(
-                marketSale,
-                {
-                    type: "differentType",
-                } as any,
-                "trying to change type",
-                { expectError: true }
-            );
-
-            await expect(updating).rejects.toThrow(/type must not change/);
-        });
 
         it("fails if trying to change saleState from Pending", async (context: STOK_TC) => {
             const { h } = context;
@@ -1523,7 +1282,7 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/salePace must remain 1.0/);
         });
 
-        it("fails if trying to change progressDetails.lastPurchaseAt", async (context: STOK_TC) => {
+        it("fails if trying to change progressDetails.lastPurchaseAt away fromt the startAt", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();

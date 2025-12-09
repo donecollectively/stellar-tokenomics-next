@@ -35,6 +35,8 @@ import type {
     Capo,
     CapoDelegateBundle,
     DelegatedDataBundle,
+    createContext,
+    updateContext,
 } from "@donecollectively/stellar-contracts";
 import {
     makeDummyAddress,
@@ -104,6 +106,105 @@ export class MarketSaleController extends WrappedDgDataContract<
         return module.MarketSaleBundle;
     }
 
+    beforeCreate(newRecord, { activity }) {
+        return {
+            ...newRecord,
+            details: {
+                ...newRecord.details,
+                V1: {
+                    ...newRecord.details.V1,
+                    threadInfo: {
+                        ...newRecord.details.V1.threadInfo,
+                        saleId: newRecord.id,
+                    },
+                },
+            },
+        };
+    }
+
+    beforeUpdate(
+        updated: MarketSaleDataLike,
+        { activity, original }: updateContext<ErgoMarketSaleData>
+    ) {
+        // doesn't interfere with the transaction-builder for selling while active:
+        if (original.details.V1.saleState.state.Active) {
+            return updated;
+        }
+        if (updated.details.V1.saleState.state.Pending) {
+            return this.fixChunkUnitCount(
+                this.enforceLastPurchaseAtStartTime(
+                    this.enforcePrevPurchaseAtStartTime(updated)
+                )
+            );
+        }
+        return updated;
+    }
+
+    fixChunkUnitCount(
+        record: MarketSaleDataLike
+    ): MarketSaleDataLike {
+        const chunkUnitCount = record.details.V1.saleAssets.totalSaleUnits;
+        if (record.details.V1.saleState.progressDetails.chunkUnitCount == chunkUnitCount) {
+            return record;
+        }
+        return this.withSaleProgresssDetails(record, {
+            ...record.details.V1.saleState.progressDetails,
+            chunkUnitCount,
+        });
+    }
+
+    withSaleProgresssDetails(
+        record: MarketSaleDataLike,
+        progressDetails: MarketSaleDataLike["details"]["V1"]["saleState"]["progressDetails"]
+    ): MarketSaleDataLike {
+        return {
+            ...record,
+            details: {
+                ...record.details,
+                V1: {
+                    ...record.details.V1,
+                    saleState: {
+                        ...record.details.V1.saleState,
+                        progressDetails,
+                    },
+                },
+            },
+        };
+    }
+
+    enforcePrevPurchaseAtStartTime(
+        record: MarketSaleDataLike
+    ): MarketSaleDataLike {
+        const startAt = record.details.V1.fixedSaleDetails.startAt;
+        if (
+            record.details.V1.saleState.progressDetails.prevPurchaseAt ==
+            startAt
+        ) {
+            return record;
+        }
+        return this.withSaleProgresssDetails(record, {
+            ...record.details.V1.saleState.progressDetails,
+            prevPurchaseAt: startAt,
+        });
+    }
+
+    enforceLastPurchaseAtStartTime(
+        record: MarketSaleDataLike
+    ): MarketSaleDataLike {
+        const startAt = record.details.V1.fixedSaleDetails.startAt;
+        if (
+            record.details.V1.saleState.progressDetails.lastPurchaseAt ==
+            startAt
+        ) {
+            return record;
+        }
+
+        return this.withSaleProgresssDetails(record, {
+            ...record.details.V1.saleState.progressDetails,
+            lastPurchaseAt: startAt,
+        });
+    }
+
     exampleData(): minimalMarketSaleData {
         const tn = encodeUtf8("PLANKTON");
         const mph = this.capo.mph;
@@ -118,7 +219,8 @@ export class MarketSaleController extends WrappedDgDataContract<
                     fixedSaleDetails: {
                         settings: {
                             targetPrice: 1,
-                            targetedSellingTime: 4.5 * 24 * 3600 * 1_000 /** 4.5 days */,
+                            targetedSellingTime:
+                                4.5 * 24 * 3600 * 1_000 /** 4.5 days */,
 
                             minPrice: 0.5,
                             maxPrice: 4.2,
@@ -148,7 +250,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                             tn,
                             100_000_000n / units
                         ),
-                    singleBuyMaxUnits: 25n,
+                        singleBuyMaxUnits: 25n,
                     },
                     saleState: {
                         progressDetails: {
@@ -355,11 +457,6 @@ export class MarketSaleController extends WrappedDgDataContract<
     //     //     }
     //     // );
     // }
-
-    beforeCreate(data: MarketSaleData) {
-        data.details.V1.threadInfo.saleId = data.id;
-        return data;
-    }
 
     async mkTxnActivateMarketSale<
         TCX extends hasCharterRef | StellarTxnContext
@@ -839,8 +936,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             },
             "it's created with key details of a sale": {
                 purpose: "Supports accurate administration of the sale process",
-                details: [
-                ],
+                details: [],
                 mech: [
                     "has expected labels and other high-level details",
                     "has initial timestamps",
@@ -852,8 +948,8 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "basics implemented previously to beta.9",
                     ],
                     "0.8.0-beta.10": [
-                        "constrains the saleUnitAssets to only contain the primary asset when created"
-                    ]
+                        "constrains the saleUnitAssets to only contain the primary asset when created",
+                    ],
                 },
                 requires: [],
             },
@@ -910,7 +1006,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "saleAssets can get out of sync with even token distribution when tokens are NOT being added",
                         "^ e.g. by doing a partial deposit of primary token, then changing the primary asset name",
                         "^ or, by doing a partial deposit of non-primary token, then changing the lot-count/totalSaleUnits",
-                        "Enforcing resync of even values during deposit ensures things are ok before starting the sale"
+                        "Enforcing resync of even values during deposit ensures things are ok before starting the sale",
                     ],
                     mech: [
                         "saleUnitAssets MUST NOT contain any tokens other than the primary asset when first created",

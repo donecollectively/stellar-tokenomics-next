@@ -17,6 +17,12 @@ import type {
 } from "./MarketSaleController.js";
 
 /**
+ * This class is used to wrap the MarketSaleData for computing sale prices
+ * 
+ * It is NOT used for write operations on the MarketSaleData.
+ * 
+ * The MarketSaleController provides this object in FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper> objects,
+ * alongside the utxo and the (non-wrapped) ErgoMarketSaleData object.
  * @public
  */
 export class MarketSaleDataWrapper {
@@ -36,6 +42,7 @@ export class MarketSaleDataWrapper {
         this.capo = capo;
     }
 
+    // !!! this class is ONLY used for computations, not as a read/write wrapper
     unwrapData(): MarketSaleDataLike {
         return this.data;
     }
@@ -65,7 +72,7 @@ export class MarketSaleDataWrapper {
             "    ---- unitPriceForSale: targetPrice * pricingFactorOverallProgress =",
             a
         );
-        const price = realMul(a, this.pricingFactorDynamicPace(pCtx));
+        const price = toFixedReal(realMul(a, this.pricingFactorDynamicPace(pCtx)));
         console.log("    ---- unitPriceForSale - unclamped", price);
         const result = Math.min(Math.max(price, s.minPrice), s.maxPrice);
         console.log("    ---- unitPriceForSale - clamped", result);

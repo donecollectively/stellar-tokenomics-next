@@ -1956,20 +1956,24 @@ export interface SpendingActivity$MergingChildChunkLike {
             "Constr#1", 
             "fields", SpendingActivity$AddingToSale, "noSpecialFlags"
         >,
-        Activating: singleEnumVariantMeta<SpendingActivityMeta, "Activating",
+        UpdatingPendingSale: singleEnumVariantMeta<SpendingActivityMeta, "UpdatingPendingSale",
             "Constr#2", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]   , "noSpecialFlags"
         >,
+        Activating: singleEnumVariantMeta<SpendingActivityMeta, "Activating",
+            "Constr#3", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]   , "noSpecialFlags"
+        >,
         SellingTokens: singleEnumVariantMeta<SpendingActivityMeta, "SellingTokens",
-            "Constr#3", 
+            "Constr#4", 
             "fields", SpendingActivity$SellingTokens, "noSpecialFlags"
         >,
         MergingChildChunk: singleEnumVariantMeta<SpendingActivityMeta, "MergingChildChunk",
-            "Constr#4", 
+            "Constr#5", 
             "fields", SpendingActivity$MergingChildChunk, "noSpecialFlags"
         >,
         Retiring: singleEnumVariantMeta<SpendingActivityMeta, "Retiring",
-            "Constr#5", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+            "Constr#6", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]   , "noSpecialFlags"
         >
     }
@@ -1980,7 +1984,7 @@ export interface SpendingActivity$MergingChildChunkLike {
  * SpendingActivity enum variants
  * 
  * @remarks - expresses the essential raw data structures
- * supporting the **6 variant(s)** of the SpendingActivity enum type
+ * supporting the **7 variant(s)** of the SpendingActivity enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `SpendingActivityHelper` class
  *     for generating UPLC data for this enum type
@@ -1990,6 +1994,8 @@ export type SpendingActivity =
         | { UpdatingRecord: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
         | { AddingToSale: SpendingActivity$AddingToSale /*minEnumVariant*/ }
+        | { UpdatingPendingSale: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Activating: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
         | { SellingTokens: SpendingActivity$SellingTokens /*minEnumVariant*/ }
@@ -2008,6 +2014,8 @@ export type ErgoSpendingActivity = IntersectedEnum<
         | { UpdatingRecord: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
         | { AddingToSale: SpendingActivity$Ergo$AddingToSale /*minEnumVariant*/ }
+        | { UpdatingPendingSale: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Activating: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
         | { SellingTokens: SpendingActivity$Ergo$SellingTokens /*minEnumVariant*/ }
@@ -2020,7 +2028,7 @@ export type ErgoSpendingActivity = IntersectedEnum<
  * SpendingActivity enum variants (permissive)
  * 
  * @remarks - expresses the allowable data structure
- * for creating any of the **6 variant(s)** of the SpendingActivity enum type
+ * for creating any of the **7 variant(s)** of the SpendingActivity enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `SpendingActivityHelper` class
  *     for generating UPLC data for this enum type
@@ -2034,6 +2042,8 @@ export type SpendingActivityLike = IntersectedEnum<
         | { UpdatingRecord: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
         | { AddingToSale: SpendingActivity$AddingToSaleLike /*minEnumVariant*/ }
+        | { UpdatingPendingSale: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Activating: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
         | { SellingTokens: SpendingActivity$SellingTokensLike /*minEnumVariant*/ }

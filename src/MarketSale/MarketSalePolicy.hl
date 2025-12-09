@@ -44,6 +44,12 @@ import {
     TODO,
     REQT,
     bREQT,
+    assertREQTgroup,
+    REQTgroup,
+    REQTgroupUnit,
+    logGroupUnit,
+    logGroupStart,
+    logGroupEnd,
     AnyData,
     logGroup,
     getTimeRange,
@@ -494,13 +500,16 @@ enum DelegateActivity {
                     // todo: the purchased tokens are distributed to a
                     //   configured sale-distribution contract (e.g. vesting/escrow/yield-farm)
                     
-                    REQT("Matches redeemer payment with paid value")
-                    assert(
-                        (
-                            paidValue == unitSellPrice * sellingUnitQuantity
-                        ).trace(" -- found payment matching redeemer details? "),
-                        "actual payment/redeemer mismatch"
-                    );
+                    assertREQTgroup("Matches redeemer payment with paid value", false, () -> Bool {
+                        print("  -- paidValue: "+ paidValue.show());
+                        print("  -- unitSellPrice: "+ unitSellPrice.show());
+                        print("  -- sellingUnitQuantity: "+ sellingUnitQuantity.show());
+                        expectedPayment = unitSellPrice * sellingUnitQuantity;
+                        print("  -- expected payment: "+ expectedPayment.show());
+                        print("  -- actual payment: "+ paidValue.show());
+
+                        paidValue == expectedPayment
+                    });
 
                     true
                     && correctActiveState

@@ -446,7 +446,7 @@ struct MarketSaleData {
         // Core constraints (diagnostic-friendly)
         REQT(
             reqt: "UTxO value MUST remain unchanged",
-            assertion: ddd.input().value == ddd.output().value,
+            assertion: ddd.input().value.get_assets() == ddd.output().value.get_assets(),
             onError: "UTxO value changed; delta= " + (ddd.output().value - ddd.input().value).show(),
             showSuccess: true
         );

@@ -2404,6 +2404,18 @@ export class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
     } /*multiFieldVariant enum accessor*/
 
     /**
+     * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPendingSale"***
+     */
+    UpdatingPendingSale(
+        id: number[]
+    ) : UplcData {
+        const uplc = this.mkUplcData({ 
+           UpdatingPendingSale: id
+        }, "MarketSalePolicy::SpendingActivity.UpdatingPendingSale"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
      * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.Activating"***
      */
     Activating(
@@ -3298,6 +3310,23 @@ export class SpendingActivityHelperNested extends EnumBridge<isActivity> {
         }, "MarketSalePolicy::SpendingActivity.AddingToSale");
        return uplc;
     } /*multiFieldVariant enum accessor*/
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPendingSale"***
+    * @remarks
+    * #### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    UpdatingPendingSale(
+        id: number[]
+    ) : isActivity {
+        const uplc = this.mkUplcData({ 
+           UpdatingPendingSale: id
+        }, "MarketSalePolicy::SpendingActivity.UpdatingPendingSale"); /*singleField enum variant*/
+       return uplc;
+    }
 
     /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.Activating"***
@@ -8945,6 +8974,21 @@ export const SpendingActivitySchema : EnumTypeSchema = {
         {
             "kind": "variant",
             "tag": 2,
+            "id": "__module__MarketSalePolicy__SpendingActivity[]__UpdatingPendingSale",
+            "name": "UpdatingPendingSale",
+            "fieldTypes": [
+                {
+                    "name": "id",
+                    "type": {
+                        "kind": "internal",
+                        "name": "ByteArray"
+                    }
+                }
+            ]
+        },
+        {
+            "kind": "variant",
+            "tag": 3,
             "id": "__module__MarketSalePolicy__SpendingActivity[]__Activating",
             "name": "Activating",
             "fieldTypes": [
@@ -8959,7 +9003,7 @@ export const SpendingActivitySchema : EnumTypeSchema = {
         },
         {
             "kind": "variant",
-            "tag": 3,
+            "tag": 4,
             "id": "__module__MarketSalePolicy__SpendingActivity[]__SellingTokens",
             "name": "SellingTokens",
             "fieldTypes": [
@@ -8988,7 +9032,7 @@ export const SpendingActivitySchema : EnumTypeSchema = {
         },
         {
             "kind": "variant",
-            "tag": 4,
+            "tag": 5,
             "id": "__module__MarketSalePolicy__SpendingActivity[]__MergingChildChunk",
             "name": "MergingChildChunk",
             "fieldTypes": [
@@ -9010,7 +9054,7 @@ export const SpendingActivitySchema : EnumTypeSchema = {
         },
         {
             "kind": "variant",
-            "tag": 5,
+            "tag": 6,
             "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
             "name": "Retiring",
             "fieldTypes": [
@@ -9566,6 +9610,21 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                             {
                                 "kind": "variant",
                                 "tag": 2,
+                                "id": "__module__MarketSalePolicy__SpendingActivity[]__UpdatingPendingSale",
+                                "name": "UpdatingPendingSale",
+                                "fieldTypes": [
+                                    {
+                                        "name": "id",
+                                        "type": {
+                                            "kind": "internal",
+                                            "name": "ByteArray"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "kind": "variant",
+                                "tag": 3,
                                 "id": "__module__MarketSalePolicy__SpendingActivity[]__Activating",
                                 "name": "Activating",
                                 "fieldTypes": [
@@ -9580,7 +9639,7 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                             },
                             {
                                 "kind": "variant",
-                                "tag": 3,
+                                "tag": 4,
                                 "id": "__module__MarketSalePolicy__SpendingActivity[]__SellingTokens",
                                 "name": "SellingTokens",
                                 "fieldTypes": [
@@ -9609,7 +9668,7 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                             },
                             {
                                 "kind": "variant",
-                                "tag": 4,
+                                "tag": 5,
                                 "id": "__module__MarketSalePolicy__SpendingActivity[]__MergingChildChunk",
                                 "name": "MergingChildChunk",
                                 "fieldTypes": [
@@ -9631,7 +9690,7 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                             },
                             {
                                 "kind": "variant",
-                                "tag": 5,
+                                "tag": 6,
                                 "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
                                 "name": "Retiring",
                                 "fieldTypes": [
