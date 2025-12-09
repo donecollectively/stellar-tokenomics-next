@@ -1073,6 +1073,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                     details: [
                         "Enforces immutability of core identity fields, state, and progress details",
                         "Validates asset and lot-count (totalSaleUnits) consistency when updating sale configuration",
+                        "Doesn't allow tokens to be added or removed from the UTxO when editing details",
                     ],
                     mech: [
                         "requires governance authority to update the sale details",
@@ -1080,7 +1081,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "prevents the sale from leaving Pending state",
                         "doesn't allow changing sale pace, progress details, or thread info",
                         "fails if primaryAssetTargetCount is not an even multiple of the lot count",
-                        "fails if the Value in the UTxO is modified during the update",
+                        "fails if the token count in the UTxO is modified during the update",
                     ],
                     requires: [
                         "Updating a pending sale keeps the saleAssets consistent",

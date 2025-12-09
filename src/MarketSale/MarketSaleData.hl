@@ -444,10 +444,16 @@ struct MarketSaleData {
         prevUtxoValue : Value = ddd.input().value;
                 
         // Core constraints (diagnostic-friendly)
-        REQT(
-            reqt: "UTxO value MUST remain unchanged",
-            assertion: ddd.input().value.get_assets() == ddd.output().value.get_assets(),
-            onError: "UTxO value changed; delta= " + (ddd.output().value - ddd.input().value).show(),
+        assertREQTgroup( reqt: "fails if the token count in the UTxO is modified during the update", collapsed:false, 
+        callback: () -> Bool {
+            inputAssets = ddd.input().value.get_assets();
+            outputAssets = ddd.output().value.get_assets();
+            assert(inputAssets == outputAssets, "UTxO tokens changed; delta:  " + (outputAssets - inputAssets).show());
+            true
+        })
+
+        REQT("doesn't allow changing sale pace from 1.0",
+            assertion: nextState.salePace == 1.0,
             showSuccess: true
         );
 
@@ -455,7 +461,7 @@ struct MarketSaleData {
         nextState.mustBePending("UpdatingPendingSale: updated record")
     
         REQT(
-            reqt: "threadInfo must remain unchanged",
+            reqt: "doesn't allow changing thread info",
             assertion: prevDetails.threadInfo == nextDetails.threadInfo,
             showSuccess: true
         );
@@ -468,67 +474,97 @@ struct MarketSaleData {
         );
         
         if (primaryAssetChanged) {
-            REQT("if primary asset changes, check if old primary asset tokens exist in previous UTxO");
+        REQTgroup("when primary asset is changed ...", false, () -> Bool {
+            previousPrimaryAssetName : String = prevAssets.primaryAssetName.decode_utf8_safe();
+            nextPrimaryAssetName : String = nextAssets.primaryAssetName.decode_utf8_safe();
+            print("    ... primary asset changed from " + previousPrimaryAssetName + 
+                " to " + nextPrimaryAssetName
+            );
+            // REQT("if primary asset changes, check if old primary asset tokens exist in previous UTxO");
             prevUtxoAssets : Value = prevUtxoValue - ddd.uutValue();
-            oldPrimaryAssetCount : Int = prevUtxoAssets
+            oldPrimaryAssetsDeposited : Int = prevUtxoAssets
                 .get_policy(prevAssets.primaryAssetMph)
                 .get(prevAssets.primaryAssetName);
             
-            hasOldPrimaryTokens : Bool = oldPrimaryAssetCount > 0;
+            hasOldPrimaryTokens : Bool = oldPrimaryAssetsDeposited > 0;
             
-            if (hasOldPrimaryTokens) {
-                REQT("if old primary asset tokens exist, saleUnitAssets must continue to reference old primary");
+            if (hasOldPrimaryTokens) {                
+            bREQTgroup("when old primary asset tokens are present in the UTxO ...", false, () -> Bool {
+                print("   -- utxo has " + oldPrimaryAssetsDeposited.show() + " " + previousPrimaryAssetName);
+
+                nextSaleUnitOldPrimary : Int = nextAssets.saleUnitAssets
+                    .get_assets()
+                    .get_policy(prevAssets.primaryAssetMph)
+                    .get(prevAssets.primaryAssetName);
+
+                print("   -- next saleUnit has " + nextSaleUnitOldPrimary.show() + " " + previousPrimaryAssetName);
+
+                assertREQTgroup("... saleUnitAssets‹primaryAsset› must keep a minimum lot-size, ≥ depositedTokens/totalSaleUnits", false, () -> Bool {
+                    expectedOldPrimaryPerLot : Int = oldPrimaryAssetsDeposited / nextAssets.totalSaleUnits;
+                    print("    ... expectedOldPrimaryPerLot: " + expectedOldPrimaryPerLot.show());
+                    assert(
+                        nextSaleUnitOldPrimary >= expectedOldPrimaryPerLot,
+                        "insufficient lot-size for previous primary asset"
+                    );
+                    true
+                });
+
+                bREQTgroup("... saleUnitAssets must contain the NEW primary token", false, () -> Bool {
+                    nextSaleUnitNewPrimary : Int = nextAssets.saleUnitAssets
+                        .get_assets()
+                        .get_policy(nextAssets.primaryAssetMph)
+                        .get(nextAssets.primaryAssetName);
+                    assert(
+                        nextSaleUnitNewPrimary > 0,
+                        "saleUnitAssets doesn't contain the new primary asset"
+                    );
+                    true
+                }) 
+            }) } else {
+            bREQTgroup("when no old primary asset tokens are present in the UTxO ...", false, () -> Bool {
                 nextSaleUnitOldPrimary : Int = nextAssets.saleUnitAssets
                     .get_assets()
                     .get_policy(prevAssets.primaryAssetMph)
                     .get(prevAssets.primaryAssetName);
                 
-                REQT("old primary asset quantity in saleUnitAssets must divide evenly by totalSaleUnits");
-                assert(
-                    oldPrimaryAssetCount % nextAssets.totalSaleUnits == 0,
-                    "old primary asset quantity must divide evenly by totalSaleUnits"
-                );
-                
-                expectedOldPrimaryPerUnit : Int = oldPrimaryAssetCount / nextAssets.totalSaleUnits;
-                assert(
-                    nextSaleUnitOldPrimary == expectedOldPrimaryPerUnit,
-                    "saleUnitAssets must reference old primary asset with correct per-unit quantity"
-                );
-            } else {
-                REQT("if no old primary asset tokens, saleUnitAssets must reference new primary and not old");
-                nextSaleUnitOldPrimary : Int = nextAssets.saleUnitAssets
-                    .get_assets()
-                    .get_policy(prevAssets.primaryAssetMph)
-                    .get(prevAssets.primaryAssetName);
-                
-                assert(
-                    nextSaleUnitOldPrimary == 0,
-                    "saleUnitAssets must not reference old primary asset when no old tokens exist"
-                );
+                assertREQTgroup("... saleUnitAssets must not reference old primary token", false, () -> Bool {
+                    print("   -- " + nextSaleUnitOldPrimary.show() + " " + previousPrimaryAssetName);
+                    assert(
+                        nextSaleUnitOldPrimary == 0,
+                        "saleUnitAssets has old primary tokens remaining"
+                    );
+                    true
+                });
                 
                 nextSaleUnitNewPrimary : Int = nextAssets.saleUnitAssets
                     .get_assets()
                     .get_policy(nextAssets.primaryAssetMph)
                     .get(nextAssets.primaryAssetName);
-                
-                assert(
-                    nextSaleUnitNewPrimary > 0,
-                    "saleUnitAssets must reference new primary asset"
-                );
-            }
-        }
+
+                bREQTgroup("...saleUnitAssets must reference new primary asset", false, () -> Bool {                
+                    print("   -- next saleUnit has " + nextSaleUnitNewPrimary.show() + " " + nextPrimaryAssetName);
+                    assert(
+                        nextSaleUnitNewPrimary > 0,
+                        "saleUnitAssets must reference new primary asset"
+                    );
+                    true
+                });
+            }) }
+        }) }
         
         // Primary asset target count consistency
-        REQT("primaryAssetTargetCount must maintain consistency with totalSaleUnits and saleUnitAssets");
-        nextPrimaryPerUnit : Int = nextAssets.saleUnitAssets
-            .get_assets()
-            .get_policy(nextAssets.primaryAssetMph)
-            .get(nextAssets.primaryAssetName);
-        expectedTargetCount : Int = nextAssets.totalSaleUnits * nextPrimaryPerUnit;
-        assert(
-            nextAssets.primaryAssetTargetCount == expectedTargetCount,
-            "primaryAssetTargetCount must equal totalSaleUnits * saleUnitAssets@primary"
-        );
+        assertREQTgroup("fails if primaryAssetTargetCount is not an even multiple of the lot count", false, () -> Bool {
+            nextPrimaryPerUnit : Int = nextAssets.saleUnitAssets
+                .get_assets()
+                .get_policy(nextAssets.primaryAssetMph)
+                .get(nextAssets.primaryAssetName);
+            expectedTargetCount : Int = nextAssets.totalSaleUnits * nextPrimaryPerUnit;
+            assert(
+                nextAssets.primaryAssetTargetCount == expectedTargetCount,
+                "lot size has uneven primaryAssetTargetCount and mismatch with target count"
+            );
+            true
+        });
         
         // Validate VxfDestination fields
         REQT("validates VxfDestination in vxfTokensTo if Some");

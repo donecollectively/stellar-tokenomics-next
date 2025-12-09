@@ -1267,7 +1267,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        /**failing*/ it("doesn't allow changing sale pace", async (context: STOK_TC) => {
+        it("doesn't allow changing sale pace", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1590,7 +1590,7 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/divisible|lot count|even/i);
         });
 
-/**failing*/       it("fails if the token count in the UTxO is modified during the update", async (context: STOK_TC) => {
+        it("fails if the token count in the UTxO is modified during the update", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1599,7 +1599,7 @@ describe("MarketSale plugin", async () => {
             const mktSaleDgt = await h.mktSaleDgt();
 
             const tcx = h.capo.mkTcx("update that changes value");
-            const updating = mktSaleDgt.mkTxnUpdateRecord(
+            const tcx2 = mktSaleDgt.mkTxnUpdateRecord(
                 "update that changes value",
                 marketSale,
                 {
@@ -1610,12 +1610,17 @@ describe("MarketSale plugin", async () => {
                         name: "Changing value should fail",
                     },
                     // Add 1 lovelace to change the UTxO value (should be rejected)
-                    addedUtxoValue: makeValue(1n),
+                    addedUtxoValue: makeValue(h.capo.mph, textToBytes("FISH"), 1n),
                 },
-                tcx
+                await h.capo.txnMintingFungibleTokens(
+                    tcx, "FISH", 1n
+                )
             );
+            const updating = h.submitTxnWithBlock(tcx2, {
+                expectError: true,                
+            });
 
-            await expect(updating).rejects.toThrow(/value.*must remain/i);
+            await expect(updating).rejects.toThrow(/UTxO tokens changed; delta: /i);
         });
 
 /**failing*/        it("if old primary tokens exist in UTxO, saleUnitAssets must reference them with per-unit count ≥ depositedTokens/totalSaleUnits", async (context: STOK_TC) => {
