@@ -3,6 +3,13 @@ module SaleProgressDetails
 import {
     REQT,
     bREQT,
+    REQTgroup,
+    assertREQTgroup,
+    bREQTgroup,
+    logGroup,
+    logGroupUnit,
+    logGroupStart,
+    logGroupEnd,
     TODO
 } from StellarHeliosHelpers
 
@@ -13,17 +20,18 @@ struct SaleProgressDetailsV1 {
     chunkUnitCount: Int 
     chunkUnitsSold: Int 
 
-    func validateCreatedDetails(self, 
+    func validateDetailsWhenPending(self, 
         saleStartTime : Time, 
         totalSaleUnits : Int
      ) -> Bool {
-        print("progDtls: validate");
-        assert(self.lastPurchaseAt == saleStartTime, "lastPurchaseAt must be equal to startAt");
-        assert(self.prevPurchaseAt == saleStartTime, "prevPurchaseAt must be equal to startAt");
-        assert(self.chunkUnitCount == totalSaleUnits, "chunkUnitCount must be equal to totalSaleUnits");
-        assert(self.chunkUnitsSold == 0, "chunkUnitsSold must be zero");
-        // assert(self.lastPurchaseAt >= self.prevPurchaseAt, "lastPurchaseAt must be greater than or equal to prevPurchaseAt");
-        true    
+        logGroup("SaleProgressDetails: validateCreatedDetails()", false, () -> Bool {
+            assert(self.lastPurchaseAt == saleStartTime, "lastPurchaseAt must be equal to startAt");
+            assert(self.prevPurchaseAt == saleStartTime, "prevPurchaseAt must be equal to startAt");
+            assert(self.chunkUnitCount == totalSaleUnits, "chunkUnitCount must be equal to totalSaleUnits");
+            assert(self.chunkUnitsSold == 0, "chunkUnitsSold must be zero");
+            // assert(self.lastPurchaseAt >= self.prevPurchaseAt, "lastPurchaseAt must be greater than or equal to prevPurchaseAt");
+            true    
+        })
     }
 
     func validateUpdatedDetails(
@@ -32,42 +40,50 @@ struct SaleProgressDetailsV1 {
         now: Time,
         unitsSold: Int
     ) -> Bool {
-        print("SaleProgressDetails: validating update");
+        logGroup("SaleProgressDetails: validateUpdatedDetails()", false, () -> Bool {
+            bREQTgroup("Updates last-purchase-time to the current tx time", false, () -> Bool {
+                print("   ----  lastPurchaseAt: " + self.lastPurchaseAt.show());
+                print("   ----  now: " + now.show());
+                assert(
+                    (self.lastPurchaseAt == now),
+                    "lastPurchaseAt not updated correctly"
+                )
+                print("✔ lastPurchaseAt updated OK")
+                true
+            })
 
-        REQT("Updates last-purchase-time to the current tx time");
-        print("   ----  lastPurchaseAt: " + self.lastPurchaseAt.show());
-        print("   ----  now: " + now.show());
-        assert(
-            (self.lastPurchaseAt == now).trace("  -- updated lastPurchaseAt ok? "),
-            "lastPurchaseAt not updated correctly"
-        );
+            && bREQTgroup("Keeps a record of the prior purchase time for dynamic pacing", false, () -> Bool {
+                prevNow : Time = prevProgress.lastPurchaseAt;
+                assert(self.prevPurchaseAt == prevNow,
+                    "must update prevPurchaseAt to prev lastPurchaseAt " + prevNow.show() + 
+                    ", got " + self.prevPurchaseAt.show()
+                )
+                print("✔ prevPurchaseAt updated OK")
+                true
+            })
 
-        REQT("Keeps a record of the prior purchase time for dynamic pacing");
-        prevNow : Time = prevProgress.lastPurchaseAt;
-        assert(self.prevPurchaseAt == prevNow,
-            "must update prevPurchaseAt to prev lastPurchaseAt " + prevNow.show() + 
-            ", got " + self.prevPurchaseAt.show()
-        );
+            && bREQTgroup("Updates chunkUnitsSold to include the new units being purchased", false, () -> Bool {
+                print("   ----  prev unitsSold: " + prevProgress.chunkUnitsSold.show());
+                print("   ----  unitsSold: " + self.chunkUnitsSold.show());
+                assert(
+                    (
+                        self.chunkUnitsSold == prevProgress.chunkUnitsSold + unitsSold
+                    ),
+                    "chunkUnitsSold not updated correctly"
+                )
+                print("✔ chunkUnitsSold updated OK")
+                true
+            }) 
 
-        REQT("Updates total-sale-units to include the new units being purchased");
-        print("   ----  prev unitsSold: " + prevProgress.chunkUnitsSold.show());
-        print("   ----  unitsSold: " + self.chunkUnitsSold.show());
-        assert(
-            (
-                self.chunkUnitsSold == prevProgress.chunkUnitsSold + unitsSold
-            ).trace("  -- updated chunkUnitsSold ok? "),
-            "must update progress units sold"
-        );
-
-        REQT("Ensures the total number of units available for purchase is unchanged");
-        assert(
-            (
-                self.chunkUnitCount == prevProgress.chunkUnitCount
-            ).trace("  -- chunkUnitCount unchanged? "),
-            "must not change chunk unit count"
-        );
-        print("✔ progress details updated OK");
-
-        true
+            && bREQTgroup("Ensures the total number of units available for purchase is unchanged", false, () -> Bool {
+                assert(
+                    (self.chunkUnitCount == prevProgress.chunkUnitCount),
+                    "must not change chunk unit count"
+                )
+                print("✔ chunkUnitCount unchanged OK")
+                true
+            }) 
+            && true
+        })
     }
 }

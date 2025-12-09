@@ -1,5 +1,18 @@
 module DynamicSaleV1Settings
 
+import {
+    REQT,
+    bREQT,
+    REQTgroup,
+    assertREQTgroup,
+    bREQTgroup,
+    logGroup,
+    logGroupUnit,
+    logGroupStart,
+    logGroupEnd,
+    TODO
+} from StellarHeliosHelpers
+
 struct DynamicSaleV1Settings {
     targetPrice: Real  
     //TODO: add pricing unit
@@ -25,7 +38,8 @@ struct DynamicSaleV1Settings {
     // 5 by default
     pricingWeightDynaPace: Real  // same as weightNextDynaPace
 
-    func validateCreatedDetails(self) -> Bool {
+    func validateDetailsWhenPending(self) -> Bool {
+    logGroup("DynamicSaleV1Settings: validateCreatedDetails()" , false, () -> Bool {
         assert(self.progressPricingDiscountFloorPoint > 0.05, "floor point too low");
         assert(self.progressPricingDiscountFloorPoint < 0.50, "floor point too high");
         assert(self.progressPricingDiscountWhenSlow >= 0.0, "negative discount");
@@ -40,7 +54,7 @@ struct DynamicSaleV1Settings {
         assert(self.pricingWeightDynaPace < 15, "dyna pace weight way too high");
 
         true
-    }
+    })}
 
     // func validateUpdatedDetails(self) -> Bool {
 

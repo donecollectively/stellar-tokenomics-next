@@ -3,6 +3,13 @@ module MarketSaleData
 import {
     REQT,
     bREQT,
+    REQTgroup,
+    assertREQTgroup,
+    bREQTgroup,
+    logGroup,
+    logGroupUnit,
+    logGroupStart,
+    logGroupEnd,
     TODO
 } from StellarHeliosHelpers
 
@@ -56,20 +63,20 @@ struct OtherSaleStateV1 {
     state: MarketSaleState 
     // ^ was saleStrategyState: AnySaleState "stratState" 
 
-    func mustBeActive(self, which : String) -> Bool {
-        if (self.state == MarketSaleState::Active) {
-            true
-        } else {
-            error(which + ": state must be Active")
-        }
+    func mustBeActive(self, which : String) -> () {
+        REQT(
+            reqt: which + ": state must be Active",  
+            assertion: self.state == MarketSaleState::Active, 
+            showSuccess: true
+        )
     }
 
-    func mustBePending(self, which : String) -> Bool {
-        if (self.state == MarketSaleState::Pending) {
-            true
-        } else {
-            error(which + ": state must be Pending")
-        }
+    func mustBePending(self, which : String) -> () {
+        REQT(
+            reqt: which + ": state must be Pending",  
+            assertion: self.state == MarketSaleState::Pending, 
+            showSuccess: true
+        )
     }
 }
 
@@ -86,6 +93,16 @@ struct ThreadInfoV1 {
     // saleId is empty in the root MarketSale.
     // each split chunk should point to the root MarketSale 
     saleId: ByteArray 
+
+    func validateDetailsWhenPending(self, saleId: ByteArray) -> Bool {
+        logGroup("ThreadInfoV1: validateDetailsWhenPending()", false, () -> Bool {
+            assert(self.parentChunkId == #, "parentChunkId must be empty");
+            assert(self.saleId == saleId, "saleId must be equal to saleId");
+            assert(self.nestedThreads == 0, "nestedThreads must be zero");
+            assert(self.retiredThreads == 0, "retiredThreads must be zero");
+            true
+        })
+    }
 }
 
 enum MktSaleDetails {
@@ -114,83 +131,122 @@ struct MarketSaleData {
         }
     }
 
+    func primaryAsset(self) -> AssetClass {
+        assets = self.v1details().saleAssets;
+        AssetClass::new(assets.primaryAssetMph, assets.primaryAssetName)
+    }
+
+    func lotSizeForToken(self, assetClass : AssetClass, optional: Bool = false) -> Int {
+        count = self.v1details().saleAssets.saleUnitAssets
+            .get_safe(assetClass)
+
+        if (!optional) {
+            assert(count > 0, "lot size is zero: "+ assetClass.show())
+        };
+        count
+    }
+
     func validate(self) -> Bool {
-        print("mktSale: validate()");
+    logGroup("mktSale: validate()", false, () -> Bool {
         assert(self.type == "mktSale", "wrong type");
         assert(self.name.serialize().length > 10, "name must be at least 10 characters");
         saleAssets = self.v1details().saleAssets;
-        assert(
-            saleAssets.totalSaleUnits *
-            saleAssets.saleUnitAssets
-            .get_assets()
-                .get_policy(saleAssets.primaryAssetMph)
-                .get(saleAssets.primaryAssetName) 
-            == saleAssets.primaryAssetTargetCount, 
-            "saleUnitAssets' primary-token value must divide the target-count over the sale-unit count"
-        );
+        assertREQTgroup("validate: primary asset must be divisible by totalSaleUnits", false, () -> Bool {
+            print("  -- saleAssets "+ saleAssets.totalSaleUnits.show() + " x " + saleAssets.saleUnitAssets.show());
+
+            primaryLotSize = self.lotSizeForToken(self.primaryAsset());
+            expectedTargetCount = primaryLotSize * saleAssets.totalSaleUnits;
+            print("  -- primaryAssetTargetCount: " + saleAssets.primaryAssetTargetCount.show());
+            print("  -- expectedTargetCount: " + expectedTargetCount.show());
+            assert(
+                expectedTargetCount == saleAssets.primaryAssetTargetCount, 
+                "saleUnitAssets' primaryToken mismatch: lot-size * totalSaleUnits != primaryAssetTargetCount"
+            );
+            true
+        });
 
         // assert(self.currentUnitPrice > 0, "currentUnitPrice must be greater than zero");
 
-        assert(saleAssets.saleUnitAssets.get_assets().to_map().length > 0, "saleUnitAssets must not be empty");
-        assert(saleAssets.totalSaleUnits > 0, "totalSaleUnits must be greater than zero");
-        assert(saleAssets.singleBuyMaxUnits > 0, "singleBuyMaxUnits must be greater than zero");
-        assert(saleAssets.singleBuyMaxUnits < saleAssets.totalSaleUnits, "singleBuyMaxUnits must be less than totalSaleUnits");
-
+        REQT(
+            reqt: "saleUnitAssets must not be empty", 
+            assertion: saleAssets.saleUnitAssets.to_map().length > 0, 
+            showSuccess: true
+        );
+        REQT(
+            reqt: "totalSaleUnits must be greater than zero", 
+            assertion: saleAssets.totalSaleUnits > 0, 
+            showSuccess: true
+        );
+        REQT(
+            reqt: "singleBuyMaxUnits must be greater than zero", 
+            assertion: saleAssets.singleBuyMaxUnits > 0, 
+            showSuccess: true
+        );
+        REQT(
+            reqt: "singleBuyMaxUnits must be less than totalSaleUnits", 
+            assertion: saleAssets.singleBuyMaxUnits < saleAssets.totalSaleUnits, 
+            showSuccess: true
+        );
+        REQT(
+            reqt: "primaryAssetTargetCount must be greater than zero", 
+            assertion: saleAssets.primaryAssetTargetCount > 0, 
+            showSuccess: true
+        );
         true
-    }
-
-    func validatePendingDetails(self) -> Bool {
-        print("mktSale: validatePendingDetails()");
-        threadInfo = self.v1details().threadInfo;
-        assert(threadInfo.parentChunkId == #, "parentChunkId must be empty");
-        assert(threadInfo.saleId == self.id, "saleId must be equal to id");
-        assert(threadInfo.nestedThreads == 0, "nestedThreads must be zero");
-        assert(threadInfo.retiredThreads == 0, "retiredThreads must be zero");
-
-        true
-    }
-
-    func validateCreatedDetails(self) -> Bool {
-        print("mktSale: validateCreatedDetails()");
-        saleState = self.v1details().saleState;
-        assert(saleState.salePace == 1.0, "salePace must be initialized to 1.0");
-        // assert(self.weightedPace == 0 * Duration::SECOND, "weightedPace must be zero");
-        saleDetails = self.v1details().fixedSaleDetails;
-        saleAssets = self.v1details().saleAssets;
-        true
-        && saleState.mustBePending("created").trace("must be Pending? ")
-        && saleDetails.settings.validateCreatedDetails()
-        && saleState.progressDetails.validateCreatedDetails(
-            saleDetails.startAt, 
-            saleAssets.totalSaleUnits
-        ).trace("progress details OK? ")
-        && self.validatePrimaryAssetOnlyOnCreation()
         && true
+    })  }
+
+    func validateDetailsWhenPending(self, which : String) -> Bool {
+        logGroup("mktSale: validateDetailsWhenPending(): " + which, false, () -> Bool {
+            details = self.v1details();
+            saleState = details.saleState;
+            REQT(
+                reqt: "salePace must be initialized to 1.0", 
+                assertion: saleState.salePace == 1.0, 
+                showSuccess: true
+            );
+        // assert(self.weightedPace == 0 * Duration::SECOND, "weightedPace must be zero");
+            saleDetails = details.fixedSaleDetails;
+            saleAssets = details.saleAssets;
+
+            saleState.mustBePending(which + ": created sale")
+            true
+            && saleDetails.settings.validateDetailsWhenPending()
+            && saleState.progressDetails.validateDetailsWhenPending(
+                saleDetails.startAt, 
+                saleAssets.totalSaleUnits
+            )
+            && details.threadInfo.validateDetailsWhenPending(self.id)
+            && true
+        })
     }
 
     func validatePrimaryAssetOnlyOnCreation(self) -> Bool {
-        saleAssets = self.v1details().saleAssets;
-        primaryPerUnit : Int = saleAssets.primaryAssetTargetCount / saleAssets.totalSaleUnits;
-        expectedPrimaryOnly : Value = Value::new(
-            AssetClass::new(
-                saleAssets.primaryAssetMph,
-                saleAssets.primaryAssetName
-            ),
-            primaryPerUnit
-        );
-        assert(
-            saleAssets.saleUnitAssets == expectedPrimaryOnly,
-            "saleUnitAssets must only reference the primary asset when created"
-        );
-        true
+        bREQTgroup("mktSale: when creating, only allows primary asset in saleUnitAssets", false, () -> Bool {
+            saleAssets = self.v1details().saleAssets;
+            primaryPerUnit : Int = saleAssets.primaryAssetTargetCount / saleAssets.totalSaleUnits;
+            print("  -- primaryPerUnit: " + primaryPerUnit.show());
+            expectedPrimaryOnly : Value = Value::new(
+                AssetClass::new(
+                    saleAssets.primaryAssetMph,
+                    saleAssets.primaryAssetName
+                ),
+                primaryPerUnit
+            );
+            print("  -- expected asset bundle: " + expectedPrimaryOnly.show());
+            print("  -- actual asset bundle: " + saleAssets.saleUnitAssets.show());
+            assert(
+                saleAssets.saleUnitAssets == expectedPrimaryOnly,
+                "saleUnitAssets must only reference the primary asset when created"
+            );
+            true
+        })
     }
 
-    func validateActivating(self, utxoValue: Value, DDdetails : DgDataDetails ) -> Bool {
-        print("mktSale: validateActivating()");
-        prevMktSale : MarketSaleData = MarketSaleData::from_data(
-            DDdetails.inputData()
-        );
-        // expectedDatum : ByteArray = prevMktSale.copy(
+    func validateActivating(self, utxoValue: Value, DDdetails: DgDataDetails) -> Bool {
+        logGroup("mktSale: validateActivating()", false, () -> Bool {
+        previous = MarketSaleData::previous(DDdetails);
+        // expectedDatum : ByteArray = previous.copy(
         //     state: MarketSaleState::Active
         // ).serialize();
         // print("expectedDatum: ");
@@ -199,53 +255,72 @@ struct MarketSaleData {
         // print(self.serialize().show());
         // assert(expectedDatum == self.serialize(), "Activating a sale may only change the state to Active");
 
-        assert(self.name == prevMktSale.name, "name must not change");
-        assert(
-            prevMktSale.v1details().saleState.mustBePending("old"), 
-            "previous sale not Pending"
+        REQT(
+            reqt: "name must not change", 
+            assertion: self.name == previous.name,
+            showSuccess: true
         );
-        assert(self.v1details().saleState.state == MarketSaleState::Active, "state must be Active");
+
+        previous.v1details().saleState.mustBePending("previous sale");
+
+        REQT(
+            reqt: "state must be changed to Active", 
+            assertion: self.v1details().saleState.state == MarketSaleState::Active,
+            showSuccess: true
+        );
+
         // ok to change the sale start time
-        // assert(self.startAt == prevMktSale.startAt, "startAt must not change");
+        // assert(self.startAt == previous.startAt, "startAt must not change");
 
-        // assert(self.lastPurchaseAt == prevMktSale.lastPurchaseAt, "lastPurchaseAt must not change");
-        // assert(self.prevPurchaseAt == prevMktSale.prevPurchaseAt, "prevPurchaseAt must not change");
+        // assert(self.lastPurchaseAt == previous.lastPurchaseAt, "lastPurchaseAt must not change");
+        // assert(self.prevPurchaseAt == previous.prevPurchaseAt, "prevPurchaseAt must not change");
 
-        // assert(self.weightedPace == prevMktSale.weightedPace, "weightedPace must not change");
+        // assert(self.weightedPace == previous.weightedPace, "weightedPace must not change");
         // ok to change the assets & sale units, as long as everthing else checks out
-        //    assert(self.saleUnitAssets == prevMktSale.saleUnitAssets, "saleUnitAssets must not change");
-        //    assert(self.totalSaleUnits == prevMktSale.totalSaleUnits, "totalSaleUnits must not change");
-        //    assert(self.singleBuyMaxUnits == prevMktSale.singleBuyMaxUnits, "singleBuyMaxUnits must not change");
-        //    assert(self.currentUnitPrice == prevMktSale.currentUnitPrice, "currentUnitPrice must not change");
+        //    assert(self.saleUnitAssets == previous.saleUnitAssets, "saleUnitAssets must not change");
+        //    assert(self.totalSaleUnits == previous.totalSaleUnits, "totalSaleUnits must not change");
+        //    assert(self.singleBuyMaxUnits == previous.singleBuyMaxUnits, "singleBuyMaxUnits must not change");
+        //    assert(self.currentUnitPrice == previous.currentUnitPrice, "currentUnitPrice must not change");
 
-        assets : Value = utxoValue.get_assets() - DDdetails.uutValue();
-        print("expected assets: ");
-        print(assets.show());
+        assertREQTgroup("validateActivating: must have the required assets deposited to the sale", false, 
+        () -> Bool {
+            assets : Value = utxoValue.get_assets() - DDdetails.uutValue();
+            print("expected assets: " + assets.show());
 
-        assert(self.v1details().saleAssets.saleUnitAssets * self.v1details().saleAssets.totalSaleUnits == assets, "utxo must contain the supply of tokens to be sold");
+            assert(
+                self.v1details().saleAssets.saleUnitAssets * 
+                self.v1details().saleAssets.totalSaleUnits == assets, 
+                "utxo must contain the supply of tokens to be sold"
+            );
+            true
+        });
 
-        REQT("validates VxfDestination in vxfTokensTo field");
-        self.v1details().fixedSaleDetails.vxfTokensTo.switch {
-            Some{vxf} => {
-                assert(vxf.validate("vxfTokensTo"), "<-- that fails; this can't");
-            },
-            None => {
-                print("  -- vxfTokensTo is not restricted");
-            }
-        }
+        assertREQTgroup("validates VxfDestination in vxfTokensTo field", false, 
+        () -> Bool {
+            self.v1details().fixedSaleDetails.vxfTokensTo.switch {
+                Some{vxf} => {
+                    assert(vxf.validate("vxfTokensTo"), "<-- that fails; this can't");
+                },
+                None => {
+                    print("  -- vxfTokensTo is not restricted");
+                }
+            };
+            true
+        });
 
-        REQT("validates VxfDestination in vxfFundsTo field");
-        assert(
-            (
-                self.v1details().fixedSaleDetails.vxfFundsTo.unwrap().validate("vxfFundsTo")
-            ).trace("  -- vxfFundsTo ok? "), 
-            "^^^ that fails; this can't"
-        );
-
+        assertREQTgroup("validates VxfDestination in vxfFundsTo field", false, 
+        () -> Bool {
+            assert(
+                self.v1details().fixedSaleDetails.vxfFundsTo.unwrap().validate("vxfFundsTo"),
+                "vxfFundsTo invalid"
+            );
+            true
+        });
 
         true
-        && self.validatePendingDetails() 
+        && self.v1details().threadInfo.validateDetailsWhenPending(self.id)
         && true
+    })
     }
 
     func previous(ddd : DgDataDetails) -> MarketSaleData {
@@ -257,7 +332,9 @@ struct MarketSaleData {
     }
 
    func validateAdding(self, ddd : DgDataDetails, mph : MintingPolicyHash, tn: ByteArray) -> Bool {
-        updated : MarketSaleData = MarketSaleData::updated(ddd);
+        updated = self
+        previous = MarketSaleData::previous(ddd);
+        
         outValue : Value = ddd.output().value;
  
         updatedAssetCount : Int = outValue.get_policy(mph).get(tn);
@@ -266,8 +343,8 @@ struct MarketSaleData {
                 // print("primary mph" + self.primaryAssetMph.show());
                 // print("this mph: " + mph.show());
 
-        currentAssets = self.v1details().saleAssets;
-        currentState = self.v1details().saleState;
+        currentAssets = previous.v1details().saleAssets;
+        currentState = previous.v1details().saleState;
         nextAssets = updated.v1details().saleAssets;
         nextState = updated.v1details().saleState;
         isPrimary : Bool = ( true
@@ -279,6 +356,13 @@ struct MarketSaleData {
             
         print("vvv ... for added tn: "+ tn.show());
         updatedAssetChunkSize : Int = nextAssets.saleUnitAssets.get_policy(mph).get(tn);
+        
+        // calculate the incremental amount being added
+        inValue : Value = ddd.input().value;
+        assetClass : AssetClass = AssetClass::new(mph, tn);
+        previousAssetCount : Int = inValue.get_safe(assetClass);
+        incrementalAmount : Int = updatedAssetCount - previousAssetCount;
+        
         expectedAssetCount : Int = if (isPrimary) {
             existingAssetChunkSize : Int = currentAssets.saleUnitAssets.get_policy(mph).get(tn);
             if (updatedAssetChunkSize < existingAssetChunkSize) {
@@ -287,6 +371,18 @@ struct MarketSaleData {
             print("    ... each sale-unit has " + updatedAssetChunkSize.show());
             print("    ... sale now supplied with " + updatedAssetCount.show());
             print("    ... ^ / saleUnits  "+ nextAssets.totalSaleUnits.show());
+            
+            // if tokens are already deposited (previousAssetCount > 0), 
+            // then progressive funding is allowed in any amount
+            // otherwise (first addition), the amount must be divisible by totalSaleUnits
+            // Note: saleUnitAssets may be configured even when no tokens are deposited yet
+            if (previousAssetCount == 0) {
+                isEvenChunk : Bool = incrementalAmount % nextAssets.totalSaleUnits == 0;
+                if (!isEvenChunk) {
+                    error("primary asset incremental amount must be divisible by totalSaleUnits")
+                };
+            };
+            
             percentSupplied = 100.0 * updatedAssetCount / nextAssets.primaryAssetTargetCount;
             print("Now supplied with "+ percentSupplied.show() +"% of the primary token");
     
@@ -319,13 +415,13 @@ struct MarketSaleData {
             error("The updated sale-units * sale-unit-count / this-tn must match the updated deposit-value / this-tn")
         } else { true };
 
+        currentState.mustBePending("AddTokens: previous version")
+        nextState.mustBePending("AddTokens: updated sale")
+
         true
         && hasMatchyValue
-        && currentState.mustBePending("old: AddTokens").trace("input sale must be Pending: ")
-        && nextState.mustBePending("new:AddTokens").trace("updated sale must be Pending: ")
         && updated.validate()
-        && updated.validateCreatedDetails()
-        && updated.validatePendingDetails()
+        && updated.v1details().threadInfo.validateDetailsWhenPending(updated.id)
         && true
     }
 
@@ -333,11 +429,11 @@ struct MarketSaleData {
     //  This function enforces which fields may be updated and which must remain unchanged.
     func validateUpdatePendingSale(self, ddd : DgDataDetails) -> Bool {
         print("mktSale: validateUpdatePendingSale()");
-        prevMktSale : MarketSaleData = MarketSaleData::from_data(
+        previous : MarketSaleData = MarketSaleData::from_data(
             ddd.inputData()
         );
         
-        prevDetails = prevMktSale.v1details();
+        prevDetails = previous.v1details();
         nextDetails = self.v1details();
         
         prevState = prevDetails.saleState;
@@ -349,20 +445,19 @@ struct MarketSaleData {
                 
         // Core constraints (diagnostic-friendly)
         REQT(
-            "UTxO value MUST remain unchanged",
-            ddd.input().value == ddd.output().value,
-            "UTxO value changed; delta= " + (ddd.output().value - ddd.input().value).show()
+            reqt: "UTxO value MUST remain unchanged",
+            assertion: ddd.input().value == ddd.output().value,
+            onError: "UTxO value changed; delta= " + (ddd.output().value - ddd.input().value).show(),
+            showSuccess: true
         );
 
-        REQT(
-            "The sale must be in Pending state and remain there",
-            prevState.mustBePending("UpdatingPendingSale: previous record") 
-            && nextState.mustBePending("UpdatingPendingSale: updated record")
-        );
+        prevState.mustBePending("UpdatingPendingSale: previous record") 
+        nextState.mustBePending("UpdatingPendingSale: updated record")
     
         REQT(
-            "threadInfo must remain unchanged",
-            prevDetails.threadInfo == nextDetails.threadInfo
+            reqt: "threadInfo must remain unchanged",
+            assertion: prevDetails.threadInfo == nextDetails.threadInfo,
+            showSuccess: true
         );
         
         // Primary asset identity change logic
@@ -461,17 +556,20 @@ struct MarketSaleData {
         assert(self.validate(), "updated record must pass general validation");
         
         REQT("validates updated record passes pending-specific validations");
-        assert(self.validatePendingDetails(), "updated record must pass pending validations");
+        assert(
+            self.v1details().threadInfo.validateDetailsWhenPending(self.id),
+            "updated record must pass pending validations"
+        );
         
         REQT("validates settings");
         assert(
-            nextFixed.settings.validateCreatedDetails(),
+            nextFixed.settings.validateDetailsWhenPending(),
             "updated settings must pass validation"
         );
         
         REQT("validates progressDetails still matches startAt and totalSaleUnits");
         assert(
-            nextState.progressDetails.validateCreatedDetails(
+            nextState.progressDetails.validateDetailsWhenPending(
                 nextFixed.startAt,
                 nextAssets.totalSaleUnits
             ),

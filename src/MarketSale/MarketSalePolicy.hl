@@ -45,6 +45,7 @@ import {
     REQT,
     bREQT,
     AnyData,
+    logGroup,
     getTimeRange,
     endsBefore
 } from StellarHeliosHelpers
@@ -339,50 +340,43 @@ enum DelegateActivity {
                         mktSaleDD : DgDataDetails = cctx.creatingDgData(mktSaleId);
 
                         // gets the new MarketSaleData record
-                        mktSale : MarketSaleData = MarketSaleData::from_data(
-                            mktSaleDD.outputData()
-                        );
+                        created : MarketSaleData = MarketSaleData::updated(mktSaleDD);
 
                         true
-                        // validates it (general)
-                        && mktSale.validate()
-                        // validates creation details
-                        && mktSale.validateCreatedDetails()
-                        && mktSale.validatePendingDetails()
-                        && true
+                        && created.validateDetailsWhenPending("creating record")
+                        && created.validatePrimaryAssetOnlyOnCreation()
+                        && cctx.requiresGovAuthority().orFail()
                     }
                 }
             },
             SpendingActivities{x} => x.switch {
                 UpdatingRecord => error("use more specific spending activity"),
-                UpdatingPendingSale {saleId} => {
+                UpdatingPendingSale{saleId} => logGroup("UpdatingPendingSale:", false, () -> Bool {
                     TODO("UpdatingPendingSale mktSale: test this code path");
                     assert(cctx.withCharterRef().orFail(), "can't");
 
                     mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
                     
-                    next : MarketSaleData = MarketSaleData::updated(mktSaleDD);
+                    nextRec : MarketSaleData = MarketSaleData::updated(mktSaleDD);
 
                     true
-                    && next.validateUpdatePendingSale(mktSaleDD)
+                    && nextRec.validateUpdatePendingSale(mktSaleDD)
                     && cctx.requiresGovAuthority().orFail()
-                },
+                }),
 
-                AddingToSale {saleId, mph, tn} => {
-                    TODO("AddingToSale mktSale: test this code path");
+                AddingToSale {saleId, mph, tn} => logGroup("AddingToSale:", false, () -> Bool {
+                    TODO("AddingToSale: test this code path");
+    
                     assert(cctx.withCharterRef().orFail(), "can't");
-
-                    // mktSale = cctx.updatingDgData(mktSaleId)
                     mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
-                    
-                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
-                    
+                    next : MarketSaleData = MarketSaleData::updated(mktSaleDD);
                     true
-                    && previous.validateAdding(mktSaleDD, mph, tn)
+                    && next.validateDetailsWhenPending("adding to sale")
+                    && next.validateAdding(mktSaleDD, mph, tn)
                     && cctx.requiresGovAuthority().orFail()
-                },
-                Activating {saleId} => {
-                    TODO("Activating mktSale: test this code path");
+                }),
+                Activating {saleId} => logGroup("Activating sale:", false, () -> Bool {
+                    TODO("test this code path");
                     assert(cctx.withCharterRef().orFail(), "can't");
 
                     // mktSale = cctx.updatingDgData(mktSaleId)
@@ -396,18 +390,18 @@ enum DelegateActivity {
                     prevState = previous.v1details().saleState
                     nextState = updated.v1details().saleState
 
+                    prevState.mustBePending("previous sale")
+                    nextState.mustBeActive("updated sale: activating")
+
                     newValue : Value = mktSaleDD.output().value;
                     true
                     && cctx.requiresGovAuthority().orFail()
-                    && prevState.mustBePending("old").trace("sale was Pending? ")
-                    && nextState.mustBeActive("new").trace("Pending -> Active ok: ")
                     // // validates updated record
                     && updated.validate()
-                    && updated.validateActivating(newValue, mktSaleDD).trace("valid for activation: ")
+                    && updated.validateActivating(newValue, mktSaleDD)
                     && true
-
-                }, 
-                SellingTokens { recId, sellingUnitQuantity, unitSellPrice : Value } => {
+                }), 
+                SellingTokens { recId, sellingUnitQuantity, unitSellPrice : Value } => logGroup("SellingTokens:", false, () -> Bool {
                     assert(cctx.withCharterRef().orFail(), "can't");
 
                     mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: recId);
@@ -421,8 +415,8 @@ enum DelegateActivity {
                     updated = MarketSaleData::updated(mktSaleDD);
 
                     correctActiveState = true
-                    && previous.v1details().saleState.mustBeActive("old").trace("sale was Active? ")
-                    && updated.v1details().saleState.mustBeActive("new").trace("sale is still Active? ")
+                    previous.v1details().saleState.mustBeActive("previous sale")
+                    updated.v1details().saleState.mustBeActive("updated sale: selling tokens")
 
                     REQT("doesn't sell before the start date")
                     nowRange = getTimeRange(5*Duration::MINUTE);
@@ -520,10 +514,9 @@ enum DelegateActivity {
                     && pricingStrategy.validateUpdatedDetails()
                     && bREQT("Requires payment according to the dynamic pricing strategy")
                     && pricingStrategy.isRightPayment(paidValue).trace("  -- right payment? ")
-                    && true                    
                     // && costForPurchase.contains(paidValue).trace("payment correct and tokens distributed? ")
                     && true
-                },
+                }),
                 MergingChildChunk => { //{_, _ /* recId, childChunkId */} => {
                     error("todo: MergingChildChunk")
                 },

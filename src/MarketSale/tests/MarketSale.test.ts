@@ -554,7 +554,7 @@ describe("MarketSale plugin", async () => {
                 }
             );
 
-            await expect(submitting).rejects.toThrow(/divisible|primaryAssetTargetCount|lot count/i);
+            await expect(submitting).rejects.toThrow(/primaryToken.*mismatch/i);
         });
 
         it("won't activate if deposited primary tokens aren't evenly divisible by lot count", async (context: STOK_TC) => {
