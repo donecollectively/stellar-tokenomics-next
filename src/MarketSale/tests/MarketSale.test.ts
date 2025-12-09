@@ -1195,7 +1195,7 @@ describe("MarketSale plugin", async () => {
     });
 
     describe("Activity:UpdatingPendingSale allows updates to a Pending mktSale", () => {
-        fit("can update any allowed fields", async (context: STOK_TC) => {
+        it("can update saleAssets, fixedSaleDetails, and name fields", async (context: STOK_TC) => {
             const {
                 h,
                 h: { network, actors, delay, state },
@@ -1238,7 +1238,7 @@ describe("MarketSale plugin", async () => {
         });
 
 
-        it("fails if trying to change saleState from Pending", async (context: STOK_TC) => {
+        it("prevents the sale from leaving Pending state", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1267,7 +1267,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        it("fails if trying to change salePace", async (context: STOK_TC) => {
+        /**failing*/ it("doesn't allow changing sale pace", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1294,7 +1294,7 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/salePace must remain 1.0/);
         });
 
-        it("fails if trying to change progressDetails.lastPurchaseAt away from the startAt", async (context: STOK_TC) => {
+        /**failing*/ it("doesn't allow changing progress details", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1319,7 +1319,7 @@ describe("MarketSale plugin", async () => {
             enforceLastPurchaseAtStartTimeSpy.mockRestore();
         });
 
-        it("fails if trying to change progressDetails.chunkUnitCount", async (context: STOK_TC) => {
+        /**failing*/it("doesn't allow changing progress details (chunkUnitCount)", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1344,7 +1344,7 @@ describe("MarketSale plugin", async () => {
             fixChunkUnitCountSpy.mockRestore();
         });
 
-        it("fails if trying to change progressDetails.prevPurchaseAt away from the startAt", async (context: STOK_TC) => {
+        /**failing*/ it("doesn't allow changing progress details (prevPurchaseAt)", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1369,7 +1369,7 @@ describe("MarketSale plugin", async () => {
             enforcePrevPurchaseAtStartTimeSpy.mockRestore();
         });
 
-        it("fails if trying to change threadInfo", async (context: STOK_TC) => {
+        it("doesn't allow changing thread info", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1408,7 +1408,7 @@ describe("MarketSale plugin", async () => {
             }
         );
 
-        it("fails if trying to change primaryAssetName", async (context: STOK_TC) => {
+    /**failing*/    it("fails if trying to change primaryAssetName", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1437,7 +1437,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        it("fails if primaryAssetTargetCount is inconsistent with totalSaleUnits and saleUnitAssets", async (context: STOK_TC) => {
+        it("can update saleAssets.totalSaleUnits if primaryAssetTargetCount remains an even multiple", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1478,7 +1478,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        it("fails if saleUnitAssets drops the primary asset entry", async (context: STOK_TC) => {
+/**failing*/        it("saleUnitAssets MUST always contain the primary asset", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1509,7 +1509,7 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/primary.*saleUnitAssets|must.*contain.*primary/i);
         });
 
-        it("fails when changing primary asset without old tokens, but keeping old primary in saleUnitAssets", async (context: STOK_TC) => {
+/**failing*/        it("if primaryAsset changes and old tokens don't exist, saleUnitAssets must not reference old primary token", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1544,7 +1544,7 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/old primary|must not reference|saleUnitAssets/i);
         });
 
-        it("fails if saleUnitAssets token counts are not divisible by totalSaleUnits", async (context: STOK_TC) => {
+/**failing*/        it("fails if saleUnitAssets token counts are not divisible by totalSaleUnits (lot count)", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1590,7 +1590,7 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/divisible|lot count|even/i);
         });
 
-        it("fails if the UTxO value changes during update", async (context: STOK_TC) => {
+/**failing*/       it("fails if the token count in the UTxO is modified during the update", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1618,7 +1618,7 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/value.*must remain/i);
         });
 
-        it("fails when changing primary asset while old primary tokens remain without keeping old per-unit reference", async (context: STOK_TC) => {
+/**failing*/        it("if old primary tokens exist in UTxO, saleUnitAssets must reference them with per-unit count ≥ depositedTokens/totalSaleUnits", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1680,7 +1680,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        it("requires governance authority", async (context: STOK_TC) => {
+        it("requires governance authority to update the sale details", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
