@@ -145,7 +145,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         if (mintTokenName) {
             const totalNeeded =
                 marketSale.data!.details.V1.saleAssets.saleUnitAssets.multiply(
-                    marketSale.data!.details.V1.saleAssets.totalSaleUnits
+                    marketSale.data!.details.V1.saleAssets.totalSaleLots
                 );
             const needThisTokenCount = totalNeeded.assets
                 .getPolicyTokens(capo.mph)
@@ -310,7 +310,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         return {
             name: "Updated Market Sale Name",
             startAt: this._cachedNow + 1000 * 60 * 60 * 24, // 1 day from now
-            totalSaleUnits: 2000n,
+            totalSaleLots: 2000n,
             singleBuyMaxUnits: 50n,
             primaryAssetTargetCount: 200_000_000n,
             targetPrice: 1.5,
@@ -329,12 +329,12 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         const newSaleUnitAssets = makeValue(
             this.capo.mph,
             marketSale.data!.details.V1.saleAssets.primaryAssetName,
-            updateDetails.primaryAssetTargetCount / updateDetails.totalSaleUnits
+            updateDetails.primaryAssetTargetCount / updateDetails.totalSaleLots
         ).add(
             makeValue(
                 this.capo.mph,
                 textToBytes("KRILL"),
-                (updateDetails.totalSaleUnits * 1000n) / updateDetails.totalSaleUnits
+                (updateDetails.totalSaleLots * 1000n) / updateDetails.totalSaleLots
             )
         );
 
@@ -356,7 +356,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
                         },
                         saleAssets: {
                             ...marketSale.data!.details.V1.saleAssets,
-                            totalSaleUnits: updateDetails.totalSaleUnits,
+                            totalSaleLots: updateDetails.totalSaleLots,
                             singleBuyMaxUnits: updateDetails.singleBuyMaxUnits,
                             primaryAssetTargetCount: updateDetails.primaryAssetTargetCount,
                             saleUnitAssets: newSaleUnitAssets,

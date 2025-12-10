@@ -17,18 +17,18 @@ struct SaleProgressDetailsV1 {
     lastPurchaseAt: Time 
     prevPurchaseAt: Time 
 
-    chunkUnitCount: Int 
-    chunkUnitsSold: Int 
+    lotCount: Int 
+    lotsSold: Int 
 
     func validateDetailsWhenPending(self, 
         saleStartTime : Time, 
-        totalSaleUnits : Int
+        totalSaleLots : Int
      ) -> Bool {
         logGroup("SaleProgressDetails: validateCreatedDetails()", false, () -> Bool {
             assert(self.lastPurchaseAt == saleStartTime, "lastPurchaseAt must be equal to startAt");
             assert(self.prevPurchaseAt == saleStartTime, "prevPurchaseAt must be equal to startAt");
-            assert(self.chunkUnitCount == totalSaleUnits, "chunkUnitCount must be equal to totalSaleUnits");
-            assert(self.chunkUnitsSold == 0, "chunkUnitsSold must be zero");
+            assert(self.lotCount == totalSaleLots, "lotCount must be equal to totalSaleLots");
+            assert(self.lotsSold == 0, "lotsSold must be zero");
             // assert(self.lastPurchaseAt >= self.prevPurchaseAt, "lastPurchaseAt must be greater than or equal to prevPurchaseAt");
             true    
         })
@@ -62,25 +62,25 @@ struct SaleProgressDetailsV1 {
                 true
             })
 
-            && bREQTgroup("Updates chunkUnitsSold to include the new units being purchased", false, () -> Bool {
-                print("   ----  prev unitsSold: " + prevProgress.chunkUnitsSold.show());
-                print("   ----  unitsSold: " + self.chunkUnitsSold.show());
+            && bREQTgroup("Updates lotsSold to include the new units being purchased", false, () -> Bool {
+                print("   ----  prev unitsSold: " + prevProgress.lotsSold.show());
+                print("   ----  unitsSold: " + self.lotsSold.show());
                 assert(
                     (
-                        self.chunkUnitsSold == prevProgress.chunkUnitsSold + unitsSold
+                        self.lotsSold == prevProgress.lotsSold + unitsSold
                     ),
-                    "chunkUnitsSold not updated correctly"
+                    "lotsSold not updated correctly"
                 )
-                print("✔ chunkUnitsSold updated OK")
+                print("✔ lotsSold updated OK")
                 true
             }) 
 
             && bREQTgroup("Ensures the total number of units available for purchase is unchanged", false, () -> Bool {
                 assert(
-                    (self.chunkUnitCount == prevProgress.chunkUnitCount),
+                    (self.lotCount == prevProgress.lotCount),
                     "must not change chunk unit count"
                 )
-                print("✔ chunkUnitCount unchanged OK")
+                print("✔ lotCount unchanged OK")
                 true
             }) 
             && true

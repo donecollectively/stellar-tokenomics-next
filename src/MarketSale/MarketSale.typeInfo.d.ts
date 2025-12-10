@@ -188,8 +188,8 @@ export interface DelegationDetailLike {
 export interface SaleProgressDetailsV1 {
     lastPurchaseAt: /*minStructField*/ number
     prevPurchaseAt: /*minStructField*/ number
-    chunkUnitCount: /*minStructField*/ bigint
-    chunkUnitsSold: /*minStructField*/ bigint
+    lotCount: /*minStructField*/ bigint
+    lotsSold: /*minStructField*/ bigint
 }
 
 
@@ -213,8 +213,8 @@ export type ErgoSaleProgressDetailsV1 = SaleProgressDetailsV1/*like canon-other*
 export interface SaleProgressDetailsV1Like {
     lastPurchaseAt: /*minStructField*/ TimeLike
     prevPurchaseAt: /*minStructField*/ TimeLike
-    chunkUnitCount: /*minStructField*/ IntLike
-    chunkUnitsSold: /*minStructField*/ IntLike
+    lotCount: /*minStructField*/ IntLike
+    lotsSold: /*minStructField*/ IntLike
 }
 
 
@@ -818,7 +818,7 @@ export interface SaleAssetsV1 {
     primaryAssetMph: /*minStructField*/ MintingPolicyHash
     primaryAssetName: /*minStructField*/ number[]
     primaryAssetTargetCount: /*minStructField*/ bigint
-    totalSaleUnits: /*minStructField*/ bigint
+    totalSaleLots: /*minStructField*/ bigint
 }
 
 
@@ -845,7 +845,7 @@ export interface SaleAssetsV1Like {
     primaryAssetMph: /*minStructField*/ MintingPolicyHash | string | number[]
     primaryAssetName: /*minStructField*/ number[]
     primaryAssetTargetCount: /*minStructField*/ IntLike
-    totalSaleUnits: /*minStructField*/ IntLike
+    totalSaleLots: /*minStructField*/ IntLike
 }
 
 

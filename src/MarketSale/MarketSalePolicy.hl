@@ -453,8 +453,8 @@ enum DelegateActivity {
                     totalProgress = SaleProgressDetailsV1{
                         lastPurchaseAt: nowRange.start,
                         prevPurchaseAt: prevProgress.lastPurchaseAt,
-                        chunkUnitCount: nextProgress.chunkUnitCount,
-                        chunkUnitsSold: prevProgress.chunkUnitsSold + sellingUnitQuantity
+                        lotCount: nextProgress.lotCount,
+                        lotsSold: prevProgress.lotsSold + sellingUnitQuantity
                     };
 
                     pricingStrategy = DynamicSaleV1{

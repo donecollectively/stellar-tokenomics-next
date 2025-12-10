@@ -288,8 +288,8 @@ export class MarketSalePolicyDataBridge extends ContractDataBridge {
         SaleProgressDetailsV1: (fields: SaleProgressDetailsV1Like | {
     lastPurchaseAt: /*minStructField*/ TimeLike
     prevPurchaseAt: /*minStructField*/ TimeLike
-    chunkUnitCount: /*minStructField*/ IntLike
-    chunkUnitsSold: /*minStructField*/ IntLike
+    lotCount: /*minStructField*/ IntLike
+    lotsSold: /*minStructField*/ IntLike
 }
 ) => {
         return this.ᱺᱺSaleProgressDetailsV1Cast.toUplcData(fields);
@@ -355,7 +355,7 @@ export class MarketSalePolicyDataBridge extends ContractDataBridge {
     primaryAssetMph: /*minStructField*/ MintingPolicyHash | string | number[]
     primaryAssetName: /*minStructField*/ number[]
     primaryAssetTargetCount: /*minStructField*/ IntLike
-    totalSaleUnits: /*minStructField*/ IntLike
+    totalSaleLots: /*minStructField*/ IntLike
 }
 ) => {
         return this.ᱺᱺSaleAssetsV1Cast.toUplcData(fields);
@@ -4638,14 +4638,14 @@ export const SaleProgressDetailsV1Schema : StructTypeSchema = {
             }
         },
         {
-            "name": "chunkUnitCount",
+            "name": "lotCount",
             "type": {
                 "kind": "internal",
                 "name": "Int"
             }
         },
         {
-            "name": "chunkUnitsSold",
+            "name": "lotsSold",
             "type": {
                 "kind": "internal",
                 "name": "Int"
@@ -4719,14 +4719,14 @@ export const OtherSaleStateV1Schema : StructTypeSchema = {
                         }
                     },
                     {
-                        "name": "chunkUnitCount",
+                        "name": "lotCount",
                         "type": {
                             "kind": "internal",
                             "name": "Int"
                         }
                     },
                     {
-                        "name": "chunkUnitsSold",
+                        "name": "lotsSold",
                         "type": {
                             "kind": "internal",
                             "name": "Int"
@@ -5837,7 +5837,7 @@ export const SaleAssetsV1Schema : StructTypeSchema = {
             }
         },
         {
-            "name": "totalSaleUnits",
+            "name": "totalSaleLots",
             "type": {
                 "kind": "internal",
                 "name": "Int"
@@ -5932,14 +5932,14 @@ export const MktSaleDetailsSchema : EnumTypeSchema = {
                                             }
                                         },
                                         {
-                                            "name": "chunkUnitCount",
+                                            "name": "lotCount",
                                             "type": {
                                                 "kind": "internal",
                                                 "name": "Int"
                                             }
                                         },
                                         {
-                                            "name": "chunkUnitsSold",
+                                            "name": "lotsSold",
                                             "type": {
                                                 "kind": "internal",
                                                 "name": "Int"
@@ -6599,7 +6599,7 @@ export const MktSaleDetailsSchema : EnumTypeSchema = {
                                 }
                             },
                             {
-                                "name": "totalSaleUnits",
+                                "name": "totalSaleLots",
                                 "type": {
                                     "kind": "internal",
                                     "name": "Int"
@@ -6732,14 +6732,14 @@ export const MarketSaleDataSchema : StructTypeSchema = {
                                                         }
                                                     },
                                                     {
-                                                        "name": "chunkUnitCount",
+                                                        "name": "lotCount",
                                                         "type": {
                                                             "kind": "internal",
                                                             "name": "Int"
                                                         }
                                                     },
                                                     {
-                                                        "name": "chunkUnitsSold",
+                                                        "name": "lotsSold",
                                                         "type": {
                                                             "kind": "internal",
                                                             "name": "Int"
@@ -7399,7 +7399,7 @@ export const MarketSaleDataSchema : StructTypeSchema = {
                                             }
                                         },
                                         {
-                                            "name": "totalSaleUnits",
+                                            "name": "totalSaleLots",
                                             "type": {
                                                 "kind": "internal",
                                                 "name": "Int"
@@ -7638,14 +7638,14 @@ export const DelegateDatumSchema : EnumTypeSchema = {
                                                                             }
                                                                         },
                                                                         {
-                                                                            "name": "chunkUnitCount",
+                                                                            "name": "lotCount",
                                                                             "type": {
                                                                                 "kind": "internal",
                                                                                 "name": "Int"
                                                                             }
                                                                         },
                                                                         {
-                                                                            "name": "chunkUnitsSold",
+                                                                            "name": "lotsSold",
                                                                             "type": {
                                                                                 "kind": "internal",
                                                                                 "name": "Int"
@@ -8305,7 +8305,7 @@ export const DelegateDatumSchema : EnumTypeSchema = {
                                                                 }
                                                             },
                                                             {
-                                                                "name": "totalSaleUnits",
+                                                                "name": "totalSaleLots",
                                                                 "type": {
                                                                     "kind": "internal",
                                                                     "name": "Int"
@@ -16021,14 +16021,14 @@ export const DTS_PurchaseInfoSchema : StructTypeSchema = {
                         }
                     },
                     {
-                        "name": "chunkUnitCount",
+                        "name": "lotCount",
                         "type": {
                             "kind": "internal",
                             "name": "Int"
                         }
                     },
                     {
-                        "name": "chunkUnitsSold",
+                        "name": "lotsSold",
                         "type": {
                             "kind": "internal",
                             "name": "Int"
@@ -16193,14 +16193,14 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                     }
                                 },
                                 {
-                                    "name": "chunkUnitCount",
+                                    "name": "lotCount",
                                     "type": {
                                         "kind": "internal",
                                         "name": "Int"
                                     }
                                 },
                                 {
-                                    "name": "chunkUnitsSold",
+                                    "name": "lotsSold",
                                     "type": {
                                         "kind": "internal",
                                         "name": "Int"
@@ -16287,14 +16287,14 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                                     }
                                                                 },
                                                                 {
-                                                                    "name": "chunkUnitCount",
+                                                                    "name": "lotCount",
                                                                     "type": {
                                                                         "kind": "internal",
                                                                         "name": "Int"
                                                                     }
                                                                 },
                                                                 {
-                                                                    "name": "chunkUnitsSold",
+                                                                    "name": "lotsSold",
                                                                     "type": {
                                                                         "kind": "internal",
                                                                         "name": "Int"
@@ -16954,7 +16954,7 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                         }
                                                     },
                                                     {
-                                                        "name": "totalSaleUnits",
+                                                        "name": "totalSaleLots",
                                                         "type": {
                                                             "kind": "internal",
                                                             "name": "Int"
@@ -17095,14 +17095,14 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                                         }
                                                                     },
                                                                     {
-                                                                        "name": "chunkUnitCount",
+                                                                        "name": "lotCount",
                                                                         "type": {
                                                                             "kind": "internal",
                                                                             "name": "Int"
                                                                         }
                                                                     },
                                                                     {
-                                                                        "name": "chunkUnitsSold",
+                                                                        "name": "lotsSold",
                                                                         "type": {
                                                                             "kind": "internal",
                                                                             "name": "Int"
@@ -17762,7 +17762,7 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                             }
                                                         },
                                                         {
-                                                            "name": "totalSaleUnits",
+                                                            "name": "totalSaleLots",
                                                             "type": {
                                                                 "kind": "internal",
                                                                 "name": "Int"

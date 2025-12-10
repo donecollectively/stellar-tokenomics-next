@@ -148,12 +148,12 @@ export class MarketSaleDataWrapper {
     targetSellingPace(pCtx: PurchaseContext): number {
         const { prevSale: sale } = pCtx;
         const s = sale.data.details.V1.fixedSaleDetails.settings;
-        const { chunkUnitCount } =
+        const { lotCount } =
             sale.data.details.V1.saleState.progressDetails;
-        // console.log("  -- chunkUnitCount", chunkUnitCount);
+        // console.log("  -- lotCount", lotCount);
         // console.log("  -- targetedSellingTime", s.targetedSellingTime);
         const tsp = realDiv(
-            Number(chunkUnitCount),
+            Number(lotCount),
             realDiv(Number(s.targetedSellingTime), 60 * 60 * 1000)
         );
         console.log("    ---- targetSellingPace", tsp);
@@ -268,7 +268,7 @@ export class MarketSaleDataWrapper {
         const unitsPurchased = pCtx.unitCount;
         const alreadySold =
             pCtx.prevSale.data.details.V1.saleState.progressDetails
-                .chunkUnitsSold;
+                .lotsSold;
         const sp = realDiv(
             Number(unitsPurchased) + Number(alreadySold),
             this.elapsedSaleHours(pCtx)

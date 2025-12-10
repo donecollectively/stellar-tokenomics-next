@@ -169,7 +169,7 @@ struct DynamicSaleV1 {
         };
         REQT("EXPECTS the basic SaleProgressDetails to be validated separately")
 
-        REQT("The sale settings must not be changed");
+        REQT("fails if it changes the settings");
         prevSettings : DynamicSaleV1Settings = self.settings;
         nextSettings = upd.v1details().fixedSaleDetails.settings;
         assert(
@@ -193,7 +193,7 @@ struct DynamicSaleV1 {
             "wrong next salePace in updated sale, expected " + expectedPace.show()
         );
 
-        REQT("Guards against underflow in dynamic pace calculations, by enforcing a minimum chunk age");
+        REQT("won't sell tokens from a sale chunk less than 10 minutes old");
         chunkAge : Duration = upd.v1details().saleState.progressDetails.lastPurchaseAt
             - self.sale.v1details().saleState.progressDetails.lastPurchaseAt;
 
@@ -209,7 +209,7 @@ struct DynamicSaleV1 {
     func actualSellingPace(self) -> Real {
         t : Real = (
             self.purchase.unitsPurchased
-            + self.sale.v1details().saleState.progressDetails.chunkUnitsSold 
+            + self.sale.v1details().saleState.progressDetails.lotsSold 
         ) / self.elapsedSaleHours();
         print("    ---- actualSellingPace " + t.show());
         t
@@ -218,10 +218,10 @@ struct DynamicSaleV1 {
     func targetSellingPace(self) -> Real {
         // print("selling time " + self.settings.targetedSellingTime.show());
         // print("  -- in hours" + (100 *  self.settings.targetedSellingTime / Duration::HOUR / 100.0).show());
-        chunkUnitCount : Int = self.purchase.totalProgress.chunkUnitCount;
-        // print("chunkUnitCount"+ self.purchase.totalProgress.chunkUnitCount.show());
+        lotCount : Int = self.purchase.totalProgress.lotCount;
+        // print("lotCount"+ self.purchase.totalProgress.lotCount.show());
         t : Real = 
-         (chunkUnitCount + 0.0) / (
+         (lotCount + 0.0) / (
              self.settings.targetedSellingTime * 100 / Duration::HOUR / 100.0
         ) 
 
@@ -230,7 +230,7 @@ struct DynamicSaleV1 {
 
         // returns the CHUNK-RELATIVE selling pace
         // ^^^ distinct from sale-aggregate pace vvv
-        // return self.sale.totalSaleUnits / self.settings.targetedSellingTime
+        // return self.sale.totalSaleLots / self.settings.targetedSellingTime
     }
 
     func elapsedSaleHours(self) -> Real {
@@ -263,7 +263,7 @@ struct DynamicSaleV1 {
         // timeProgress: Real  = self.elapsedTime() / self.settings.targetedSellingTime
 
         // saleProgress : SaleProgressDetails = self.purchase.totalProgress;
-        // unitsProgress : Real = saleProgress.chunkUnitsSold / saleProgress.chunkUnitCount;
+        // unitsProgress : Real = saleProgress.lotsSold / saleProgress.lotCount;
 
         // // net overall pacing is the portion of units sold vs the portion of time elapsed
         // unitsProgress / timeProgress
@@ -478,8 +478,8 @@ struct DynamicSaleV1 {
 //     totalProgress: SaleProgressDetails = SaleProgressDetails{
 //         lastPurchaseAt: now,
 //         prevPurchaseAt: prevProgress.lastPurchaseAt,
-//         chunkUnitCount: prevProgress.chunkUnitCount,
-//         chunkUnitsSold: prevProgress.chunkUnitsSold + sellingUnitQuantity
+//         lotCount: prevProgress.lotCount,
+//         lotsSold: prevProgress.lotsSold + sellingUnitQuantity
 //     };
 //     prevPace : Real = prevMktSale.salePace;
 //     DynamicSaleV1{
