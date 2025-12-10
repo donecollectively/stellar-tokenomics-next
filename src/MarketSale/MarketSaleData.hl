@@ -442,7 +442,7 @@ struct MarketSaleData {
         prevPrimaryAssetClass = AssetClass::new(prevAssets.primaryAssetMph, prevAssets.primaryAssetName);
         nextPrimaryAssetClass = AssetClass::new(nextAssets.primaryAssetMph, nextAssets.primaryAssetName);
         if (primaryAssetChanged) {
-        assertREQTgroup("when primary asset is changed ...", false, () -> Bool {
+        assertREQTgroup("when primary asset is changed during update ...", false, () -> Bool {
 
             previousPrimaryAssetName : String = prevAssets.primaryAssetName.decode_utf8_safe();
             nextPrimaryAssetName : String = nextAssets.primaryAssetName.decode_utf8_safe();

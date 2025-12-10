@@ -180,7 +180,7 @@ describe("MarketSale plugin", async () => {
             // );
         });
 
-        it("rejects creation when saleUnitAssets include non-primary tokens", async (context: STOK_TC) => {
+        it("rejects creation when saleUnitAssets contains any tokens other than the primary asset", async (context: STOK_TC) => {
             const { h } = context;
             await h.reusableBootstrap();
             const controller = await h.mktSaleDgt();

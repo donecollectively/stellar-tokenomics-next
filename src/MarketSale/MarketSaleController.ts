@@ -1010,7 +1010,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "Enforcing resync of even values during deposit ensures things are ok before starting the sale",
                     ],
                     mech: [
-                        "saleUnitAssets MUST NOT contain any tokens other than the primary asset when first created",
+                        "saleUnitAssets only allows the primary asset tokens when first created",
                         "can AddTokens to a Pending sale",
                         "can't add non-primary tokens if the sale-assets aren't even",
                         "requires the gov authority to AddTokens",
@@ -1040,7 +1040,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "Ensures that tokens are stored in a consistent way with the lot-count",
                     ],
                     mech: [
-                        "when depositing tokens, the token count in the UTxO must divide evenly by the lot count",
+                        "when depositing tokens, the token count in the UTxO must be an even multiple of the lot count",
                     ],
                     requires: [],
                     deltas: {
@@ -1122,7 +1122,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "Enforces consistency rules while allowing necessary changes",
                 ],
                 mech: [
-                    "saleUnitAssets MUST NOT contain any tokens other than the primary asset when first created",
+                    "saleUnitAssets only allows the primary asset tokens when first created",
                     "saleUnitAssets MUST always contain the primary asset, even if no tokens have been deposited yet",
                     "saleUnitAssets‹primaryAsset› count must equal primaryAssetTargetCount / totalSaleLots",
                     "primaryAssetTargetCount must be an even multiple of the lot count ",
@@ -1161,12 +1161,13 @@ export class MarketSaleController extends WrappedDgDataContract<
             "updates appropriate sale details as a result of each sale": {
                 purpose: "Updates the sale details after each sale",
                 details: [
-                    "Ensures that the sale details are updated correctly after each sale",
+                    "Ensures the sale record is updated with sale-progress details after each sale",
+                    "Ensures the sale record is updated with dynamic sale details after each sale",
                 ],
                 mech: [
                     "updates the timestamps and units-sold",
                     "fails if it changes the settings or unit-counts",
-                    "updates the stratState's sellingPace field",
+                    "updates the saleState's sellingPace field",
                     "fails without the correct next dynamicPace",
                 ],
                 requires: [],
