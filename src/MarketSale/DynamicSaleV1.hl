@@ -145,7 +145,10 @@ struct DynamicSaleV1 {
 
     func unitPriceForSale(self) -> Real {
         // paceThisPurchase : Real = self.purchase.inferredPace(); // units / hours-since-last-purchase
-        print("    ---- target price " + self.settings.targetPrice.show());
+        // targetPriceStr = self.settings.targetPrice.show(); /** todo: inline */
+        targetPrice = self.settings.targetPrice;
+        print("    ---- target price " + targetPrice.show());
+
         targetPrice = self.settings.targetPrice
         price: Real = targetPrice
             * self.pricingFactorOverallProgress()
@@ -368,16 +371,20 @@ struct DynamicSaleV1 {
                 //   ... of the slower pace, reducing the next-dynamic-pace 
                 //   ... as well as the current price.
                 print("    ---- nextPaceWeight: slowing sale; using dynaPaceIdleDecayRate ");
-                print("      ---- hoursSinceLastPurchase " + purchase.hoursSinceLastPurchase.show());
-                print("      ---- * dynaPaceIdleDecayRate " + settings.dynaPaceIdleDecayRate.show());
+                hslpStr = purchase.hoursSinceLastPurchase.show(); /** todo: inline */
+                print("      ---- hoursSinceLastPurchase " + hslpStr);
+                dpidrStr = settings.dynaPaceIdleDecayRate.show(); /** todo: inline */
+                print("      ---- * dynaPaceIdleDecayRate " + dpidrStr);
                 result = maxReal(
                     1.0, purchase.hoursSinceLastPurchase * settings.dynaPaceIdleDecayRate
                 )
-                print("  -- nextPaceWeight = " + result.show());
+                resultStr = result.show(); /** todo: inline */
+                print("  -- nextPaceWeight = " + resultStr);
                 result
             }
         };
-        print("    ---- nextPaceWeight " + nextPaceWeight.show());
+        nextPaceWeightStr = nextPaceWeight.show(); /** todo: inline */
+        print("    ---- nextPaceWeight " + nextPaceWeightStr);
         psp : Real = purchase.prevSalePace;
         print("    ---- prev salePace " + psp.show());
 

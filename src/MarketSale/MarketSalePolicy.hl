@@ -426,9 +426,12 @@ enum DelegateActivity {
 
                     REQT("doesn't sell before the start date")
                     nowRange = getTimeRange(5*Duration::MINUTE);
-                    print("   --- now start: " + nowRange.start.show());
-                    print("   --- startAt:   " + previous.v1details().fixedSaleDetails.startAt.show());
-                    print("   --- now end:   " + nowRange.end.show());
+                    nowRangeStartStr = nowRange.start.show(); /** todo: inline */
+                    print("   --- now start: " + nowRangeStartStr);
+                    startAtStr = previous.v1details().fixedSaleDetails.startAt.show(); /** todo: inline */
+                    print("   --- startAt:   " + startAtStr);
+                    nowRangeEndStr = nowRange.end.show(); /** todo: inline */
+                    print("   --- now end: " + nowRangeEndStr);
 
                     assert(
                         nowRange.is_after(

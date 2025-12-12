@@ -152,12 +152,18 @@ struct MarketSaleData {
         assert(self.name.serialize().length > 10, "name must be at least 10 characters");
         saleAssets = self.v1details().saleAssets;
         assertREQTgroup("validate: primary asset must be divisible by totalSaleLots", false, () -> Bool {
-            print("  -- saleAssets "+ saleAssets.totalSaleLots.show() + " x " + saleAssets.saleUnitAssets.show());
+            lotsStr = saleAssets.totalSaleLots.show(); /** todo: inline */
+            assetsStr = saleAssets.saleUnitAssets.show(); /** todo: inline */
+            print("  -- saleAssets "+ lotsStr + " x " + assetsStr);
 
             primaryLotSize = self.lotSizeForToken(self.primaryAsset());
             expectedTargetCount = primaryLotSize * saleAssets.totalSaleLots;
-            print("  -- primaryAssetTargetCount: " + saleAssets.primaryAssetTargetCount.show());
-            print("  -- expectedTargetCount: " + expectedTargetCount.show());
+
+            targetCountStr = saleAssets.primaryAssetTargetCount.show(); /** todo: inline */
+            print("  -- primaryAssetTargetCount: " + targetCountStr);
+            expectedTargetCountStr = expectedTargetCount.show(); /** todo: inline */
+            print("  -- expectedTargetCount: " + expectedTargetCountStr);
+
             assert(
                 expectedTargetCount == saleAssets.primaryAssetTargetCount, 
                 "saleUnitAssets' primaryToken mismatch: lot-size * totalSaleLots != primaryAssetTargetCount"
@@ -233,8 +239,10 @@ struct MarketSaleData {
                 ),
                 primaryPerUnit
             );
-            print("  -- expected asset bundle: " + expectedPrimaryOnly.show());
-            print("  -- actual asset bundle: " + saleAssets.saleUnitAssets.show());
+            expectedPrimaryOnlyStr = expectedPrimaryOnly.show(); /** todo: inline */
+            print("  -- expected asset bundle: " + expectedPrimaryOnlyStr);
+            actualAssetsStr = saleAssets.saleUnitAssets.show(); /** todo: inline */
+            print("  -- actual asset bundle: " + actualAssetsStr);
             assert(
                 saleAssets.saleUnitAssets == expectedPrimaryOnly,
                 "saleUnitAssets must only reference the primary asset when created"

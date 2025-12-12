@@ -42,8 +42,10 @@ struct SaleProgressDetailsV1 {
     ) -> Bool {
         logGroup("SaleProgressDetails: validateUpdatedDetails()", false, () -> Bool {
             bREQTgroup("Updates last-purchase-time to the current tx time", false, () -> Bool {
-                print("   ----  lastPurchaseAt: " + self.lastPurchaseAt.show());
-                print("   ----  now: " + now.show());
+                lps = self.lastPurchaseAt.show();
+                nowStr = now.show();
+                print("   ----  lastPurchaseAt: " + lps);
+                print("   ----  now: " + nowStr);
                 assert(
                     (self.lastPurchaseAt == now),
                     "lastPurchaseAt not updated correctly"
@@ -63,8 +65,10 @@ struct SaleProgressDetailsV1 {
             })
 
             && bREQTgroup("Updates lotsSold to include the new units being purchased", false, () -> Bool {
-                print("   ----  prev unitsSold: " + prevProgress.lotsSold.show());
-                print("   ----  unitsSold: " + self.lotsSold.show());
+                prevLotsSoldStr = prevProgress.lotsSold.show(); /** todo: inline */
+                print("   ----  prev unitsSold: " + prevLotsSoldStr);
+                lotsSoldStr = self.lotsSold.show(); /** todo: inline */
+                print("   ----  unitsSold: " + lotsSoldStr);
                 assert(
                     (
                         self.lotsSold == prevProgress.lotsSold + unitsSold
