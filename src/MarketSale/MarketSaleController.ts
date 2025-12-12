@@ -234,10 +234,10 @@ export class MarketSaleController extends WrappedDgDataContract<
                             progressPricingDiscountWhenSlow: 0.25,
                             progressPricingExpansionWhenFast: 0.2,
 
-                            dynaPaceFasterSaleWeight: 0.3,
+                            dynaPaceFasterSaleWeight: 0.12,
                             dynaPaceIdleDecayRate: 0.5,
 
-                            pricingWeightDynaPace: 5,
+                            pricingWeightDynaPace: 1.5,
                         },
                         startAt: startTime,
                         vxfTokensTo: undefined,
