@@ -62,6 +62,7 @@ import type {
     MarketSaleDataLike,
     minimalMarketSaleData,
 } from "./MarketSale.typeInfo.js";
+import type { StellarTokenomicsCapo } from "../../dist/stellar-tokenomics.js";
 export type {
     ErgoMarketSaleData,
     MarketSaleData,
@@ -87,6 +88,10 @@ export class MarketSaleController extends WrappedDgDataContract<
     MarketSaleDataWrapper
 > {
     dataBridgeClass = MarketSalePolicyDataBridge;
+
+    get capo(): StellarTokenomicsCapo<any, any> {
+        return super.capo as StellarTokenomicsCapo<any, any>;
+    }
 
     get recordTypeName() {
         return "mktSale" as const;
@@ -471,9 +476,9 @@ export class MarketSaleController extends WrappedDgDataContract<
 
         // console.profile("activate sale");
         const tt = await this.mkTxnUpdateRecord(
-            "activate MarketSale",
             mktSale,
             {
+                txnName: `activate ${mktSale.data!.name}`,
                 activity: this.activity.SpendingActivities.Activating(
                     mktSale.data!.details.V1.threadInfo.saleId
                 ),
@@ -616,9 +621,9 @@ export class MarketSaleController extends WrappedDgDataContract<
         this.guardUnevenLots(updatedCount, existingSale);
 
         const tcx2 = await this.mkTxnUpdateRecord(
-            "add tokens to MarketSale",
             mktSale,
             {
+                txnName: `${mint ? "mint and " : ""}add tokens to ${mktSale.data!.name}`,
                 activity: this.activity.SpendingActivities.AddingToSale({
                     id: existingSale.details.V1.threadInfo.saleId,
                     mph: addedTokenMph,
@@ -649,7 +654,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                 },
                 addedUtxoValue: addedTokenValue,
             },
-            tcx
+            tcx1
         );
         return this.capo.txnAddGovAuthority(tcx2);
     }
@@ -790,9 +795,9 @@ export class MarketSaleController extends WrappedDgDataContract<
                 salePrice: makeValue(this.ADA(unitPrice)),
             });
         return this.mkTxnUpdateRecord(
-            "buy from MarketSale",
             mktSale,
             {
+                txnName: `buy: ${mktSale.data?.name}`,
                 activity,
                 addedUtxoValue,
                 updatedFields: this.mkUpdatedDetails(mktSaleData, {

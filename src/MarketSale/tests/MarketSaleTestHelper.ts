@@ -195,17 +195,14 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     ) {
         const { capo } = this;
         const mktSaleDgt = await this.mktSaleDgt();
-        const tcx = await capo.txnMintingFungibleTokens(
-            capo.mkTcx("mint + add to market sale"),
-            mintTokenName,
-            mintTokenCount
-        );
+
+        const yesMintThem = true;
         const tcx2 = await mktSaleDgt.mkTxnAddToMarketSale(
             marketSale,
             capo.mph,
             mintTokenName,
             mintTokenCount,
-            tcx
+            yesMintThem
         );
         return this.submitTxnWithBlock(tcx2);
     }
@@ -272,9 +269,9 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         }
 
         const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
-            description,
             marketSale,
             {
+                txnName: description,
                 activity:
                     mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale(
                         existingSale.details.V1.threadInfo.saleId
