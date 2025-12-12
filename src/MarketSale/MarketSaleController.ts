@@ -521,6 +521,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         addedTokenMph: MintingPolicyHash,
         addedTokenName: string | number[],
         addedTokenCount: number | bigint,
+        mint?: boolean,
         tcx?: TCX
     ): Promise<TCX> {
         console.log("🏒 adding to mktSale");
@@ -530,9 +531,20 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
 
         const newTnBytes =
-            typeof addedTokenName === "string"
-                ? textToBytes(addedTokenName)
-                : addedTokenName;
+        typeof addedTokenName === "string"
+            ? textToBytes(addedTokenName)
+            : addedTokenName;
+        const {capo} = this;
+
+        if (!   addedTokenMph.isEqual(capo.mph)) {
+            throw new Error("can't mint tokens except via capo's mph");
+        }
+        const tokenCount = BigInt(addedTokenCount);
+        const tcx1 = mint ? await capo.txnMintingFungibleTokens(
+            tcx || this.mkTcx("mint + add to market sale") as TCX,
+            newTnBytes,
+            tokenCount) : undefined;
+
         const addedTokenValue = makeValue(
             addedTokenMph,
             newTnBytes,
