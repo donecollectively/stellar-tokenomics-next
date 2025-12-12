@@ -34,9 +34,13 @@ playStartSound
 } || logProblemWith "dAPI build with rollup"
 
 wait
-# Copy typeInfo.d.ts files to dist/types/ for api-extractor
-find src -type d | tail -n +2 | while read a ; do { mkdir -p dist/types/$a ; } done
-find src -name \*.typeInfo.d.ts | grep -v '/tests/' | while read a ; do { cp $a dist/types/$a ; } done
+# Copy typeInfo.d.ts files to dist/types/ to complete the picture of exported types 
+{
+    pushd src/ >/dev/null
+    find . -type d | tail -n +2 | while read a ; do { mkdir -p ../dist/types/$a ; } done
+    find . -name \*.typeInfo.d.ts | grep -v '/tests/' | while read a ; do { cp $a ../dist/types/$a ; } done
+    popd >/dev/null
+}
 
 echo "build started at  $startTime"
 date
@@ -46,12 +50,6 @@ playCheckpointSound
 
 echo -n "build finished at "
 date
-# inBackground "dAPI docs" api-extractor run --local --verbose --diagnostics &
-inBackground "dAPI docs" api-extractor run --local --verbose &
-
-wait
-echo "build started at  $startTime"
-echo "build finished at $(date)"
 exitIfError
 
 playSuccessSound

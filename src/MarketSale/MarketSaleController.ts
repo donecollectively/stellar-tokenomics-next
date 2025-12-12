@@ -62,7 +62,8 @@ import type {
     MarketSaleDataLike,
     minimalMarketSaleData,
 } from "./MarketSale.typeInfo.js";
-import type { StellarTokenomicsCapo } from "../../dist/stellar-tokenomics.js";
+import type { StellarTokenomicsCapo } from "../StellarTokenomicsCapo.js";
+
 export type {
     ErgoMarketSaleData,
     MarketSaleData,

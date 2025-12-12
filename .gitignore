@@ -6,6 +6,10 @@ zz_disabled/
 zz_junk/
 .vscode/
 
+#backup files
+*.bak
+*~
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies

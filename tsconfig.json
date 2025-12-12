@@ -62,7 +62,7 @@
         "experimentalSpecifierResolution": "node"
     },
     "include": [
-        "./heliosModule.d.ts",
+        "src/heliosModule.d.ts",
         "next-env.d.ts",
         "./src/**/*.ts",
         "./src/**/*.tsx",
