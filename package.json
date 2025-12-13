@@ -1,6 +1,6 @@
 {
     "name": "stellar-tokenomics",
-    "version": "0.8.0-beta.8",
+    "version": "0.9.0-beta.1",
     "engine-strict": true,
     "engines": {
         "node": ">=20",
