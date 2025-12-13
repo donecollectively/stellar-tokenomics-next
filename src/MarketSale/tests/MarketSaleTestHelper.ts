@@ -144,7 +144,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         let remainingNeededTokenCount = 0n;
         if (mintTokenName) {
             const totalNeeded =
-                marketSale.data!.details.V1.saleAssets.saleUnitAssets.multiply(
+                marketSale.data!.details.V1.saleAssets.saleLotAssets.multiply(
                     marketSale.data!.details.V1.saleAssets.totalSaleLots
                 );
             const needThisTokenCount = totalNeeded.assets
@@ -152,7 +152,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
                 ?.find(([tnb, _count]) => equalsBytes(tnBytes, tnb))?.[1];
             if (!needThisTokenCount) {
                 throw new Error(
-                    `token ${mintTokenName} not found in sale unit assets`
+                    `token ${mintTokenName} not found in sale lot assets`
                 );
             }
 
@@ -242,7 +242,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         const tcx2 = await mktSaleDgt.mkTxnBuyFromMarketSale(
             marketSale,
             {
-                sellingUnitQuantity: quantity,
+                lotsPurchased: quantity,
             },
             futureDate ? tcx.futureDate(futureDate) : tcx
         );
@@ -308,7 +308,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
             name: "Updated Market Sale Name",
             startAt: this._cachedNow + 1000 * 60 * 60 * 24, // 1 day from now
             totalSaleLots: 2000n,
-            singleBuyMaxUnits: 50n,
+            singleBuyMaxLots: 50n,
             primaryAssetTargetCount: 200_000_000n,
             targetPrice: 1.5,
         };
@@ -322,8 +322,8 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         const marketSale = await this.findFirstMarketSale();
 
         const updateDetails = this.packagedUpdateDetails();
-        // Calculate KRILL per unit: original was 1000n per unit, so for 2000 units it should be 2000n per unit
-        const newSaleUnitAssets = makeValue(
+        // Calculate KRILL per lot: original was 1000n per lot, so for 2000 lots it should be 2000n per lot
+        const newsaleLotAssets = makeValue(
             this.capo.mph,
             marketSale.data!.details.V1.saleAssets.primaryAssetName,
             updateDetails.primaryAssetTargetCount / updateDetails.totalSaleLots
@@ -354,9 +354,9 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
                         saleAssets: {
                             ...marketSale.data!.details.V1.saleAssets,
                             totalSaleLots: updateDetails.totalSaleLots,
-                            singleBuyMaxUnits: updateDetails.singleBuyMaxUnits,
+                            singleBuyMaxLots: updateDetails.singleBuyMaxLots,
                             primaryAssetTargetCount: updateDetails.primaryAssetTargetCount,
-                            saleUnitAssets: newSaleUnitAssets,
+                            saleLotAssets: newsaleLotAssets,
                         },
                     },
                 },

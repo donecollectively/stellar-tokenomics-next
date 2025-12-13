@@ -77,7 +77,7 @@ export type {
 export type PurchaseContext = {
     prevSale: MarketSaleDataWrapper;
     now: Date;
-    unitCount: bigint;
+    lotCount: bigint;
 };
 
 /**
@@ -214,7 +214,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     exampleData(): minimalMarketSaleData {
         const tn = encodeUtf8("PLANKTON");
         const mph = this.capo.mph;
-        const units = 1000n;
+        const lots = 1000n;
         const startTime = new Date().getTime();
         const data: minimalMarketSaleData = {
             // id: "mktSale_123",
@@ -250,19 +250,19 @@ export class MarketSaleController extends WrappedDgDataContract<
                         primaryAssetMph: mph,
                         primaryAssetName: tn,
                         primaryAssetTargetCount: 100_000_000n,
-                        totalSaleLots: units,
-                        saleUnitAssets: makeValue(
+                        totalSaleLots: lots,
+                        saleLotAssets: makeValue(
                             mph,
                             tn,
-                            100_000_000n / units
+                            100_000_000n / lots
                         ),
-                        singleBuyMaxUnits: 25n,
+                        singleBuyMaxLots: 25n,
                     },
                     saleState: {
                         progressDetails: {
                             lastPurchaseAt: startTime,
                             prevPurchaseAt: startTime,
-                            lotCount: units,
+                            lotCount: lots,
                             lotsSold: 0n,
                         },
                         salePace: 1,
@@ -432,7 +432,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     //         primaryAssetMph,
     //         primaryAssetName,
     //         primaryAssetTargetCount,
-    //         saleUnitAssets: makeValue(
+    //         saleLotAssets: makeValue(
     //             primaryAssetMph,
     //             primaryAssetName,
     //             primaryAssetTargetCount / mktSale.totalSaleLots
@@ -574,45 +574,45 @@ export class MarketSaleController extends WrappedDgDataContract<
             "    -- existingTokensInContract",
             existingTokensInContract
         );
-        const previousSaleUnit =
-            existingSale.details.V1.saleAssets.saleUnitAssets;
-        console.log("    -- previousSaleUnit", dumpAny(previousSaleUnit));
-        const prevSaleUnitCountThisToken =
-            previousSaleUnit.assets.getPolicyTokenQuantity(
+        const previousSaleLot =
+            existingSale.details.V1.saleAssets.saleLotAssets;
+        console.log("    -- previousSaleLot", dumpAny(previousSaleLot));
+        const prevSalelotCountThisToken =
+            previousSaleLot.assets.getPolicyTokenQuantity(
                 addedTokenMph,
                 newTnBytes
             );
-        const prevSaleUnitThisTokenValue = makeValue(
+        const prevSaleLotThisTokenValue = makeValue(
             addedTokenMph,
             newTnBytes,
-            prevSaleUnitCountThisToken
+            prevSalelotCountThisToken
         );
-        const otherValueInPrevSaleUnit = previousSaleUnit.subtract(
-            prevSaleUnitThisTokenValue
+        const otherValueInPrevSaleLot = previousSaleLot.subtract(
+            prevSaleLotThisTokenValue
         );
         const updatedCount = existingTokensInContract + BigInt(addedTokenCount);
 
-        // for primary tokens, it retains the unit-size for that token when adding them to the sale
-        // for non-primary tokens added, the unit-size is updated to reflect the new deposted-token-amount
-        const updatedUnitCount = isPrimary
-            ? prevSaleUnitCountThisToken
+        // for primary tokens, it retains the lot-size for that token when adding them to the sale
+        // for non-primary tokens added, the lot-size is updated to reflect the new deposted-token-amount
+        const updatedlotCount = isPrimary
+            ? prevSalelotCountThisToken
             : updatedCount / existingSale.details.V1.saleAssets.totalSaleLots;
 
-        const newSaleUnitThisTokenValue = makeValue(
+        const newSaleLotThisTokenValue = makeValue(
             addedTokenMph,
             newTnBytes,
-            updatedUnitCount
+            updatedlotCount
         );
         console.log(
-            "    -- newSaleUnitThisTokenValue",
-            dumpAny(newSaleUnitThisTokenValue)
+            "    -- newSaleLotThisTokenValue",
+            dumpAny(newSaleLotThisTokenValue)
         );
-        const saleUnitAssets = otherValueInPrevSaleUnit.add(
-            newSaleUnitThisTokenValue
+        const saleLotAssets = otherValueInPrevSaleLot.add(
+            newSaleLotThisTokenValue
         );
         console.log("    -- ℹ️  token name", displayTokenName(newTnBytes));
         console.log("    -- ℹ️  updatedCount", updatedCount);
-        console.log("    -- ℹ️  new saleUnitAssets", dumpAny(saleUnitAssets));
+        console.log("    -- ℹ️  new saleLotAssets", dumpAny(saleLotAssets));
         console.log(
             "    -- ℹ️  totalSaleLots",
             existingSale.details.V1.saleAssets.totalSaleLots
@@ -651,7 +651,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                             ...mktSale.data!.details.V1,
                             saleAssets: {
                                 ...mktSale.data!.details.V1.saleAssets,
-                                saleUnitAssets,
+                                saleLotAssets,
                             },
                             fixedSaleDetails: {
                                 ...mktSale.data!.details.V1.fixedSaleDetails,
@@ -677,24 +677,24 @@ export class MarketSaleController extends WrappedDgDataContract<
             existingSale.details.V1.saleAssets.totalSaleLots !=
             0n) {
             throw new Error(
-                "Updated (non-primary) token count not divisible by total sale units"
+                "Updated (non-primary) token count not divisible by total sale lots"
             );
         }
     }
 
     saleTokenValue(
         itemDetails: FoundDatumUtxo<MarketSaleData>,
-        sellingUnitQuantity: number | bigint = 1
+        lotsPurchased: number | bigint = 1
     ) {
-        return itemDetails.data!.details.V1.saleAssets.saleUnitAssets.multiply(
-            sellingUnitQuantity
+        return itemDetails.data!.details.V1.saleAssets.saleLotAssets.multiply(
+            lotsPurchased
         );
     }
 
-    // async XXXgetUnitPriceViaHelios(
+    // async XXXgetlotPriceViaHelios(
     //     sale: FoundDatumUtxo<MarketSaleData>,
     //     now_: Date,
-    //     sellingUnitQuantity_: number | bigint
+    //     lotsPurchased_: number | bigint
     // ): Promise<number> {
     //     const funcs = this.onChainFunctions();
     //     const adapter = this.mkDatumAdapter();
@@ -703,7 +703,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     //         (await adapter.toOnchainDatum(sale.datum)).data
     //     );
     //     const now = UplcInt.new(now_.getTime()); //adapter.uplcInt
-    //     const sellingUnitQuantity = UplcInt.new(sellingUnitQuantity_); // adapter.uplcInt(sellingUnitQuantity_);
+    //     const lotsPurchased = UplcInt.new(lotsPurchased_); // adapter.uplcInt(lotsPurchased_);
     //
     //     //@ts-expect-error
     //     const topScope = this.scriptProgram.evalTypes(); // TopScope {#parent: GlobalScope, #values: Array(13), #allowShadowing: false, #strict: false}
@@ -713,7 +713,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     //             (x) => x.name.value == this.specializedDelegateModule.moduleName
     //         ).name
     //     );
-    //     const func = delegateModuleScope.get("getUnitPrice").asFunc;
+    //     const func = delegateModuleScope.get("getlotPrice").asFunc;
     //
     //     throw new Error(
     //         `this doesn't work because the types of the data aren't understood by func.call()`
@@ -722,7 +722,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     //         // named args
     //         mktSale: ocDatum,
     //         now: now,
-    //         sellingUnitQuantity: sellingUnitQuantity,
+    //         lotsPurchased: lotsPurchased,
     //     });
     //
     //     return 1.42;
@@ -732,17 +732,17 @@ export class MarketSaleController extends WrappedDgDataContract<
         this: MarketSaleController,
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
         {
-            sellingUnitQuantity,
+            lotsPurchased,
             delegateActivity,
         }: {
-            sellingUnitQuantity: number | bigint;
+            lotsPurchased: number | bigint;
             delegateActivity?: isActivity;
         },
         tcxIn?: TCX
     ) {
         const tokenValuePurchase = this.saleTokenValue(
             mktSale,
-            sellingUnitQuantity
+            lotsPurchased
         );
 
         const tcx = tcxIn || this.mkTcx(tcxIn, "buyFromMarketSale");
@@ -753,16 +753,16 @@ export class MarketSaleController extends WrappedDgDataContract<
         const pCtx: PurchaseContext = {
             prevSale: mktSaleObj,
             now: thisPurchaseAt,
-            unitCount: BigInt(sellingUnitQuantity),
+            lotCount: BigInt(lotsPurchased),
         };
         console.log("🏒 buying from mktSale");
         debugger;
-        const unitPrice = mktSaleObj.getUnitPrice(pCtx);
-        console.log("    -- unit price", unitPrice);
+        const lotPrice = mktSaleObj.getLotPrice(pCtx);
+        console.log("    -- lot price", lotPrice);
 
         const nextSalePace = mktSaleObj.computeNextSalePace(pCtx);
         console.log("    -- next sale pace", nextSalePace);
-        const pmtAda = realMul(Number(sellingUnitQuantity), unitPrice);
+        const pmtAda = realMul(Number(lotsPurchased), lotPrice);
 
         const pmtLovelace = this.ADA(pmtAda);
         const pmtValue = makeValue(pmtLovelace);
@@ -804,8 +804,8 @@ export class MarketSaleController extends WrappedDgDataContract<
             delegateActivity ??
             this.activity.SpendingActivities.SellingTokens({
                 id: mktSale.data!.id,
-                sellingUnitQuantity: BigInt(sellingUnitQuantity),
-                salePrice: makeValue(this.ADA(unitPrice)),
+                lotsPurchased: BigInt(lotsPurchased),
+                salePrice: makeValue(this.ADA(lotPrice)),
             });
         return this.mkTxnUpdateRecord(
             mktSale,
@@ -826,7 +826,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                                     lotCount,
                                     lotsSold:
                                         lotsSold +
-                                        BigInt(sellingUnitQuantity),
+                                        BigInt(lotsPurchased),
                                 }),
                                 salePace: nextSalePace,
                             },
@@ -868,14 +868,14 @@ export class MarketSaleController extends WrappedDgDataContract<
 
     // async mkTxnBuyAndSplit(
     //     mktSale: FoundDatumUtxo<MarketSaleData>,
-    //     sellingUnitQuantity: number | bigint,
+    //     lotsPurchased: number | bigint,
     //     tcxIn?: StellarTxnContext
     // ) {
     //     const tcx = tcxIn || this.mkTcx(tcxIn, "buyAndSplit");
     //     const tcx2 = await this.mkTxnBuyFromMarketSale(
     //         mktSale,
     //         {
-    //             sellingUnitQuantity,
+    //             lotsPurchased,
     //             delegateActivityFunc: this.activitySplittingAndBuyingFromChunk
     //         },
     //         tcx
@@ -960,14 +960,14 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "has expected labels and other high-level details",
                     "has initial timestamps",
                     "has key details of price, sale-sizes and token to be sold",
-                    "rejects creation when saleUnitAssets contains any tokens other than the primary asset",
+                    "rejects creation when saleLotAssets contains any tokens other than the primary asset",
                 ],
                 deltas: {
                     "0.8.0-beta.9": [
                         "basics implemented previously to beta.9",
                     ],
                     "0.8.0-beta.10": [
-                        "constrains the saleUnitAssets to only contain the primary asset when created",
+                        "constrains the saleLotAssets to only contain the primary asset when created",
                     ],
                 },
                 requires: [],
@@ -1021,20 +1021,20 @@ export class MarketSaleController extends WrappedDgDataContract<
                         "Manages the addition of tokens to a pending market sale",
                     details: [
                         "Ensures that tokens can be added to a pending sale under the correct conditions",
-                        "Depositing tokens enforces even distribution of the tokens across the sale-units",
-                        "saleAssets can get out of sync with even token distribution when tokens are NOT being added",
+                        "Depositing tokens enforces even distribution of the tokens across the sale's lots",
+                        "saleLotAssets can get out of sync with even token distribution when tokens are NOT being added",
                         "^ e.g. by doing a partial deposit of primary token, then changing the primary asset name",
                         "^ or, by doing a partial deposit of non-primary token, then changing the lot-count/totalSaleLots",
                         "Enforcing resync of even values during deposit ensures things are ok before starting the sale",
                     ],
                     mech: [
-                        "saleUnitAssets only allows the primary asset tokens when first created",
+                        "saleLotAssets only allows the primary asset tokens when first created",
                         "can AddTokens to a Pending sale",
-                        "can't add non-primary tokens if the sale-assets aren't even",
+                        "can't add non-primary tokens if the saleLotAssets aren't even",
                         "requires the gov authority to AddTokens",
                         "the number of tokens in the UTxO must be evenly divisible by the lot count when depositing those tokens",
-                        "starting the sale fails if the sale assets are not evenly divisible by the lot count ",
-                        "starting the sale fails if the deposited Value doesn't match the totalSaleLots * saleUnitAssets",
+                        "starting the sale fails if the saleLotAssets are not evenly divisible by the lot count ",
+                        "starting the sale fails if the deposited Value doesn't match the totalSaleLots * saleLotAssets",
                     ],
                     requires: [
                         "Activity:AddTokens constrains stored tokens' consistency with lot-count",
@@ -1116,14 +1116,14 @@ export class MarketSaleController extends WrappedDgDataContract<
                 purpose:
                     "Ensures saleAssets remain consistent during updates, while remaining flexible to end-user changes",
                 details: [
-                    "Maintains even lot sizes and prevents removal of already deposited tokens from the lot/token bundle (saleUnitAssets)",
+                    "Maintains even lot sizes and prevents removal of already deposited tokens from the lot/token bundle (saleLotAssets)",
                     "Allows primary asset changes when consistency is preserved",
                 ],
                 mech: [
                     "can update saleAssets.totalSaleLots if primaryAssetTargetCount remains an even multiple",
-                    "if previous primary tokens exist in UTxO, saleUnitAssets‹primaryAsset› must keep a minimum lot-size, ≥ depositedTokens/totalSaleLots",
-                    "if primaryAsset changes and old tokens exist, saleUnitAssets must contain the NEW primary token",
-                    "if primaryAsset changes and old tokens don't exist, saleUnitAssets must not reference previous primary token",
+                    "if previous primary tokens exist in UTxO, saleLotAssets‹primaryAsset› must keep a minimum lot-size, ≥ depositedTokens/totalSaleLots",
+                    "if primaryAsset changes and old tokens exist, saleLotAssets must contain the NEW primary token",
+                    "if primaryAsset changes and old tokens don't exist, saleLotAssets must not reference previous primary token",
                 ],
                 requires: ["Maintains consistency of saleAssets while Pending"],
                 deltas: {
@@ -1140,9 +1140,9 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "Enforces consistency rules while allowing necessary changes",
                 ],
                 mech: [
-                    "saleUnitAssets only allows the primary asset tokens when first created",
-                    "saleUnitAssets MUST always contain the primary asset, even if no tokens have been deposited yet",
-                    "saleUnitAssets‹primaryAsset› count must equal primaryAssetTargetCount / totalSaleLots",
+                    "saleLotAssets only allows the primary asset tokens when first created",
+                    "saleLotAssets MUST always contain the primary asset, even if no tokens have been deposited yet",
+                    "saleLotAssets‹primaryAsset› count must equal primaryAssetTargetCount / totalSaleLots",
                     "primaryAssetTargetCount must be an even multiple of the lot count ",
                 ],
                 requires: [
@@ -1164,7 +1164,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                 mech: [
                     "doesn't sell while state is Pending",
                     "doesn't sell tokens before the start date",
-                    "won't sell more than singleBuyMaxUnits, or less than 1 unit",
+                    "won't sell more than singleBuyMaxLots, or less than 1 unit",
                     "sells tokens when Active and in the selling period",
                     "won't sell tokens from a sale chunk less than 10 minutes old",
                 ],

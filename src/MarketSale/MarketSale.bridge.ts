@@ -350,8 +350,8 @@ export class MarketSalePolicyDataBridge extends ContractDataBridge {
        * generates UplcData for the enum type ***SaleAssetsV1*** for the `BasicDelegate` script
        */
         SaleAssetsV1: (fields: SaleAssetsV1Like | {
-    saleUnitAssets: /*minStructField*/ Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {mph: MintingPolicyHash | string | number[], tokens: {name: number[] | string, qty: IntLike}[]}[]
-    singleBuyMaxUnits: /*minStructField*/ IntLike
+    saleLotAssets: /*minStructField*/ Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {mph: MintingPolicyHash | string | number[], tokens: {name: number[] | string, qty: IntLike}[]}[]
+    singleBuyMaxLots: /*minStructField*/ IntLike
     primaryAssetMph: /*minStructField*/ MintingPolicyHash | string | number[]
     primaryAssetName: /*minStructField*/ number[]
     primaryAssetTargetCount: /*minStructField*/ IntLike
@@ -436,7 +436,7 @@ export class MarketSalePolicyDataBridge extends ContractDataBridge {
         DTS_PurchaseInfo: (fields: DTS_PurchaseInfoLike | {
     inferredPace: /*minStructField*/ number
     hoursSinceLastPurchase: /*minStructField*/ number
-    unitsPurchased: /*minStructField*/ IntLike
+    lotsPurchased: /*minStructField*/ IntLike
     purchaseTime: /*minStructField*/ TimeLike
     prevSalePace: /*minStructField*/ number
     totalProgress: /*minStructField*/ SaleProgressDetailsV1Like
@@ -2433,7 +2433,7 @@ export class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
      */
     SellingTokens(fields: SpendingActivity$SellingTokensLike | { 
         id: number[],
-        sellingUnitQuantity: IntLike,
+        lotsPurchased: IntLike,
         salePrice: Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {mph: MintingPolicyHash | string | number[], tokens: {name: number[] | string, qty: IntLike}[]}[]
     }) : UplcData {
         const uplc = this.mkUplcData({
@@ -2537,7 +2537,7 @@ export class MintingActivityHelper extends EnumBridge<JustAnEnum> {
      */
     SplittingSaleChunkAndBuying(value: hasSeed, fields: { 
         parentChunkId: string,
-        buyingUnitQuantity: IntLike 
+        lotsPurchased: IntLike 
     } ) : UplcData
     /**
      * generates  UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"*** 
@@ -2546,13 +2546,13 @@ export class MintingActivityHelper extends EnumBridge<JustAnEnum> {
     SplittingSaleChunkAndBuying(fields: MintingActivity$SplittingSaleChunkAndBuyingLike | {
             seed: TxOutputId | string,
             parentChunkId: string,
-            buyingUnitQuantity: IntLike
+            lotsPurchased: IntLike
     } ): UplcData
     SplittingSaleChunkAndBuying(
         seedOrUf: hasSeed | MintingActivity$SplittingSaleChunkAndBuyingLike, 
         filteredFields?: { 
             parentChunkId: string,
-            buyingUnitQuantity: IntLike
+            lotsPurchased: IntLike
     }) : UplcData {
         if (filteredFields) {
             const seedTxOutputId = this.getSeed(seedOrUf as hasSeed);
@@ -2571,7 +2571,7 @@ export class MintingActivityHelper extends EnumBridge<JustAnEnum> {
 
     /**
      * generates  UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***, 
-     * @param fields - \{ parentChunkId: string, buyingUnitQuantity: IntLike \}
+     * @param fields - \{ parentChunkId: string, lotsPurchased: IntLike \}
      * @remarks
     * ##### Seeded activity
     * This activity  uses the pattern of spending a utxo to provide a uniqueness seed.
@@ -2580,7 +2580,7 @@ export class MintingActivityHelper extends EnumBridge<JustAnEnum> {
      * provided implicitly by a SeedActivity-supporting library function. 
      *
      * #### Usage
-     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, buyingUnitQuantity })`
+     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, lotsPurchased })`
       *       method with the indicated (non-seed) details.
      *   2. Use the resulting activity in a seed-providing context, such as the delegated-data-controller's
      *       `mkTxnCreateRecord({activity})` method.
@@ -2588,7 +2588,7 @@ export class MintingActivityHelper extends EnumBridge<JustAnEnum> {
     $seeded$SplittingSaleChunkAndBuying = impliedSeedActivityMaker(this, 
         this.SplittingSaleChunkAndBuying as (value: hasSeed, fields: { 
             parentChunkId: string,
-            buyingUnitQuantity: IntLike 
+            lotsPurchased: IntLike 
         } ) => UplcData
     )
     /* coda: seeded helper in same multiFieldVariant/seeded */
@@ -3355,7 +3355,7 @@ export class SpendingActivityHelperNested extends EnumBridge<isActivity> {
      */
     SellingTokens(fields: SpendingActivity$SellingTokensLike | { 
         id: number[],
-        sellingUnitQuantity: IntLike,
+        lotsPurchased: IntLike,
         salePrice: Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {mph: MintingPolicyHash | string | number[], tokens: {name: number[] | string, qty: IntLike}[]}[]
     }) : isActivity {
         const uplc = this.mkUplcData({
@@ -3482,7 +3482,7 @@ export class MintingActivityHelperNested extends EnumBridge<isActivity> {
      */
     SplittingSaleChunkAndBuying(value: hasSeed, fields: { 
         parentChunkId: string,
-        buyingUnitQuantity: IntLike 
+        lotsPurchased: IntLike 
     } ) : isActivity
     /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"*** 
@@ -3491,13 +3491,13 @@ export class MintingActivityHelperNested extends EnumBridge<isActivity> {
     SplittingSaleChunkAndBuying(fields: MintingActivity$SplittingSaleChunkAndBuyingLike | {
             seed: TxOutputId | string,
             parentChunkId: string,
-            buyingUnitQuantity: IntLike
+            lotsPurchased: IntLike
     } ): isActivity
     SplittingSaleChunkAndBuying(
         seedOrUf: hasSeed | MintingActivity$SplittingSaleChunkAndBuyingLike, 
         filteredFields?: { 
             parentChunkId: string,
-            buyingUnitQuantity: IntLike
+            lotsPurchased: IntLike
     }) : isActivity {
         if (filteredFields) {
             const seedTxOutputId = this.getSeed(seedOrUf as hasSeed);
@@ -3516,7 +3516,7 @@ export class MintingActivityHelperNested extends EnumBridge<isActivity> {
 
     /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***, 
-     * @param fields - \{ parentChunkId: string, buyingUnitQuantity: IntLike \}
+     * @param fields - \{ parentChunkId: string, lotsPurchased: IntLike \}
      * @remarks
     * ##### Seeded activity
     * This activity  uses the pattern of spending a utxo to provide a uniqueness seed.
@@ -3525,7 +3525,7 @@ export class MintingActivityHelperNested extends EnumBridge<isActivity> {
      * provided implicitly by a SeedActivity-supporting library function. 
      *
      * #### Usage
-     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, buyingUnitQuantity })`
+     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, lotsPurchased })`
       *       method with the indicated (non-seed) details.
      *   2. Use the resulting activity in a seed-providing context, such as the delegated-data-controller's
      *       `mkTxnCreateRecord({activity})` method.
@@ -3537,7 +3537,7 @@ export class MintingActivityHelperNested extends EnumBridge<isActivity> {
     $seeded$SplittingSaleChunkAndBuying = impliedSeedActivityMaker(this, 
         this.SplittingSaleChunkAndBuying as (value: hasSeed, fields: { 
             parentChunkId: string,
-            buyingUnitQuantity: IntLike 
+            lotsPurchased: IntLike 
         } ) => isActivity
     )
     /* coda: seeded helper in same multiFieldVariant/seeded */
@@ -5802,14 +5802,14 @@ export const SaleAssetsV1Schema : StructTypeSchema = {
     "name": "SaleAssetsV1",
     "fieldTypes": [
         {
-            "name": "saleUnitAssets",
+            "name": "saleLotAssets",
             "type": {
                 "kind": "internal",
                 "name": "Value"
             }
         },
         {
-            "name": "singleBuyMaxUnits",
+            "name": "singleBuyMaxLots",
             "type": {
                 "kind": "internal",
                 "name": "Int"
@@ -6564,14 +6564,14 @@ export const MktSaleDetailsSchema : EnumTypeSchema = {
                         "name": "SaleAssetsV1",
                         "fieldTypes": [
                             {
-                                "name": "saleUnitAssets",
+                                "name": "saleLotAssets",
                                 "type": {
                                     "kind": "internal",
                                     "name": "Value"
                                 }
                             },
                             {
-                                "name": "singleBuyMaxUnits",
+                                "name": "singleBuyMaxLots",
                                 "type": {
                                     "kind": "internal",
                                     "name": "Int"
@@ -7364,14 +7364,14 @@ export const MarketSaleDataSchema : StructTypeSchema = {
                                     "name": "SaleAssetsV1",
                                     "fieldTypes": [
                                         {
-                                            "name": "saleUnitAssets",
+                                            "name": "saleLotAssets",
                                             "type": {
                                                 "kind": "internal",
                                                 "name": "Value"
                                             }
                                         },
                                         {
-                                            "name": "singleBuyMaxUnits",
+                                            "name": "singleBuyMaxLots",
                                             "type": {
                                                 "kind": "internal",
                                                 "name": "Int"
@@ -8270,14 +8270,14 @@ export const DelegateDatumSchema : EnumTypeSchema = {
                                                         "name": "SaleAssetsV1",
                                                         "fieldTypes": [
                                                             {
-                                                                "name": "saleUnitAssets",
+                                                                "name": "saleLotAssets",
                                                                 "type": {
                                                                     "kind": "internal",
                                                                     "name": "Value"
                                                                 }
                                                             },
                                                             {
-                                                                "name": "singleBuyMaxUnits",
+                                                                "name": "singleBuyMaxLots",
                                                                 "type": {
                                                                     "kind": "internal",
                                                                     "name": "Int"
@@ -9015,7 +9015,7 @@ export const SpendingActivitySchema : EnumTypeSchema = {
                     }
                 },
                 {
-                    "name": "sellingUnitQuantity",
+                    "name": "lotsPurchased",
                     "type": {
                         "kind": "internal",
                         "name": "Int"
@@ -9111,7 +9111,7 @@ export const MintingActivitySchema : EnumTypeSchema = {
                     }
                 },
                 {
-                    "name": "buyingUnitQuantity",
+                    "name": "lotsPurchased",
                     "type": {
                         "kind": "internal",
                         "name": "Int"
@@ -9651,7 +9651,7 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                                         }
                                     },
                                     {
-                                        "name": "sellingUnitQuantity",
+                                        "name": "lotsPurchased",
                                         "type": {
                                             "kind": "internal",
                                             "name": "Int"
@@ -9757,7 +9757,7 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                                         }
                                     },
                                     {
-                                        "name": "buyingUnitQuantity",
+                                        "name": "lotsPurchased",
                                         "type": {
                                             "kind": "internal",
                                             "name": "Int"
@@ -15978,7 +15978,7 @@ export const DTS_PurchaseInfoSchema : StructTypeSchema = {
             }
         },
         {
-            "name": "unitsPurchased",
+            "name": "lotsPurchased",
             "type": {
                 "kind": "internal",
                 "name": "Int"
@@ -16150,7 +16150,7 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                         }
                     },
                     {
-                        "name": "unitsPurchased",
+                        "name": "lotsPurchased",
                         "type": {
                             "kind": "internal",
                             "name": "Int"
@@ -16919,14 +16919,14 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                 "name": "SaleAssetsV1",
                                                 "fieldTypes": [
                                                     {
-                                                        "name": "saleUnitAssets",
+                                                        "name": "saleLotAssets",
                                                         "type": {
                                                             "kind": "internal",
                                                             "name": "Value"
                                                         }
                                                     },
                                                     {
-                                                        "name": "singleBuyMaxUnits",
+                                                        "name": "singleBuyMaxLots",
                                                         "type": {
                                                             "kind": "internal",
                                                             "name": "Int"
@@ -17727,14 +17727,14 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                     "name": "SaleAssetsV1",
                                                     "fieldTypes": [
                                                         {
-                                                            "name": "saleUnitAssets",
+                                                            "name": "saleLotAssets",
                                                             "type": {
                                                                 "kind": "internal",
                                                                 "name": "Value"
                                                             }
                                                         },
                                                         {
-                                                            "name": "singleBuyMaxUnits",
+                                                            "name": "singleBuyMaxLots",
                                                             "type": {
                                                                 "kind": "internal",
                                                                 "name": "Int"

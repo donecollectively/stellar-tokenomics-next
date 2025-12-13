@@ -47,8 +47,8 @@ export class MarketSaleDataWrapper {
         return this.data;
     }
 
-    getUnitPrice(pCtx: PurchaseContext) {
-        return this.getDynamicUnitPrice(pCtx);
+    getLotPrice(pCtx: PurchaseContext) {
+        return this.getDynamicLotPrice(pCtx);
     }
 
     // hasDynamicPrice(x: MarketSaleData): x is MarketSaleData & {
@@ -58,8 +58,8 @@ export class MarketSaleDataWrapper {
     //     return (x.saleStrategy as any).dynaPaceFasterSaleWeight !== undefined;
     // }
 
-    getDynamicUnitPrice(pCtx: PurchaseContext) {
-        const { prevSale: sale, now, unitCount } = pCtx;
+    getDynamicLotPrice(pCtx: PurchaseContext) {
+        const { prevSale: sale, now, lotCount } = pCtx;
         const s = sale.data.details.V1.fixedSaleDetails.settings;
 
         console.log("    ---- targetPrice", s.targetPrice);
@@ -69,13 +69,13 @@ export class MarketSaleDataWrapper {
         );
 
         console.log(
-            "    ---- unitPriceForSale: targetPrice * pricingFactorOverallProgress =",
+            "    ---- lotPriceForSale: targetPrice * pricingFactorOverallProgress =",
             a
         );
         const price = toFixedReal(realMul(a, this.pricingFactorDynamicPace(pCtx)));
-        console.log("    ---- unitPriceForSale - unclamped", price);
+        console.log("    ---- lotPriceForSale - unclamped", price);
         const result = Math.min(Math.max(price, s.minPrice), s.maxPrice);
-        console.log("    ---- unitPriceForSale - clamped", result);
+        console.log("    ---- lotPriceForSale - clamped", result);
         return result;
     }
 
@@ -265,12 +265,12 @@ export class MarketSaleDataWrapper {
     }
 
     actualSellingPace(pCtx: PurchaseContext): number {
-        const unitsPurchased = pCtx.unitCount;
+        const lotsPurchased = pCtx.lotCount;
         const alreadySold =
             pCtx.prevSale.data.details.V1.saleState.progressDetails
                 .lotsSold;
         const sp = realDiv(
-            Number(unitsPurchased) + Number(alreadySold),
+            Number(lotsPurchased) + Number(alreadySold),
             this.elapsedSaleHours(pCtx)
         );
         console.log("    ---- actualSellingPace", sp);
@@ -323,7 +323,7 @@ export class MarketSaleDataWrapper {
     inferredPace(pCtx: PurchaseContext): number {
         debugger;
         const ip = realDiv(
-            Number(pCtx.unitCount),
+            Number(pCtx.lotCount),
             this.hoursSinceLastPurchase(pCtx)
         );
         console.log("    ---- inferredPace", ip);

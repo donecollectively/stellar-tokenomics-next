@@ -42,7 +42,7 @@ struct DTS_PurchaseInfo {
     inferredPace: Real
     hoursSinceLastPurchase: Real
 
-    unitsPurchased: Int
+    lotsPurchased: Int
     purchaseTime: Time
     // previousPurchaseTime: Time
     
@@ -53,7 +53,7 @@ struct DTS_PurchaseInfo {
 
     // func inferredPace(self) -> Real {
     //      p : Real = 
-    //      self.unitsPurchased / self.hoursSinceLastPurchase()
+    //      self.lotsPurchased / self.hoursSinceLastPurchase()
     //      ;print ("    ---- inferredPace " + p.show());
     //      p
     // }
@@ -71,7 +71,7 @@ struct DTS_PurchaseInfo {
     //     h
     // }
     func create(
-        unitsPurchased: Int, 
+        lotsPurchased: Int, 
         purchaseTime: Time, 
         prevPurchaseTime: Time,
         prevSalePace: Real,
@@ -87,17 +87,17 @@ struct DTS_PurchaseInfo {
             3_600_000.0
         ) / 1_000_000.0;
         REQT("Infers the pace of the current purchase")
-        print("      ---- unitsPurchased " + unitsPurchased.show());
+        print("      ---- lotsPurchased " + lotsPurchased.show());
         print("      ---- hoursSinceLastPurchase " + hoursSinceLastPurchase.show());
         // inferredPace = Ratio::new(
-        //     unitsPurchased, 1
+        //     lotsPurchased, 1
         // ) / hoursSinceLastPurchase;
-        inferredPace : Real = unitsPurchased / hoursSinceLastPurchase;
+        inferredPace : Real = lotsPurchased / hoursSinceLastPurchase;
         print("  -- inferredPace " + inferredPace.show());
         DTS_PurchaseInfo{
             inferredPace: inferredPace,
             hoursSinceLastPurchase: hoursSinceLastPurchase,
-            unitsPurchased: unitsPurchased,
+            lotsPurchased: lotsPurchased,
             purchaseTime: purchaseTime,
             // previousPurchaseTime: prevPurchaseTime,
             prevSalePace: prevSalePace,
@@ -117,17 +117,29 @@ struct DynamicSaleV1 {
     // updatedSettings: Option[DynamicSaleV1Settings]
     // updatedState: DynamicSaleV1State
 
-    func isRightPayment(self, payment: Value) -> Bool {
-        expected : Real = self.unitPriceForSale() * self.purchase.unitsPurchased;
-        actual : Real = payment.get_lovelace() / 1_000_000.0;
+    func isRightPayment(self, lotPrice: Value, payment: Value) -> Bool {
+        expectedPrice = self.lotPriceForSale();
+        actualPrice : Real = lotPrice.get_lovelace() / 1_000_000.0;
+        print("    ---- actual price " + actualPrice.show());
+        print("    ---- expected price " + expectedPrice.show());
+        diff : Real = (actualPrice - expectedPrice);
+        if (diff.abs() > 0.000002) {
+            error("incorrect lot price in redeemer")
+        } else if (diff.abs() > 0.0) {
+            print("  -- unit price is close enough, delta = "+diff.show())
+        };
+        // if the actual price is "close enough" to expected, then the expected payment is...
+        // the ACTUAL price * lot-count
+        expectedPayment : Real = actualPrice * self.purchase.lotsPurchased;
+        // todo: support non-ADA payments
+        actualPayment : Real = payment.get_lovelace() / 1_000_000.0;
         
-        print("    ---- expected payment " + expected.show());
-        print("    ---- actual payment " + actual.show() + " +/- 0.000002");
+        print("    ---- expected payment " + expectedPayment.show() + " +/- 0.000002");
+        print("    ---- actual payment " + actualPayment.show());
         assert(payment.get_assets().is_zero(), "non-ADA assets not yet supported here");
 
-    if ( (actual - expected).abs() > 0.000002) {
-            error("payment amount is not correct")
-        };
+        paymentDiff : Real = (actualPayment - expectedPayment);
+        assert(paymentDiff == 0.0, "payment amount is not correct")
         true
     }
 
@@ -143,7 +155,7 @@ struct DynamicSaleV1 {
     //     }
     // }
 
-    func unitPriceForSale(self) -> Real {
+    func lotPriceForSale(self) -> Real {
         // paceThisPurchase : Real = self.purchase.inferredPace(); // units / hours-since-last-purchase
         // targetPriceStr = self.settings.targetPrice.show(); /** todo: inline */
         targetPrice = self.settings.targetPrice;
@@ -153,14 +165,14 @@ struct DynamicSaleV1 {
         price: Real = targetPrice
             * self.pricingFactorOverallProgress()
             * self.pricingFactorDynamicPace();
-            print("    ---- unitPriceForSale - unclamped " + price.show());
+            print("    ---- lotPriceForSale - unclamped " + price.show());
 
         // clamp the price to min/max limits
         clamped : Real = minReal(
             maxReal(price, self.settings.minPrice),
             self.settings.maxPrice
         );
-        print("    -- unitPriceForSale: clamped = " + clamped.show());
+        print("    -- lotPriceForSale: clamped = " + clamped.show());
         clamped
     }
 
@@ -211,7 +223,7 @@ struct DynamicSaleV1 {
 
     func actualSellingPace(self) -> Real {
         t : Real = (
-            self.purchase.unitsPurchased
+            self.purchase.lotsPurchased
             + self.sale.v1details().saleState.progressDetails.lotsSold 
         ) / self.elapsedSaleHours();
         print("    ---- actualSellingPace " + t.show());
@@ -478,7 +490,7 @@ struct DynamicSaleV1 {
 // func mkSaleController(
 //     prevMktSale: MarketSaleData, 
 //     now: Time, 
-//     sellingUnitQuantity: Int,
+//     lotsPurchased: Int,
 //     updatedSale: Option[MarketSaleData] = Option[MarketSaleData]::None
 // ) -> DynamicSaleV1 {
 //     prevProgress : SaleProgressDetails = prevMktSale.progressDetails;
@@ -486,13 +498,13 @@ struct DynamicSaleV1 {
 //         lastPurchaseAt: now,
 //         prevPurchaseAt: prevProgress.lastPurchaseAt,
 //         lotCount: prevProgress.lotCount,
-//         lotsSold: prevProgress.lotsSold + sellingUnitQuantity
+//         lotsSold: prevProgress.lotsSold + lotsPurchased
 //     };
 //     prevPace : Real = prevMktSale.salePace;
 //     DynamicSaleV1{
 //         settings: prevMktSale.saleSettings,
 //         purchase: DTS_PurchaseInfo{
-//             unitsPurchased: sellingUnitQuantity,
+//             lotsPurchased: lotsPurchased,
 //             purchaseTime: now,
 //             previousPurchaseTime: prevProgress.lastPurchaseAt,
 //             prevSalePace: prevPace,

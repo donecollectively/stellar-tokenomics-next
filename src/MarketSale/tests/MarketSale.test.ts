@@ -156,11 +156,11 @@ describe("MarketSale plugin", async () => {
                 ) / BigInt(exampleData.details.V1.saleAssets.totalSaleLots)
             );
             expect(
-                mktSale.details.V1.saleAssets.saleUnitAssets.isEqual(
+                mktSale.details.V1.saleAssets.saleLotAssets.isEqual(
                     expectedSaleAsset
                 ),
-                `saleUnitAssets ${dumpAny(
-                    mktSale.details.V1.saleAssets.saleUnitAssets
+                `saleLotAssets ${dumpAny(
+                    mktSale.details.V1.saleAssets.saleLotAssets
                 )} should have the expected sale tokens:\n  ${dumpAny(
                     expectedSaleAsset
                 )}`
@@ -169,24 +169,21 @@ describe("MarketSale plugin", async () => {
             // expect(mktSale.totalTokenCount).toEqual(sampleMarketSale.totalTokenCount);
             // expect(mktSale.totalTokenCount).toEqual(sampleMarketSale.totalTokenCount);
             // expect(mktSale.minSaleSize).toEqual(sampleMarketSale.minSaleSize);
-            expect(mktSale.details.V1.saleAssets.singleBuyMaxUnits).toEqual(
-                exampleData.details.V1.saleAssets.singleBuyMaxUnits
+            expect(mktSale.details.V1.saleAssets.singleBuyMaxLots).toEqual(
+                exampleData.details.V1.saleAssets.singleBuyMaxLots
             );
             expect(mktSale.details.V1.threadInfo.nestedThreads).toEqual(0n);
             expect(mktSale.details.V1.threadInfo.retiredThreads).toEqual(0n);
             expect(mktSale.details.V1.threadInfo.parentChunkId).toEqual([]);
-            // expect(mktSale.currentUnitPrice).toEqual(
-            //     exampleData.currentUnitPrice
-            // );
         });
 
-        it("rejects creation when saleUnitAssets contains any tokens other than the primary asset", async (context: STOK_TC) => {
+        it("rejects creation when saleLotAssets contains any tokens other than the primary asset", async (context: STOK_TC) => {
             const { h } = context;
             await h.reusableBootstrap();
             const controller = await h.mktSaleDgt();
             const example = controller.exampleData();
 
-            const primaryPerUnit =
+            const primaryPerLot =
                 BigInt(example.details.V1.saleAssets.primaryAssetTargetCount) /
                 BigInt(example.details.V1.saleAssets.totalSaleLots);
 
@@ -197,10 +194,10 @@ describe("MarketSale plugin", async () => {
                         ...example.details.V1,
                         saleAssets: {
                             ...example.details.V1.saleAssets,
-                            saleUnitAssets: makeValue(
+                            saleLotAssets: makeValue(
                                 h.capo.mph,
                                 example.details.V1.saleAssets.primaryAssetName,
-                                primaryPerUnit
+                                primaryPerLot
                             ).add(
                                 makeValue(h.capo.mph, textToBytes("EXTRA"), 1n)
                             ),
@@ -210,7 +207,7 @@ describe("MarketSale plugin", async () => {
             };
 
             const creating = h.createMarketSale(badSale, { submit: true });
-            await expect(creating).rejects.toThrow(/saleUnitAssets.*primary/i);
+            await expect(creating).rejects.toThrow(/saleLotAssets.*primary/i);
         });
     });
 
@@ -332,7 +329,7 @@ describe("MarketSale plugin", async () => {
 
             const minting = h.mintAndAddAssets(mktSale, "KRILL", 999n);
             await expect(minting).rejects.toThrow(
-                "token count not divisible by total sale units"
+                "token count not divisible by total sale lots"
             );
         });
 
@@ -426,10 +423,10 @@ describe("MarketSale plugin", async () => {
         });
 
         it.todo(
-            "doesn't interfere with an unrelated, under-funded asset that's part of the sellingUnitAssets",
+            "doesn't interfere with an unrelated, under-funded asset that's part of the saleLotAssets",
             async (context: STOK_TC) => {
                 // if the sale has any asset mentioned, we ignore that other asset,
-                // while ensure that the new assets being added to the sellingUnitAssets are fully funded within the AddTokens transaction.
+                // while ensure that the new assets being added to the saleLotAssets are fully funded within the AddTokens transaction.
             }
         );
     });
@@ -496,7 +493,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        it("won't activate if saleUnitAssets expect extra tokens that aren't deposited", async (context: STOK_TC) => {
+        it("won't activate if saleLotAssets expect extra tokens that aren't deposited", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -504,8 +501,8 @@ describe("MarketSale plugin", async () => {
             const marketSale = await h.findFirstMarketSale();
             const mktSaleData = marketSale.data!;
 
-            const updatedSaleUnitAssets =
-                mktSaleData.details.V1.saleAssets.saleUnitAssets.add(
+            const updatedsaleLotAssets =
+                mktSaleData.details.V1.saleAssets.saleLotAssets.add(
                     makeValue(h.capo.mph, textToBytes("KRILL"), 1n)
                 );
 
@@ -522,7 +519,7 @@ describe("MarketSale plugin", async () => {
                             ...mktSaleData.details.V1,
                             saleAssets: {
                                 ...mktSaleData.details.V1.saleAssets,
-                                saleUnitAssets: updatedSaleUnitAssets,
+                                saleLotAssets: updatedsaleLotAssets,
                             },
                         },
                     },
@@ -778,7 +775,7 @@ describe("MarketSale plugin", async () => {
             await expect(buying).rejects.toThrow("sale not yet started");
         });
 
-        it("won't sell more than singleBuyMaxUnits, or less than 1 unit", async (context: STOK_TC) => {
+        it("won't sell more than singleBuyMaxLots, or less than 1 lot", async (context: STOK_TC) => {
             const {
                 h,
                 h: { network, actors, delay, state },
@@ -817,20 +814,20 @@ describe("MarketSale plugin", async () => {
 
             const buyExcessive = h.buyFromMktSale(
                 activeSale,
-                BigInt(exampleData.details.V1.saleAssets.singleBuyMaxUnits) +
+                BigInt(exampleData.details.V1.saleAssets.singleBuyMaxLots) +
                     1n,
-                "case 3: buying too many units FAILS",
+                "case 3: buying too many lots FAILS",
                 {
                     futureDate,
                     expectError: true,
                 }
             );
-            await expect(buyExcessive).rejects.toThrow("buy too many units");
+            await expect(buyExcessive).rejects.toThrow("buy too many lots");
 
             const buyingMax = await h.buyFromMktSale(
                 activeSale,
-                exampleData.details.V1.saleAssets.singleBuyMaxUnits,
-                "case 4: buying the max number of units WORKS",
+                exampleData.details.V1.saleAssets.singleBuyMaxLots,
+                "case 4: buying the max number of lots WORKS",
                 {
                     futureDate,
                 }
@@ -840,7 +837,7 @@ describe("MarketSale plugin", async () => {
             const buyingMin = await h.buyFromMktSale(
                 updatedSale,
                 1n,
-                "case 5: buying the min number of units WORKS",
+                "case 5: buying the min number of lots WORKS",
                 {
                     futureDate: new Date(futureDate.getTime() + 1000 * 60 * 13),
                 }
@@ -902,7 +899,7 @@ describe("MarketSale plugin", async () => {
         // })
     });
     describe("updates appropriate sale details as a result of each sale", () => {
-        it("updates the timestamps and units-sold", async (context: STOK_TC) => {
+        it("updates the timestamps and lots-sold", async (context: STOK_TC) => {
             const {
                 h,
                 h: { network, actors, delay, state },
@@ -986,7 +983,7 @@ describe("MarketSale plugin", async () => {
             ).toEqual(60n);
         });
 
-        it("fails if it changes the settings or unit-counts", async (context: STOK_TC) => {
+        it("fails if it changes the settings or lot-counts", async (context: STOK_TC) => {
             const {
                 h,
                 h: { network, actors, delay, state },
@@ -1001,7 +998,7 @@ describe("MarketSale plugin", async () => {
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
-            const borkedUnitCount = vi
+            const borkedlotCount = vi
                 .spyOn(delegate, "mkUpdatedProgressDetails")
                 .mockImplementation(function (progressDetails) {
                     return {
@@ -1014,9 +1011,9 @@ describe("MarketSale plugin", async () => {
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
-                "must not change chunk unit count"
+                "must not change chunk's lot count"
             );
-            borkedUnitCount.mockRestore();
+            borkedlotCount.mockRestore();
 
             const borkedSettings = vi
                 .spyOn(delegate, "mkUpdatedDetails")
@@ -1121,7 +1118,7 @@ describe("MarketSale plugin", async () => {
 
             await h.reusableBootstrap();
             await h.snapToFirstMarketSaleActivated();
-            // buys 26 units
+            // buys 26 lots
             const marketSale = await h.findFirstMarketSale();
             const futureDate = new Date(
                 // 1 day from now
@@ -1132,7 +1129,7 @@ describe("MarketSale plugin", async () => {
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
-                "attempted to buy too many units"
+                "attempted to buy too many lots"
             );
         });
     });
@@ -1245,8 +1242,8 @@ describe("MarketSale plugin", async () => {
                 updatedSale.data!.details.V1.saleAssets.totalSaleLots
             ).toEqual(expectedDetails.totalSaleLots);
             expect(
-                updatedSale.data!.details.V1.saleAssets.singleBuyMaxUnits
-            ).toEqual(expectedDetails.singleBuyMaxUnits);
+                updatedSale.data!.details.V1.saleAssets.singleBuyMaxLots
+            ).toEqual(expectedDetails.singleBuyMaxLots);
             expect(
                 updatedSale.data!.details.V1.saleAssets.primaryAssetTargetCount
             ).toEqual(expectedDetails.primaryAssetTargetCount);
@@ -1450,7 +1447,7 @@ describe("MarketSale plugin", async () => {
 
             const newtotalSaleLots = 2000n;
             const newPrimaryAssetTargetCount = 200_000_000n; // evenly divisible by 2000
-            const newSaleUnitAssets = makeValue(
+            const newsaleLotAssets = makeValue(
                 h.capo.mph,
                 exampleData.details.V1.saleAssets.primaryAssetName,
                 newPrimaryAssetTargetCount / newtotalSaleLots
@@ -1467,7 +1464,7 @@ describe("MarketSale plugin", async () => {
                                 totalSaleLots: newtotalSaleLots,
                                 primaryAssetTargetCount:
                                     newPrimaryAssetTargetCount,
-                                saleUnitAssets: newSaleUnitAssets,
+                                saleLotAssets: newsaleLotAssets,
                             },
                         },
                     },
@@ -1495,7 +1492,7 @@ describe("MarketSale plugin", async () => {
 
             const newtotalSaleLots = 2000n;
             const incorrectPrimaryAssetTargetCount = 200_000_001n; // not divisible by lot count
-            const newSaleUnitAssets = makeValue(
+            const newsaleLotAssets = makeValue(
                 h.capo.mph,
                 exampleData.details.V1.saleAssets.primaryAssetName,
                 100_000n // would require 200_000_000n target
@@ -1512,7 +1509,7 @@ describe("MarketSale plugin", async () => {
                                 totalSaleLots: newtotalSaleLots,
                                 primaryAssetTargetCount:
                                     incorrectPrimaryAssetTargetCount,
-                                saleUnitAssets: newSaleUnitAssets,
+                                saleLotAssets: newsaleLotAssets,
                             },
                         },
                     },
@@ -1526,7 +1523,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        it("saleUnitAssets MUST always contain the primary asset", async (context: STOK_TC) => {
+        it("saleLotAssets MUST always contain the primary asset", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1541,7 +1538,7 @@ describe("MarketSale plugin", async () => {
                             ...marketSale.data!.details.V1,
                             saleAssets: {
                                 ...marketSale.data!.details.V1.saleAssets,
-                                saleUnitAssets: makeValue(
+                                saleLotAssets: makeValue(
                                     h.capo.mph,
                                     textToBytes("KRILL"),
                                     1000n
@@ -1550,16 +1547,16 @@ describe("MarketSale plugin", async () => {
                         },
                     },
                 },
-                "dropping primary asset from saleUnitAssets",
+                "dropping primary asset from saleLotAssets",
                 { expectError: true }
             );
 
             await expect(updating).rejects.toThrow(
-                /missing primary token in saleUnitAssets/i
+                /missing primary token in saleLotAssets/i
             );
         });
 
-        it("if primaryAsset changes and old tokens aren't deposited, saleUnitAssets must not reference old primary token", async (context: STOK_TC) => {
+        it("if primaryAsset changes and old tokens aren't deposited, saleLotAssets must not reference old primary token", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1577,8 +1574,8 @@ describe("MarketSale plugin", async () => {
                             saleAssets: {
                                 ...marketSale.data!.details.V1.saleAssets,
                                 primaryAssetName: newPrimaryName,
-                                // incorrectly keep old primary reference in saleUnitAssets
-                                saleUnitAssets: makeValue(
+                                // incorrectly keep old primary reference in saleLotAssets
+                                saleLotAssets: makeValue(
                                     h.capo.mph,
                                     marketSale.data!.details.V1.saleAssets
                                         .primaryAssetName,
@@ -1590,12 +1587,12 @@ describe("MarketSale plugin", async () => {
                         },
                     },
                 },
-                "changing primary but still referencing old primary in saleUnitAssets",
+                "changing primary but still referencing old primary in saleLotAssets",
                 { expectError: true }
             );
 
             await expect(updating).rejects.toThrow(
-                /saleUnitAssets has old primary tokens remaining/i
+                /saleLotAssets has old primary tokens remaining/i
             );
         });
 
@@ -1609,9 +1606,9 @@ describe("MarketSale plugin", async () => {
 
             const tcx = h.capo.mkTcx("update that changes value");
             const tcx2 = mktSaleDgt.mkTxnUpdateRecord(
-                "update that changes value",
                 marketSale,
                 {
+                    txnName: "update that changes value",
                     activity:
                         mktSaleDgt.activity.SpendingActivities.UpdatingPendingSale(
                             marketSale.data!.id
@@ -1637,7 +1634,7 @@ describe("MarketSale plugin", async () => {
             );
         });
 
-        it("if old primary tokens exist in UTxO, saleUnitAssets must reference them with per-unit count ≥ depositedTokens/totalSaleLots", async (context: STOK_TC) => {
+        it("if old primary tokens exist in UTxO, saleLotAssets must reference them with per-lot count ≥ depositedTokens/totalSaleLots", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
@@ -1662,8 +1659,8 @@ describe("MarketSale plugin", async () => {
                             saleAssets: {
                                 ...marketSale.data!.details.V1.saleAssets,
                                 primaryAssetName: newPrimaryName,
-                                // Incorrectly drop reference to old primary in saleUnitAssets
-                                saleUnitAssets: makeValue(
+                                // Incorrectly drop reference to old primary in saleLotAssets
+                                saleLotAssets: makeValue(
                                     h.capo.mph,
                                     newPrimaryName,
                                     1000n

@@ -38,7 +38,7 @@ struct SaleProgressDetailsV1 {
         self, 
         prevProgress: SaleProgressDetailsV1, 
         now: Time,
-        unitsSold: Int
+        lotsSold: Int
     ) -> Bool {
         logGroup("SaleProgressDetails: validateUpdatedDetails()", false, () -> Bool {
             bREQTgroup("Updates last-purchase-time to the current tx time", false, () -> Bool {
@@ -64,14 +64,14 @@ struct SaleProgressDetailsV1 {
                 true
             })
 
-            && bREQTgroup("Updates lotsSold to include the new units being purchased", false, () -> Bool {
+            && bREQTgroup("Updates lotsSold to include the new lots being purchased", false, () -> Bool {
                 prevLotsSoldStr = prevProgress.lotsSold.show(); /** todo: inline */
-                print("   ----  prev unitsSold: " + prevLotsSoldStr);
+                print("   ----  prev lotsSold: " + prevLotsSoldStr);
                 lotsSoldStr = self.lotsSold.show(); /** todo: inline */
-                print("   ----  unitsSold: " + lotsSoldStr);
+                print("   ----  lotsSold: " + lotsSoldStr);
                 assert(
                     (
-                        self.lotsSold == prevProgress.lotsSold + unitsSold
+                        self.lotsSold == prevProgress.lotsSold + lotsSold
                     ),
                     "lotsSold not updated correctly"
                 )
@@ -79,10 +79,10 @@ struct SaleProgressDetailsV1 {
                 true
             }) 
 
-            && bREQTgroup("Ensures the total number of units available for purchase is unchanged", false, () -> Bool {
+            && bREQTgroup("Ensures the total number of lots available for purchase is unchanged", false, () -> Bool {
                 assert(
                     (self.lotCount == prevProgress.lotCount),
-                    "must not change chunk unit count"
+                    "must not change chunk's lot count"
                 )
                 print("✔ lotCount unchanged OK")
                 true

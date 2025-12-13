@@ -813,8 +813,8 @@ export interface FixedSaleDetailsV1Like {
  * @public
  */
 export interface SaleAssetsV1 {
-    saleUnitAssets: /*minStructField*/ Value
-    singleBuyMaxUnits: /*minStructField*/ bigint
+    saleLotAssets: /*minStructField*/ Value
+    singleBuyMaxLots: /*minStructField*/ bigint
     primaryAssetMph: /*minStructField*/ MintingPolicyHash
     primaryAssetName: /*minStructField*/ number[]
     primaryAssetTargetCount: /*minStructField*/ bigint
@@ -840,8 +840,8 @@ export type ErgoSaleAssetsV1 = SaleAssetsV1/*like canon-other*/
  * @public
  */
 export interface SaleAssetsV1Like {
-    saleUnitAssets: /*minStructField*/ Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {mph: MintingPolicyHash | string | number[], tokens: {name: number[] | string, qty: IntLike}[]}[]
-    singleBuyMaxUnits: /*minStructField*/ IntLike
+    saleLotAssets: /*minStructField*/ Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {mph: MintingPolicyHash | string | number[], tokens: {name: number[] | string, qty: IntLike}[]}[]
+    singleBuyMaxLots: /*minStructField*/ IntLike
     primaryAssetMph: /*minStructField*/ MintingPolicyHash | string | number[]
     primaryAssetName: /*minStructField*/ number[]
     primaryAssetTargetCount: /*minStructField*/ IntLike
@@ -1874,7 +1874,7 @@ export interface SpendingActivity$AddingToSaleLike {
  */
 export interface SpendingActivity$SellingTokens {
     id: number[]  /*minVariantField*/ ,
-    sellingUnitQuantity: bigint  /*minVariantField*/ ,
+    lotsPurchased: bigint  /*minVariantField*/ ,
     salePrice: Value  /*minVariantField*/ 
 }
 
@@ -1898,7 +1898,7 @@ export type SpendingActivity$Ergo$SellingTokens = SpendingActivity$SellingTokens
  */
 export interface SpendingActivity$SellingTokensLike {
     id: number[]  /*minVariantField*/ ,
-    sellingUnitQuantity: IntLike  /*minVariantField*/ ,
+    lotsPurchased: IntLike  /*minVariantField*/ ,
     salePrice: Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {mph: MintingPolicyHash | string | number[], tokens: {name: number[] | string, qty: IntLike}[]}[]  /*minVariantField*/ 
 }
 
@@ -2063,7 +2063,7 @@ export type SpendingActivityLike = IntersectedEnum<
 export interface MintingActivity$SplittingSaleChunkAndBuying {
     seed: TxOutputId  /*minVariantField*/ ,
     parentChunkId: string  /*minVariantField*/ ,
-    buyingUnitQuantity: bigint  /*minVariantField*/ 
+    lotsPurchased: bigint  /*minVariantField*/ 
 }
 
 
@@ -2087,7 +2087,7 @@ export type MintingActivity$Ergo$SplittingSaleChunkAndBuying = MintingActivity$S
 export interface MintingActivity$SplittingSaleChunkAndBuyingLike {
     seed: TxOutputId | string  /*minVariantField*/ ,
     parentChunkId: string  /*minVariantField*/ ,
-    buyingUnitQuantity: IntLike  /*minVariantField*/ 
+    lotsPurchased: IntLike  /*minVariantField*/ 
 }
 
 
@@ -3739,7 +3739,7 @@ export type minimalDgDataDetails = minimalData<DgDataDetailsLike>
 export interface DTS_PurchaseInfo {
     inferredPace: /*minStructField*/ number
     hoursSinceLastPurchase: /*minStructField*/ number
-    unitsPurchased: /*minStructField*/ bigint
+    lotsPurchased: /*minStructField*/ bigint
     purchaseTime: /*minStructField*/ number
     prevSalePace: /*minStructField*/ number
     totalProgress: /*minStructField*/ SaleProgressDetailsV1
@@ -3758,7 +3758,7 @@ export interface DTS_PurchaseInfo {
 export type ErgoDTS_PurchaseInfo = {
     inferredPace: /*minStructField*/ number
     hoursSinceLastPurchase: /*minStructField*/ number
-    unitsPurchased: /*minStructField*/ bigint
+    lotsPurchased: /*minStructField*/ bigint
     purchaseTime: /*minStructField*/ number
     prevSalePace: /*minStructField*/ number
     totalProgress: /*minStructField*/ ErgoSaleProgressDetailsV1
@@ -3774,7 +3774,7 @@ export type ErgoDTS_PurchaseInfo = {
 export interface DTS_PurchaseInfoLike {
     inferredPace: /*minStructField*/ number
     hoursSinceLastPurchase: /*minStructField*/ number
-    unitsPurchased: /*minStructField*/ IntLike
+    lotsPurchased: /*minStructField*/ IntLike
     purchaseTime: /*minStructField*/ TimeLike
     prevSalePace: /*minStructField*/ number
     totalProgress: /*minStructField*/ SaleProgressDetailsV1Like

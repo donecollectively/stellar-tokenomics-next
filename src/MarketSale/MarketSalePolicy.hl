@@ -158,7 +158,7 @@ enum MintingActivity {
     SplittingSaleChunkAndBuying {
         seed: TxOutputId
         parentChunkId: String
-        buyingUnitQuantity: Int
+        lotsPurchased: Int
     }
 }
 
@@ -180,7 +180,7 @@ enum SpendingActivity {
     }
     SellingTokens {
         id: ByteArray
-        sellingUnitQuantity: Int
+        lotsPurchased: Int
         salePrice: Value
     }
     MergingChildChunk {
@@ -407,11 +407,11 @@ enum DelegateActivity {
                     && updated.validateActivating(newValue, mktSaleDD)
                     && true
                 }), 
-                SellingTokens { recId, sellingUnitQuantity, unitSellPrice : Value } => logGroup("SellingTokens:", false, () -> Bool {
+                SellingTokens { recId, lotsPurchased, lotSellPrice : Value } => logGroup("SellingTokens:", false, () -> Bool {
                     assert(cctx.withCharterRef().orFail(), "can't");
 
                     mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: recId);
-                    // print("SellingTokens: x" + sellingUnitQuantity.show() );
+                    // print("SellingTokens: x" + lotsPurchased.show() );
                     // print("               ^^"+  recId.show());
 
                     // gets the previous MarketSaleData record
@@ -440,9 +440,9 @@ enum DelegateActivity {
                         "sale not yet started"
                     );
 
-                    assert(sellingUnitQuantity > 0, "must sell at least one unit");
-                    assert(sellingUnitQuantity <= previous.v1details().saleAssets.singleBuyMaxUnits, 
-                        "attempted to buy too many units"
+                    assert(lotsPurchased > 0, "must sell at least one lot");
+                    assert(lotsPurchased <= previous.v1details().saleAssets.singleBuyMaxLots, 
+                        "attempted to buy too many lots"
                     );
                     prevProgress = previous.v1details().saleState.progressDetails;
                     nextProgress = updated.v1details().saleState.progressDetails;
@@ -451,19 +451,19 @@ enum DelegateActivity {
                     oldValue : Value = mktSaleDD.input().value;
                     newValue : Value = mktSaleDD.output().value;
 
-                    purchasedTokens : Value = previous.v1details().saleAssets.saleUnitAssets * sellingUnitQuantity;
+                    purchasedTokens : Value = previous.v1details().saleAssets.saleLotAssets * lotsPurchased;
 
                     totalProgress = SaleProgressDetailsV1{
                         lastPurchaseAt: nowRange.start,
                         prevPurchaseAt: prevProgress.lastPurchaseAt,
                         lotCount: nextProgress.lotCount,
-                        lotsSold: prevProgress.lotsSold + sellingUnitQuantity
+                        lotsSold: prevProgress.lotsSold + lotsPurchased
                     };
 
                     pricingStrategy = DynamicSaleV1{
                         settings: previous.v1details().fixedSaleDetails.settings,
                         purchase: DTS_PurchaseInfo::create(
-                            unitsPurchased: sellingUnitQuantity,
+                            lotsPurchased: lotsPurchased,
                             purchaseTime: nowRange.start,
                             prevPurchaseTime: prevProgress.lastPurchaseAt,
                             prevSalePace: previous.v1details().saleState.salePace,
@@ -476,13 +476,13 @@ enum DelegateActivity {
                     };
                     
                     // print("ok pricing strategy");
-                    // unitPrice : Real = pricingStrategy.getUnitPrice();
-                    // print("  -- unitPrice: " + unitPrice.show());
+                    // lotPrice : Real = pricingStrategy.getlotPrice();
+                    // print("  -- lotPrice: " + lotPrice.show());
 
                     // costForPurchase : Value = Value::lovelace( 
                     //     (
                     //         // delegate this to the selected pricing strategy!
-                    //         unitPrice * sellingUnitQuantity
+                    //         lotPrice * lotsPurchased
                     //         * 1_000_000
                     //     ).floor()
                     // );
@@ -505,9 +505,9 @@ enum DelegateActivity {
                     
                     assertREQTgroup("Matches redeemer payment with paid value", false, () -> Bool {
                         print("  -- paidValue: "+ paidValue.show());
-                        print("  -- unitSellPrice: "+ unitSellPrice.show());
-                        print("  -- sellingUnitQuantity: "+ sellingUnitQuantity.show());
-                        expectedPayment = unitSellPrice * sellingUnitQuantity;
+                        print("  -- lotSellPrice: "+ lotSellPrice.show());
+                        print("  -- lotsPurchased: "+ lotsPurchased.show());
+                        expectedPayment = lotSellPrice * lotsPurchased;
                         print("  -- expected payment: "+ expectedPayment.show());
                         print("  -- actual payment: "+ paidValue.show());
 
@@ -520,12 +520,12 @@ enum DelegateActivity {
                     && nextProgress.validateUpdatedDetails(
                         prevProgress, 
                         nowRange.start, 
-                        sellingUnitQuantity
+                        lotsPurchased
                     ).trace("details updated correctly? ")
                     && bREQT("ensures the sale record is updated with dynamic sale details")
                     && pricingStrategy.validateUpdatedDetails()
                     && bREQT("Requires payment according to the dynamic pricing strategy")
-                    && pricingStrategy.isRightPayment(paidValue).trace("  -- right payment? ")
+                    && pricingStrategy.isRightPayment(lotSellPrice, paidValue).trace("  -- right payment? ")
                     // && costForPurchase.contains(paidValue).trace("payment correct and tokens distributed? ")
                     && true
                 }),
@@ -608,10 +608,10 @@ enum DelegateActivity {
 }
 
 
-// func getUnitPrice(mktSale: OutputDatum::Inline, now: Time, sellingUnitQuantity: Int) -> Real {
+// func getlotPrice(mktSale: OutputDatum::Inline, now: Time, lotsPurchased: Int) -> Real {
 //     mkPricingStrategy(
 //         MarketSaleData::from_data(mktSale.data), 
 //         now, 
-//         sellingUnitQuantity
-//     ).getUnitPrice()
+//         lotsPurchased
+//     ).getlotPrice()
 // }
