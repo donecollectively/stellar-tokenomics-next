@@ -5,7 +5,12 @@ import {
     capoConfigurationDetails,
 } from "@donecollectively/stellar-contracts";
 
-export class MarketSaleCapoBundle extends StellarTokenomicsCapoBundle {
+
+
+
+export class MarketSaleCapoBundle 
+extends StellarTokenomicsCapoBundle {
+    static isAbstract = false;
     preConfigured = capoConfigurationDetails
     
     get modules(): Source[] {
