@@ -9,7 +9,7 @@ import { ContractDataBridge, DataBridge, DataBridgeReaderClass, EnumBridge, type
  * @public
  */
 export type TimeLike = IntLike;
-import type { AnyData, AnyDataLike, DelegateDatum$Ergo$Cip68RefToken, DelegateDatum$Cip68RefTokenLike, DelegationDetail, ErgoDelegationDetail, DelegationDetailLike, RelativeDelegateLink, RelativeDelegateLinkLike, VxfExpectedActivity$SpecificRedeemerIdLike, VxfExpectedActivity$TaggedRedeemerLike, VxfExpectedActivity, ErgoVxfExpectedActivity, VxfDestination$RelativeLinkLike, VxfDestination$AnyTokenHolderLike, VxfDestination, ErgoVxfDestination, VxfDestinationLike, VestingState$PausedLike, VestingState$ClosedLike, VestingState, ErgoVestingState, VestingStateLike, VestingDetails$OnceLike, VestingFrequency$IntervalLike, VestingFrequency, ErgoVestingFrequency, VestingFrequencyLike, VestingProgress, VestingProgressLike, VestingDetails$StraightLineLike, VestingDetails$SimpleContingencyLike, VestingDetails, ErgoVestingDetails, VestingDetailsLike, VestingData, VestingDataLike, DelegateDatum$Ergo$capoStoredData, DelegateDatum$capoStoredDataLike, DelegateDatum, ErgoDelegateDatum, CapoLifecycleActivity$CreatingDelegateLike, DelegateRole, ErgoDelegateRole, DelegateRoleLike, CapoLifecycleActivity$forcingNewSpendDelegateLike, CapoLifecycleActivity$forcingNewMintDelegateLike, ManifestActivity$updatingEntryLike, ManifestActivity$addingEntryLike, ManifestActivity$forkingThreadTokenLike, ManifestActivity$burningThreadTokenLike, ManifestActivity, ErgoManifestActivity, ManifestActivityLike, CapoLifecycleActivity, ErgoCapoLifecycleActivity, CapoLifecycleActivityLike, DelegateLifecycleActivity$ReplacingMeLike, DelegateLifecycleActivity, ErgoDelegateLifecycleActivity, DelegateLifecycleActivityLike, SpendingActivity$WithdrawingLike, SpendingActivity, ErgoSpendingActivity, SpendingActivityLike, ErgoMintingActivity, MintingActivityLike, ErgoBurningActivity, BurningActivityLike, DelegateActivity$CreatingDelegatedDataLike, DelegateActivity$UpdatingDelegatedDataLike, DelegateActivity$DeletingDelegatedDataLike, DelegateActivity, ErgoDelegateActivity, PendingDelegateAction$AddLike, PendingDelegateAction$ReplaceLike, PendingDelegateAction, ErgoPendingDelegateAction, PendingDelegateActionLike, PendingDelegateChange, PendingDelegateChangeLike, ManifestEntryType$DgDataPolicyLike, ManifestEntryType$DelegateThreadsLike, ManifestEntryType, ErgoManifestEntryType, ManifestEntryTypeLike, CapoManifestEntry, CapoManifestEntryLike, PendingCharterChange$otherManifestChangeLike, PendingCharterChange, ErgoPendingCharterChange, CapoDatum$CharterDataLike, cctx_CharterInputType$RefInputLike, cctx_CharterInputType$InputLike, cctx_CharterInputType, Ergocctx_CharterInputType, cctx_CharterInputTypeLike, CapoCtx, CapoCtxLike, dgd_DataSrc$BothLike, dgd_DataSrc, Ergodgd_DataSrc, dgd_DataSrcLike, AbstractDelegateActivitiesEnum$CreatingDelegatedDataLike, AbstractDelegateActivitiesEnum$UpdatingDelegatedDataLike, AbstractDelegateActivitiesEnum$DeletingDelegatedDataLike, AbstractDelegateActivitiesEnum, ErgoAbstractDelegateActivitiesEnum, AbstractDelegateActivitiesEnumLike, DgDataDetails, DgDataDetailsLike } from "./Vesting.generic.typeInfo.js";
+import type { AnyData, ErgoAnyData, AnyDataLike, DelegateDatum$Ergo$Cip68RefToken, DelegateDatum$Cip68RefTokenLike, DelegationDetail, ErgoDelegationDetail, DelegationDetailLike, RelativeDelegateLink, ErgoRelativeDelegateLink, RelativeDelegateLinkLike, VxfExpectedActivity$SpecificRedeemerIdLike, VxfExpectedActivity$TaggedRedeemerLike, VxfExpectedActivity, ErgoVxfExpectedActivity, VxfDestination$RelativeLinkLike, VxfDestination$AnyTokenHolderLike, VxfDestination, ErgoVxfDestination, VxfDestinationLike, VestingState$PausedLike, VestingState$ClosedLike, VestingState, ErgoVestingState, VestingStateLike, VestingDetails$OnceLike, VestingFrequency$IntervalLike, VestingFrequency, ErgoVestingFrequency, VestingFrequencyLike, VestingProgress, ErgoVestingProgress, VestingProgressLike, VestingDetails$StraightLineLike, VestingDetails$SimpleContingencyLike, VestingDetails, ErgoVestingDetails, VestingDetailsLike, VestingData, ErgoVestingData, VestingDataLike, DelegateDatum$Ergo$capoStoredData, DelegateDatum$capoStoredDataLike, DelegateDatum, ErgoDelegateDatum, CapoLifecycleActivity$CreatingDelegateLike, DelegateRole, ErgoDelegateRole, DelegateRoleLike, CapoLifecycleActivity$forcingNewSpendDelegateLike, CapoLifecycleActivity$forcingNewMintDelegateLike, ManifestActivity$updatingEntryLike, ManifestActivity$addingEntryLike, ManifestActivity$forkingThreadTokenLike, ManifestActivity$burningThreadTokenLike, ManifestActivity, ErgoManifestActivity, ManifestActivityLike, CapoLifecycleActivity, ErgoCapoLifecycleActivity, CapoLifecycleActivityLike, DelegateLifecycleActivity$ReplacingMeLike, DelegateLifecycleActivity, ErgoDelegateLifecycleActivity, DelegateLifecycleActivityLike, SpendingActivity$WithdrawingLike, SpendingActivity, ErgoSpendingActivity, SpendingActivityLike, ErgoMintingActivity, MintingActivityLike, ErgoBurningActivity, BurningActivityLike, DelegateActivity$CreatingDelegatedDataLike, DelegateActivity$UpdatingDelegatedDataLike, DelegateActivity$DeletingDelegatedDataLike, DelegateActivity, ErgoDelegateActivity, PendingDelegateAction$AddLike, PendingDelegateAction$ReplaceLike, PendingDelegateAction, ErgoPendingDelegateAction, PendingDelegateActionLike, PendingDelegateChange, ErgoPendingDelegateChange, PendingDelegateChangeLike, ManifestEntryType$DgDataPolicyLike, ManifestEntryType$DelegateThreadsLike, ManifestEntryType, ErgoManifestEntryType, ManifestEntryTypeLike, CapoManifestEntry, ErgoCapoManifestEntry, CapoManifestEntryLike, PendingCharterChange$otherManifestChangeLike, PendingCharterChange, ErgoPendingCharterChange, CapoDatum$CharterDataLike, cctx_CharterInputType$RefInputLike, cctx_CharterInputType$InputLike, cctx_CharterInputType, Ergocctx_CharterInputType, cctx_CharterInputTypeLike, CapoCtx, ErgoCapoCtx, CapoCtxLike, dgd_DataSrc$BothLike, dgd_DataSrc, Ergodgd_DataSrc, dgd_DataSrcLike, AbstractDelegateActivitiesEnum$CreatingDelegatedDataLike, AbstractDelegateActivitiesEnum$UpdatingDelegatedDataLike, AbstractDelegateActivitiesEnum$DeletingDelegatedDataLike, AbstractDelegateActivitiesEnum, ErgoAbstractDelegateActivitiesEnum, AbstractDelegateActivitiesEnumLike, DgDataDetails, ErgoDgDataDetails, DgDataDetailsLike } from "./Vesting.generic.typeInfo.js";
 export type * as types from "./Vesting.generic.typeInfo.js";
 /**
  * GENERATED data bridge for **BasicDelegate** script (defined in class ***GenericVestingBundle***)
@@ -556,7 +556,8 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
     AbstractDelegateActivitiesEnum(d: UplcData): ErgoAbstractDelegateActivitiesEnum;
     /**
         * reads UplcData *known to fit the **AnyData*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * AnyData or AnyDataLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -568,10 +569,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    AnyData(d: UplcData): AnyData;
+    AnyData(d: UplcData): ErgoAnyData;
     /**
         * reads UplcData *known to fit the **DelegationDetail*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * DelegationDetail or DelegationDetailLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -583,10 +585,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    DelegationDetail(d: UplcData): DelegationDetail;
+    DelegationDetail(d: UplcData): ErgoDelegationDetail;
     /**
         * reads UplcData *known to fit the **RelativeDelegateLink*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * RelativeDelegateLink or RelativeDelegateLinkLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -598,10 +601,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    RelativeDelegateLink(d: UplcData): RelativeDelegateLink;
+    RelativeDelegateLink(d: UplcData): ErgoRelativeDelegateLink;
     /**
         * reads UplcData *known to fit the **VestingProgress*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * VestingProgress or VestingProgressLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -613,10 +617,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    VestingProgress(d: UplcData): VestingProgress;
+    VestingProgress(d: UplcData): ErgoVestingProgress;
     /**
         * reads UplcData *known to fit the **VestingData*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * VestingData or VestingDataLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -628,10 +633,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    VestingData(d: UplcData): VestingData;
+    VestingData(d: UplcData): ErgoVestingData;
     /**
         * reads UplcData *known to fit the **PendingDelegateChange*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * PendingDelegateChange or PendingDelegateChangeLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -643,10 +649,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    PendingDelegateChange(d: UplcData): PendingDelegateChange;
+    PendingDelegateChange(d: UplcData): ErgoPendingDelegateChange;
     /**
         * reads UplcData *known to fit the **CapoManifestEntry*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * CapoManifestEntry or CapoManifestEntryLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -658,10 +665,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    CapoManifestEntry(d: UplcData): CapoManifestEntry;
+    CapoManifestEntry(d: UplcData): ErgoCapoManifestEntry;
     /**
         * reads UplcData *known to fit the **CapoCtx*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * CapoCtx or CapoCtxLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -673,10 +681,11 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    CapoCtx(d: UplcData): CapoCtx;
+    CapoCtx(d: UplcData): ErgoCapoCtx;
     /**
         * reads UplcData *known to fit the **DgDataDetails*** struct type,
-        * for the BasicDelegate script.
+        * for the BasicDelegate script.  You may choose to recast this data to
+        * DgDataDetails or DgDataDetailsLike
         * #### Standard WARNING
         *
         * This is a low-level data-reader for use in ***advanced development scenarios***.
@@ -688,7 +697,7 @@ export declare class VestingPolicyDataBridgeReader extends DataBridgeReaderClass
         * It may throw an error, or it may throw no error, but return a value that
         * causes some error later on in your code, when you try to use it.
         */
-    DgDataDetails(d: UplcData): DgDataDetails;
+    DgDataDetails(d: UplcData): ErgoDgDataDetails;
 }
 /**
  * Helper class for generating UplcData for the struct ***AnyData*** type.

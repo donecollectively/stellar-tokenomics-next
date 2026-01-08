@@ -16,7 +16,7 @@ const stmdbBase = MintSpendDelegateBundle.usingCapoBundleClass(
 class STokMintDelegateBundle extends stmdbBase {
   precompiledScriptDetails = {
     singleton: {
-      scriptHash: "3207d0299d6c9ddbb1cbc4384ac2621939da3adb1e577b1e85a82b54",
+      scriptHash: "eb3f766bd92ca35eb7f36d6255273fdb33924393b8f5a6e10269f16f",
       config: { "rev": "1", "delegateName": "STokMintDelegate", "isMintDelegate": true, "isSpendDelegate": true, "isDgDataPolicy": false, "requiresGovAuthority": true }
     }
   };

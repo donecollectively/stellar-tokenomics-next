@@ -179,7 +179,7 @@ class StellarTokenomicsCapo extends Capo {
     if (!charterData) {
       charterData = await this.findCharterData();
     }
-    return this.getDgDataController("Agreement", {
+    return this.getDgDataController("mktSale", {
       charterData
     });
   }
@@ -416,11 +416,12 @@ class MarketSaleDataWrapper {
     this.controller = controller;
     this.capo = capo;
   }
+  // !!! this class is ONLY used for computations, not as a read/write wrapper
   unwrapData() {
     return this.data;
   }
-  getUnitPrice(pCtx) {
-    return this.getDynamicUnitPrice(pCtx);
+  getLotPrice(pCtx) {
+    return this.getDynamicLotPrice(pCtx);
   }
   // hasDynamicPrice(x: MarketSaleData): x is MarketSaleData & {
   //     saleStrategy: DynamicPriceSettings;
@@ -428,8 +429,8 @@ class MarketSaleDataWrapper {
   // } {
   //     return (x.saleStrategy as any).dynaPaceFasterSaleWeight !== undefined;
   // }
-  getDynamicUnitPrice(pCtx) {
-    const { prevSale: sale, now, unitCount } = pCtx;
+  getDynamicLotPrice(pCtx) {
+    const { prevSale: sale, now, lotCount } = pCtx;
     const s = sale.data.details.V1.fixedSaleDetails.settings;
     console.log("    ---- targetPrice", s.targetPrice);
     const a = realMul(
@@ -437,13 +438,13 @@ class MarketSaleDataWrapper {
       this.pricingFactorOverallProgress(pCtx)
     );
     console.log(
-      "    ---- unitPriceForSale: targetPrice * pricingFactorOverallProgress =",
+      "    ---- lotPriceForSale: targetPrice * pricingFactorOverallProgress =",
       a
     );
-    const price = realMul(a, this.pricingFactorDynamicPace(pCtx));
-    console.log("    ---- unitPriceForSale - unclamped", price);
+    const price = toFixedReal(realMul(a, this.pricingFactorDynamicPace(pCtx)));
+    console.log("    ---- lotPriceForSale - unclamped", price);
     const result = Math.min(Math.max(price, s.minPrice), s.maxPrice);
-    console.log("    ---- unitPriceForSale - clamped", result);
+    console.log("    ---- lotPriceForSale - clamped", result);
     return result;
   }
   pricingFactorOverallProgress(pCtx) {
@@ -494,9 +495,9 @@ class MarketSaleDataWrapper {
   targetSellingPace(pCtx) {
     const { prevSale: sale } = pCtx;
     const s = sale.data.details.V1.fixedSaleDetails.settings;
-    const { chunkUnitCount } = sale.data.details.V1.saleState.progressDetails;
+    const { lotCount } = sale.data.details.V1.saleState.progressDetails;
     const tsp = realDiv(
-      Number(chunkUnitCount),
+      Number(lotCount),
       realDiv(Number(s.targetedSellingTime), 60 * 60 * 1e3)
     );
     console.log("    ---- targetSellingPace", tsp);
@@ -580,10 +581,10 @@ class MarketSaleDataWrapper {
     return oppp;
   }
   actualSellingPace(pCtx) {
-    const unitsPurchased = pCtx.unitCount;
-    const alreadySold = pCtx.prevSale.data.details.V1.saleState.progressDetails.chunkUnitsSold;
+    const lotsPurchased = pCtx.lotCount;
+    const alreadySold = pCtx.prevSale.data.details.V1.saleState.progressDetails.lotsSold;
     const sp = realDiv(
-      Number(unitsPurchased) + Number(alreadySold),
+      Number(lotsPurchased) + Number(alreadySold),
       this.elapsedSaleHours(pCtx)
     );
     console.log("    ---- actualSellingPace", sp);
@@ -624,7 +625,7 @@ class MarketSaleDataWrapper {
   inferredPace(pCtx) {
     debugger;
     const ip = realDiv(
-      Number(pCtx.unitCount),
+      Number(pCtx.lotCount),
       this.hoursSinceLastPurchase(pCtx)
     );
     console.log("    ---- inferredPace", ip);
@@ -2280,6 +2281,15 @@ let SpendingActivityHelper$1 = class SpendingActivityHelper extends EnumBridge {
   }
   /*multiFieldVariant enum accessor*/
   /**
+   * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPendingSale"***
+   */
+  UpdatingPendingSale(id) {
+    const uplc = this.mkUplcData({
+      UpdatingPendingSale: id
+    }, "MarketSalePolicy::SpendingActivity.UpdatingPendingSale");
+    return uplc;
+  }
+  /**
    * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.Activating"***
    */
   Activating(id) {
@@ -2385,7 +2395,7 @@ let MintingActivityHelper$1 = class MintingActivityHelper extends EnumBridge {
   /*multiFieldVariant/seeded enum accessor*/
   /**
    * generates  UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***, 
-   * @param fields - \{ parentChunkId: string, buyingUnitQuantity: IntLike \}
+   * @param fields - \{ parentChunkId: string, lotsPurchased: IntLike \}
    * @remarks
   * ##### Seeded activity
   * This activity  uses the pattern of spending a utxo to provide a uniqueness seed.
@@ -2394,7 +2404,7 @@ let MintingActivityHelper$1 = class MintingActivityHelper extends EnumBridge {
    * provided implicitly by a SeedActivity-supporting library function. 
    *
    * #### Usage
-   *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, buyingUnitQuantity })`
+   *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, lotsPurchased })`
     *       method with the indicated (non-seed) details.
    *   2. Use the resulting activity in a seed-providing context, such as the delegated-data-controller's
    *       `mkTxnCreateRecord({activity})` method.
@@ -2947,6 +2957,20 @@ let SpendingActivityHelperNested$1 = class SpendingActivityHelperNested extends 
   }
   /*multiFieldVariant enum accessor*/
   /**
+   * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPendingSale"***
+  * @remarks
+  * #### Nested activity: 
+  * this is connected to a nested-activity wrapper, so the details are piped through 
+  * the parent's uplc-encoder, producing a single uplc object with 
+  * a complete wrapper for this inner activity detail.
+   */
+  UpdatingPendingSale(id) {
+    const uplc = this.mkUplcData({
+      UpdatingPendingSale: id
+    }, "MarketSalePolicy::SpendingActivity.UpdatingPendingSale");
+    return uplc;
+  }
+  /**
    * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.Activating"***
   * @remarks
   * #### Nested activity: 
@@ -3078,7 +3102,7 @@ let MintingActivityHelperNested$1 = class MintingActivityHelperNested extends En
   /*multiFieldVariant/seeded enum accessor*/
   /**
    * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***, 
-   * @param fields - \{ parentChunkId: string, buyingUnitQuantity: IntLike \}
+   * @param fields - \{ parentChunkId: string, lotsPurchased: IntLike \}
    * @remarks
   * ##### Seeded activity
   * This activity  uses the pattern of spending a utxo to provide a uniqueness seed.
@@ -3087,7 +3111,7 @@ let MintingActivityHelperNested$1 = class MintingActivityHelperNested extends En
    * provided implicitly by a SeedActivity-supporting library function. 
    *
    * #### Usage
-   *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, buyingUnitQuantity })`
+   *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, lotsPurchased })`
     *       method with the indicated (non-seed) details.
    *   2. Use the resulting activity in a seed-providing context, such as the delegated-data-controller's
    *       `mkTxnCreateRecord({activity})` method.
@@ -3818,14 +3842,14 @@ const SaleProgressDetailsV1Schema = {
       }
     },
     {
-      "name": "chunkUnitCount",
+      "name": "lotCount",
       "type": {
         "kind": "internal",
         "name": "Int"
       }
     },
     {
-      "name": "chunkUnitsSold",
+      "name": "lotsSold",
       "type": {
         "kind": "internal",
         "name": "Int"
@@ -3897,14 +3921,14 @@ const OtherSaleStateV1Schema = {
             }
           },
           {
-            "name": "chunkUnitCount",
+            "name": "lotCount",
             "type": {
               "kind": "internal",
               "name": "Int"
             }
           },
           {
-            "name": "chunkUnitsSold",
+            "name": "lotsSold",
             "type": {
               "kind": "internal",
               "name": "Int"
@@ -4974,14 +4998,14 @@ const SaleAssetsV1Schema = {
   "name": "SaleAssetsV1",
   "fieldTypes": [
     {
-      "name": "saleUnitAssets",
+      "name": "saleLotAssets",
       "type": {
         "kind": "internal",
         "name": "Value"
       }
     },
     {
-      "name": "singleBuyMaxUnits",
+      "name": "singleBuyMaxLots",
       "type": {
         "kind": "internal",
         "name": "Int"
@@ -5009,7 +5033,7 @@ const SaleAssetsV1Schema = {
       }
     },
     {
-      "name": "totalSaleUnits",
+      "name": "totalSaleLots",
       "type": {
         "kind": "internal",
         "name": "Int"
@@ -5102,14 +5126,14 @@ const MktSaleDetailsSchema = {
                       }
                     },
                     {
-                      "name": "chunkUnitCount",
+                      "name": "lotCount",
                       "type": {
                         "kind": "internal",
                         "name": "Int"
                       }
                     },
                     {
-                      "name": "chunkUnitsSold",
+                      "name": "lotsSold",
                       "type": {
                         "kind": "internal",
                         "name": "Int"
@@ -5734,14 +5758,14 @@ const MktSaleDetailsSchema = {
             "name": "SaleAssetsV1",
             "fieldTypes": [
               {
-                "name": "saleUnitAssets",
+                "name": "saleLotAssets",
                 "type": {
                   "kind": "internal",
                   "name": "Value"
                 }
               },
               {
-                "name": "singleBuyMaxUnits",
+                "name": "singleBuyMaxLots",
                 "type": {
                   "kind": "internal",
                   "name": "Int"
@@ -5769,7 +5793,7 @@ const MktSaleDetailsSchema = {
                 }
               },
               {
-                "name": "totalSaleUnits",
+                "name": "totalSaleLots",
                 "type": {
                   "kind": "internal",
                   "name": "Int"
@@ -5901,14 +5925,14 @@ const MarketSaleDataSchema = {
                             }
                           },
                           {
-                            "name": "chunkUnitCount",
+                            "name": "lotCount",
                             "type": {
                               "kind": "internal",
                               "name": "Int"
                             }
                           },
                           {
-                            "name": "chunkUnitsSold",
+                            "name": "lotsSold",
                             "type": {
                               "kind": "internal",
                               "name": "Int"
@@ -6533,14 +6557,14 @@ const MarketSaleDataSchema = {
                   "name": "SaleAssetsV1",
                   "fieldTypes": [
                     {
-                      "name": "saleUnitAssets",
+                      "name": "saleLotAssets",
                       "type": {
                         "kind": "internal",
                         "name": "Value"
                       }
                     },
                     {
-                      "name": "singleBuyMaxUnits",
+                      "name": "singleBuyMaxLots",
                       "type": {
                         "kind": "internal",
                         "name": "Int"
@@ -6568,7 +6592,7 @@ const MarketSaleDataSchema = {
                       }
                     },
                     {
-                      "name": "totalSaleUnits",
+                      "name": "totalSaleLots",
                       "type": {
                         "kind": "internal",
                         "name": "Int"
@@ -6806,14 +6830,14 @@ const DelegateDatumSchema$1 = {
                                       }
                                     },
                                     {
-                                      "name": "chunkUnitCount",
+                                      "name": "lotCount",
                                       "type": {
                                         "kind": "internal",
                                         "name": "Int"
                                       }
                                     },
                                     {
-                                      "name": "chunkUnitsSold",
+                                      "name": "lotsSold",
                                       "type": {
                                         "kind": "internal",
                                         "name": "Int"
@@ -7438,14 +7462,14 @@ const DelegateDatumSchema$1 = {
                             "name": "SaleAssetsV1",
                             "fieldTypes": [
                               {
-                                "name": "saleUnitAssets",
+                                "name": "saleLotAssets",
                                 "type": {
                                   "kind": "internal",
                                   "name": "Value"
                                 }
                               },
                               {
-                                "name": "singleBuyMaxUnits",
+                                "name": "singleBuyMaxLots",
                                 "type": {
                                   "kind": "internal",
                                   "name": "Int"
@@ -7473,7 +7497,7 @@ const DelegateDatumSchema$1 = {
                                 }
                               },
                               {
-                                "name": "totalSaleUnits",
+                                "name": "totalSaleLots",
                                 "type": {
                                   "kind": "internal",
                                   "name": "Int"
@@ -8137,6 +8161,21 @@ const SpendingActivitySchema$1 = {
     {
       "kind": "variant",
       "tag": 2,
+      "id": "__module__MarketSalePolicy__SpendingActivity[]__UpdatingPendingSale",
+      "name": "UpdatingPendingSale",
+      "fieldTypes": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "internal",
+            "name": "ByteArray"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "variant",
+      "tag": 3,
       "id": "__module__MarketSalePolicy__SpendingActivity[]__Activating",
       "name": "Activating",
       "fieldTypes": [
@@ -8151,7 +8190,7 @@ const SpendingActivitySchema$1 = {
     },
     {
       "kind": "variant",
-      "tag": 3,
+      "tag": 4,
       "id": "__module__MarketSalePolicy__SpendingActivity[]__SellingTokens",
       "name": "SellingTokens",
       "fieldTypes": [
@@ -8163,7 +8202,7 @@ const SpendingActivitySchema$1 = {
           }
         },
         {
-          "name": "sellingUnitQuantity",
+          "name": "lotsPurchased",
           "type": {
             "kind": "internal",
             "name": "Int"
@@ -8180,7 +8219,7 @@ const SpendingActivitySchema$1 = {
     },
     {
       "kind": "variant",
-      "tag": 4,
+      "tag": 5,
       "id": "__module__MarketSalePolicy__SpendingActivity[]__MergingChildChunk",
       "name": "MergingChildChunk",
       "fieldTypes": [
@@ -8202,7 +8241,7 @@ const SpendingActivitySchema$1 = {
     },
     {
       "kind": "variant",
-      "tag": 5,
+      "tag": 6,
       "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
       "name": "Retiring",
       "fieldTypes": [
@@ -8258,7 +8297,7 @@ const MintingActivitySchema$1 = {
           }
         },
         {
-          "name": "buyingUnitQuantity",
+          "name": "lotsPurchased",
           "type": {
             "kind": "internal",
             "name": "Int"
@@ -8755,6 +8794,21 @@ const DelegateActivitySchema$1 = {
               {
                 "kind": "variant",
                 "tag": 2,
+                "id": "__module__MarketSalePolicy__SpendingActivity[]__UpdatingPendingSale",
+                "name": "UpdatingPendingSale",
+                "fieldTypes": [
+                  {
+                    "name": "id",
+                    "type": {
+                      "kind": "internal",
+                      "name": "ByteArray"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "variant",
+                "tag": 3,
                 "id": "__module__MarketSalePolicy__SpendingActivity[]__Activating",
                 "name": "Activating",
                 "fieldTypes": [
@@ -8769,7 +8823,7 @@ const DelegateActivitySchema$1 = {
               },
               {
                 "kind": "variant",
-                "tag": 3,
+                "tag": 4,
                 "id": "__module__MarketSalePolicy__SpendingActivity[]__SellingTokens",
                 "name": "SellingTokens",
                 "fieldTypes": [
@@ -8781,7 +8835,7 @@ const DelegateActivitySchema$1 = {
                     }
                   },
                   {
-                    "name": "sellingUnitQuantity",
+                    "name": "lotsPurchased",
                     "type": {
                       "kind": "internal",
                       "name": "Int"
@@ -8798,7 +8852,7 @@ const DelegateActivitySchema$1 = {
               },
               {
                 "kind": "variant",
-                "tag": 4,
+                "tag": 5,
                 "id": "__module__MarketSalePolicy__SpendingActivity[]__MergingChildChunk",
                 "name": "MergingChildChunk",
                 "fieldTypes": [
@@ -8820,7 +8874,7 @@ const DelegateActivitySchema$1 = {
               },
               {
                 "kind": "variant",
-                "tag": 5,
+                "tag": 6,
                 "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
                 "name": "Retiring",
                 "fieldTypes": [
@@ -8887,7 +8941,7 @@ const DelegateActivitySchema$1 = {
                     }
                   },
                   {
-                    "name": "buyingUnitQuantity",
+                    "name": "lotsPurchased",
                     "type": {
                       "kind": "internal",
                       "name": "Int"
@@ -15097,7 +15151,7 @@ const DTS_PurchaseInfoSchema = {
       }
     },
     {
-      "name": "unitsPurchased",
+      "name": "lotsPurchased",
       "type": {
         "kind": "internal",
         "name": "Int"
@@ -15140,14 +15194,14 @@ const DTS_PurchaseInfoSchema = {
             }
           },
           {
-            "name": "chunkUnitCount",
+            "name": "lotCount",
             "type": {
               "kind": "internal",
               "name": "Int"
             }
           },
           {
-            "name": "chunkUnitsSold",
+            "name": "lotsSold",
             "type": {
               "kind": "internal",
               "name": "Int"
@@ -15268,7 +15322,7 @@ const DynamicSaleV1Schema = {
             }
           },
           {
-            "name": "unitsPurchased",
+            "name": "lotsPurchased",
             "type": {
               "kind": "internal",
               "name": "Int"
@@ -15311,14 +15365,14 @@ const DynamicSaleV1Schema = {
                   }
                 },
                 {
-                  "name": "chunkUnitCount",
+                  "name": "lotCount",
                   "type": {
                     "kind": "internal",
                     "name": "Int"
                   }
                 },
                 {
-                  "name": "chunkUnitsSold",
+                  "name": "lotsSold",
                   "type": {
                     "kind": "internal",
                     "name": "Int"
@@ -15405,14 +15459,14 @@ const DynamicSaleV1Schema = {
                                   }
                                 },
                                 {
-                                  "name": "chunkUnitCount",
+                                  "name": "lotCount",
                                   "type": {
                                     "kind": "internal",
                                     "name": "Int"
                                   }
                                 },
                                 {
-                                  "name": "chunkUnitsSold",
+                                  "name": "lotsSold",
                                   "type": {
                                     "kind": "internal",
                                     "name": "Int"
@@ -16037,14 +16091,14 @@ const DynamicSaleV1Schema = {
                         "name": "SaleAssetsV1",
                         "fieldTypes": [
                           {
-                            "name": "saleUnitAssets",
+                            "name": "saleLotAssets",
                             "type": {
                               "kind": "internal",
                               "name": "Value"
                             }
                           },
                           {
-                            "name": "singleBuyMaxUnits",
+                            "name": "singleBuyMaxLots",
                             "type": {
                               "kind": "internal",
                               "name": "Int"
@@ -16072,7 +16126,7 @@ const DynamicSaleV1Schema = {
                             }
                           },
                           {
-                            "name": "totalSaleUnits",
+                            "name": "totalSaleLots",
                             "type": {
                               "kind": "internal",
                               "name": "Int"
@@ -16213,14 +16267,14 @@ const DynamicSaleV1Schema = {
                                     }
                                   },
                                   {
-                                    "name": "chunkUnitCount",
+                                    "name": "lotCount",
                                     "type": {
                                       "kind": "internal",
                                       "name": "Int"
                                     }
                                   },
                                   {
-                                    "name": "chunkUnitsSold",
+                                    "name": "lotsSold",
                                     "type": {
                                       "kind": "internal",
                                       "name": "Int"
@@ -16845,14 +16899,14 @@ const DynamicSaleV1Schema = {
                           "name": "SaleAssetsV1",
                           "fieldTypes": [
                             {
-                              "name": "saleUnitAssets",
+                              "name": "saleLotAssets",
                               "type": {
                                 "kind": "internal",
                                 "name": "Value"
                               }
                             },
                             {
-                              "name": "singleBuyMaxUnits",
+                              "name": "singleBuyMaxLots",
                               "type": {
                                 "kind": "internal",
                                 "name": "Int"
@@ -16880,7 +16934,7 @@ const DynamicSaleV1Schema = {
                               }
                             },
                             {
-                              "name": "totalSaleUnits",
+                              "name": "totalSaleLots",
                               "type": {
                                 "kind": "internal",
                                 "name": "Int"
@@ -16950,6 +17004,9 @@ const DynamicSaleV1Schema = {
 
 class MarketSaleController extends WrappedDgDataContract {
   dataBridgeClass = MarketSalePolicyDataBridge;
+  get capo() {
+    return super.capo;
+  }
   get recordTypeName() {
     return "mktSale";
   }
@@ -16963,10 +17020,105 @@ class MarketSaleController extends WrappedDgDataContract {
     const module = await import('./contracts-preprod/MarketSale.hlb.mjs');
     return module.MarketSaleBundle;
   }
+  beforeCreate(newRecord, { activity }) {
+    return {
+      ...newRecord,
+      details: {
+        ...newRecord.details,
+        V1: {
+          ...newRecord.details.V1,
+          threadInfo: {
+            ...newRecord.details.V1.threadInfo,
+            saleId: newRecord.id
+          }
+        }
+      }
+    };
+  }
+  beforeUpdate(updated, { activity, original }) {
+    if (original.details.V1.saleState.state.Active) {
+      return updated;
+    }
+    if (updated.details.V1.saleState.state.Pending) {
+      return this.fixLotCount(
+        this.enforceLastPurchaseAtStartTime(
+          this.enforcePrevPurchaseAtStartTime(updated)
+        )
+      );
+    }
+    return updated;
+  }
+  // fixLotSize(
+  //     record: MarketSaleDataLike
+  // ): MarketSaleDataLike {
+  //     const lotSize = record.details.V1.saleAssets.saleLotAssets;
+  //     //@ts-ignore
+  //     if(lotSize.kind == "Value") return record;
+  //     debugger
+  //     const newLotSize = makeValue(...lotSize);
+  //     return {
+  //         ...record,
+  //         details: {
+  //             ...record.details,
+  //             V1: {
+  //                 ...record.details.V1,
+  //                 saleAssets: {
+  //                     ...record.details.V1.saleAssets,
+  //                     saleLotAssets: newLotSize,
+  //                 },
+  //             },
+  //         },
+  //     };
+  // }
+  fixLotCount(record) {
+    const lotCount = record.details.V1.saleAssets.totalSaleLots;
+    if (record.details.V1.saleState.progressDetails.lotCount == lotCount) {
+      return record;
+    }
+    return this.withSaleProgresssDetails(record, {
+      ...record.details.V1.saleState.progressDetails,
+      lotCount
+    });
+  }
+  withSaleProgresssDetails(record, progressDetails) {
+    return {
+      ...record,
+      details: {
+        ...record.details,
+        V1: {
+          ...record.details.V1,
+          saleState: {
+            ...record.details.V1.saleState,
+            progressDetails
+          }
+        }
+      }
+    };
+  }
+  enforcePrevPurchaseAtStartTime(record) {
+    const startAt = record.details.V1.fixedSaleDetails.startAt;
+    if (record.details.V1.saleState.progressDetails.prevPurchaseAt == startAt) {
+      return record;
+    }
+    return this.withSaleProgresssDetails(record, {
+      ...record.details.V1.saleState.progressDetails,
+      prevPurchaseAt: startAt
+    });
+  }
+  enforceLastPurchaseAtStartTime(record) {
+    const startAt = record.details.V1.fixedSaleDetails.startAt;
+    if (record.details.V1.saleState.progressDetails.lastPurchaseAt == startAt) {
+      return record;
+    }
+    return this.withSaleProgresssDetails(record, {
+      ...record.details.V1.saleState.progressDetails,
+      lastPurchaseAt: startAt
+    });
+  }
   exampleData() {
     const tn = encodeUtf8("PLANKTON");
     const mph = this.capo.mph;
-    const units = 1000n;
+    const lots = 1000n;
     const startTime = (/* @__PURE__ */ new Date()).getTime();
     const data = {
       // id: "mktSale_123",
@@ -16977,15 +17129,15 @@ class MarketSaleController extends WrappedDgDataContract {
           fixedSaleDetails: {
             settings: {
               targetPrice: 1,
-              targetedSellingTime: 75 * 60 * 1e3,
+              targetedSellingTime: 4.5 * 24 * 3600 * 1e3,
               minPrice: 0.5,
               maxPrice: 4.2,
               progressPricingDiscountFloorPoint: 0.2,
               progressPricingDiscountWhenSlow: 0.25,
               progressPricingExpansionWhenFast: 0.2,
-              dynaPaceFasterSaleWeight: 0.3,
+              dynaPaceFasterSaleWeight: 0.12,
               dynaPaceIdleDecayRate: 0.5,
-              pricingWeightDynaPace: 5
+              pricingWeightDynaPace: 1.5
             },
             startAt: startTime,
             vxfTokensTo: void 0,
@@ -16997,20 +17149,20 @@ class MarketSaleController extends WrappedDgDataContract {
             primaryAssetMph: mph,
             primaryAssetName: tn,
             primaryAssetTargetCount: 100000000n,
-            totalSaleUnits: units,
-            saleUnitAssets: makeValue(
+            totalSaleLots: lots,
+            saleLotAssets: makeValue(
               mph,
               tn,
-              100000000n / units
+              100000000n / lots
             ),
-            singleBuyMaxUnits: 25n
+            singleBuyMaxLots: 25n
           },
           saleState: {
             progressDetails: {
               lastPurchaseAt: startTime,
               prevPurchaseAt: startTime,
-              chunkUnitCount: units,
-              chunkUnitsSold: 0n
+              lotCount: lots,
+              lotsSold: 0n
             },
             salePace: 1,
             state: { Pending: {} }
@@ -17142,10 +17294,10 @@ class MarketSaleController extends WrappedDgDataContract {
   //         primaryAssetMph,
   //         primaryAssetName,
   //         primaryAssetTargetCount,
-  //         saleUnitAssets: makeValue(
+  //         saleLotAssets: makeValue(
   //             primaryAssetMph,
   //             primaryAssetName,
-  //             primaryAssetTargetCount / mktSale.totalSaleUnits
+  //             primaryAssetTargetCount / mktSale.totalSaleLots
   //         ),
   //         type: "mktSale",
   //         state: "Pending",
@@ -17153,8 +17305,8 @@ class MarketSaleController extends WrappedDgDataContract {
   //         progressDetails: {
   //             lastPurchaseAt: now,
   //             prevPurchaseAt: now,
-  //             chunkUnitCount: mktSale.totalSaleUnits,
-  //             chunkUnitsSold: 0n,
+  //             lotCount: mktSale.totalSaleLots,
+  //             lotsSold: 0n,
   //         },
   //         nestedThreads: 0n,
   //         parentChunkId: "",
@@ -17173,17 +17325,12 @@ class MarketSaleController extends WrappedDgDataContract {
   //     //     }
   //     // );
   // }
-  beforeCreate(data) {
-    debugger;
-    data.details.V1.threadInfo.saleId = data.id;
-    return data;
-  }
   async mkTxnActivateMarketSale(mktSale, addedTokenValue = makeValue(0n), newAttrs, tcx) {
     console.log("\u{1F3D2} activating mktSale");
     const tt = await this.mkTxnUpdateRecord(
-      "activate MarketSale",
       mktSale,
       {
+        txnName: `activate ${mktSale.data.name}`,
         activity: this.activity.SpendingActivities.Activating(
           mktSale.data.details.V1.threadInfo.saleId
         ),
@@ -17218,13 +17365,23 @@ class MarketSaleController extends WrappedDgDataContract {
     );
     return tt;
   }
-  async mkTxnAddToMarketSale(mktSale, addedTokenMph, addedTokenName, addedTokenCount, tcx) {
+  async mkTxnAddToMarketSale(mktSale, addedTokenMph, addedTokenName, addedTokenCount, mint, tcx) {
     console.log("\u{1F3D2} adding to mktSale");
     const existingSale = mktSale.data;
     if (!existingSale) {
       throw new Error("mktSale not found");
     }
     const newTnBytes = typeof addedTokenName === "string" ? textToBytes(addedTokenName) : addedTokenName;
+    const { capo } = this;
+    if (!addedTokenMph.isEqual(capo.mph)) {
+      throw new Error("can't mint tokens except via capo's mph");
+    }
+    const tokenCount = BigInt(addedTokenCount);
+    const tcx1 = mint ? await capo.txnMintingFungibleTokens(
+      tcx || this.mkTcx("mint + add to market sale"),
+      newTnBytes,
+      tokenCount
+    ) : void 0;
     const addedTokenValue = makeValue(
       addedTokenMph,
       newTnBytes,
@@ -17247,40 +17404,40 @@ class MarketSaleController extends WrappedDgDataContract {
       "    -- existingTokensInContract",
       existingTokensInContract
     );
-    const previousSaleUnit = existingSale.details.V1.saleAssets.saleUnitAssets;
-    console.log("    -- previousSaleUnit", dumpAny(previousSaleUnit));
-    const prevSaleUnitCountThisToken = previousSaleUnit.assets.getPolicyTokenQuantity(
+    const previousSaleLot = existingSale.details.V1.saleAssets.saleLotAssets;
+    console.log("    -- previousSaleLot", dumpAny(previousSaleLot));
+    const prevSalelotCountThisToken = previousSaleLot.assets.getPolicyTokenQuantity(
       addedTokenMph,
       newTnBytes
     );
-    const prevSaleUnitThisTokenValue = makeValue(
+    const prevSaleLotThisTokenValue = makeValue(
       addedTokenMph,
       newTnBytes,
-      prevSaleUnitCountThisToken
+      prevSalelotCountThisToken
     );
-    const otherValueInPrevSaleUnit = previousSaleUnit.subtract(
-      prevSaleUnitThisTokenValue
+    const otherValueInPrevSaleLot = previousSaleLot.subtract(
+      prevSaleLotThisTokenValue
     );
     const updatedCount = existingTokensInContract + BigInt(addedTokenCount);
-    const updatedUnitCount = isPrimary ? prevSaleUnitCountThisToken : updatedCount / existingSale.details.V1.saleAssets.totalSaleUnits;
-    const newSaleUnitThisTokenValue = makeValue(
+    const updatedlotCount = isPrimary ? prevSalelotCountThisToken : updatedCount / existingSale.details.V1.saleAssets.totalSaleLots;
+    const newSaleLotThisTokenValue = makeValue(
       addedTokenMph,
       newTnBytes,
-      updatedUnitCount
+      updatedlotCount
     );
     console.log(
-      "    -- newSaleUnitThisTokenValue",
-      dumpAny(newSaleUnitThisTokenValue)
+      "    -- newSaleLotThisTokenValue",
+      dumpAny(newSaleLotThisTokenValue)
     );
-    const saleUnitAssets = otherValueInPrevSaleUnit.add(
-      newSaleUnitThisTokenValue
+    const saleLotAssets = otherValueInPrevSaleLot.add(
+      newSaleLotThisTokenValue
     );
     console.log("    -- \u2139\uFE0F  token name", displayTokenName(newTnBytes));
     console.log("    -- \u2139\uFE0F  updatedCount", updatedCount);
-    console.log("    -- \u2139\uFE0F  new saleUnitAssets", dumpAny(saleUnitAssets));
+    console.log("    -- \u2139\uFE0F  new saleLotAssets", dumpAny(saleLotAssets));
     console.log(
-      "    -- \u2139\uFE0F  totalSaleUnits",
-      existingSale.details.V1.saleAssets.totalSaleUnits
+      "    -- \u2139\uFE0F  totalSaleLots",
+      existingSale.details.V1.saleAssets.totalSaleLots
     );
     if (isPrimary) {
       console.log(
@@ -17290,17 +17447,12 @@ class MarketSaleController extends WrappedDgDataContract {
           ) * 1e6
         ) / 1e4}% funded`
       );
-    } else {
-      if (updatedCount % existingSale.details.V1.saleAssets.totalSaleUnits != 0n) {
-        throw new Error(
-          "Updated (non-primary) token count not divisible by total sale units"
-        );
-      }
     }
+    this.guardUnevenLots(updatedCount, existingSale);
     const tcx2 = await this.mkTxnUpdateRecord(
-      "add tokens to MarketSale",
       mktSale,
       {
+        txnName: `${mint ? "mint and " : ""}add tokens to ${mktSale.data.name}`,
         activity: this.activity.SpendingActivities.AddingToSale({
           id: existingSale.details.V1.threadInfo.saleId,
           mph: addedTokenMph,
@@ -17312,7 +17464,7 @@ class MarketSaleController extends WrappedDgDataContract {
               ...mktSale.data.details.V1,
               saleAssets: {
                 ...mktSale.data.details.V1.saleAssets,
-                saleUnitAssets
+                saleLotAssets
               },
               fixedSaleDetails: {
                 ...mktSale.data.details.V1.fixedSaleDetails
@@ -17328,19 +17480,26 @@ class MarketSaleController extends WrappedDgDataContract {
         },
         addedUtxoValue: addedTokenValue
       },
-      tcx
+      tcx1
     );
     return this.capo.txnAddGovAuthority(tcx2);
   }
-  saleTokenValue(itemDetails, sellingUnitQuantity = 1) {
-    return itemDetails.data.details.V1.saleAssets.saleUnitAssets.multiply(
-      sellingUnitQuantity
+  guardUnevenLots(updatedCount, existingSale) {
+    if (updatedCount % existingSale.details.V1.saleAssets.totalSaleLots != 0n) {
+      throw new Error(
+        "Updated (non-primary) token count not divisible by total sale lots"
+      );
+    }
+  }
+  saleTokenValue(itemDetails, lotsPurchased = 1) {
+    return itemDetails.data.details.V1.saleAssets.saleLotAssets.multiply(
+      lotsPurchased
     );
   }
-  // async XXXgetUnitPriceViaHelios(
+  // async XXXgetlotPriceViaHelios(
   //     sale: FoundDatumUtxo<MarketSaleData>,
   //     now_: Date,
-  //     sellingUnitQuantity_: number | bigint
+  //     lotsPurchased_: number | bigint
   // ): Promise<number> {
   //     const funcs = this.onChainFunctions();
   //     const adapter = this.mkDatumAdapter();
@@ -17349,7 +17508,7 @@ class MarketSaleController extends WrappedDgDataContract {
   //         (await adapter.toOnchainDatum(sale.datum)).data
   //     );
   //     const now = UplcInt.new(now_.getTime()); //adapter.uplcInt
-  //     const sellingUnitQuantity = UplcInt.new(sellingUnitQuantity_); // adapter.uplcInt(sellingUnitQuantity_);
+  //     const lotsPurchased = UplcInt.new(lotsPurchased_); // adapter.uplcInt(lotsPurchased_);
   //
   //     //@ts-expect-error
   //     const topScope = this.scriptProgram.evalTypes(); // TopScope {#parent: GlobalScope, #values: Array(13), #allowShadowing: false, #strict: false}
@@ -17359,7 +17518,7 @@ class MarketSaleController extends WrappedDgDataContract {
   //             (x) => x.name.value == this.specializedDelegateModule.moduleName
   //         ).name
   //     );
-  //     const func = delegateModuleScope.get("getUnitPrice").asFunc;
+  //     const func = delegateModuleScope.get("getlotPrice").asFunc;
   //
   //     throw new Error(
   //         `this doesn't work because the types of the data aren't understood by func.call()`
@@ -17368,18 +17527,18 @@ class MarketSaleController extends WrappedDgDataContract {
   //         // named args
   //         mktSale: ocDatum,
   //         now: now,
-  //         sellingUnitQuantity: sellingUnitQuantity,
+  //         lotsPurchased: lotsPurchased,
   //     });
   //
   //     return 1.42;
   // }
   async mkTxnBuyFromMarketSale(mktSale, {
-    sellingUnitQuantity,
+    lotsPurchased,
     delegateActivity
   }, tcxIn) {
     const tokenValuePurchase = this.saleTokenValue(
       mktSale,
-      sellingUnitQuantity
+      lotsPurchased
     );
     const tcx = tcxIn || this.mkTcx(tcxIn, "buyFromMarketSale");
     const mktSaleData = mktSale.data;
@@ -17388,15 +17547,15 @@ class MarketSaleController extends WrappedDgDataContract {
     const pCtx = {
       prevSale: mktSaleObj,
       now: thisPurchaseAt,
-      unitCount: BigInt(sellingUnitQuantity)
+      lotCount: BigInt(lotsPurchased)
     };
     console.log("\u{1F3D2} buying from mktSale");
     debugger;
-    const unitPrice = mktSaleObj.getUnitPrice(pCtx);
-    console.log("    -- unit price", unitPrice);
+    const lotPrice = mktSaleObj.getLotPrice(pCtx);
+    console.log("    -- lot price", lotPrice);
     const nextSalePace = mktSaleObj.computeNextSalePace(pCtx);
     console.log("    -- next sale pace", nextSalePace);
-    const pmtAda = realMul(Number(sellingUnitQuantity), unitPrice);
+    const pmtAda = realMul(Number(lotsPurchased), lotPrice);
     const pmtLovelace = this.ADA(pmtAda);
     const pmtValue = makeValue(pmtLovelace);
     const addedUtxoValue = pmtValue.subtract(tokenValuePurchase);
@@ -17423,16 +17582,16 @@ class MarketSaleController extends WrappedDgDataContract {
     } else {
       throw new Error("no payment utxo found");
     }
-    const { chunkUnitCount, chunkUnitsSold } = mktSale.data.details.V1.saleState.progressDetails;
+    const { lotCount, lotsSold } = mktSale.data.details.V1.saleState.progressDetails;
     const activity = delegateActivity ?? this.activity.SpendingActivities.SellingTokens({
       id: mktSale.data.id,
-      sellingUnitQuantity: BigInt(sellingUnitQuantity),
-      salePrice: makeValue(this.ADA(unitPrice))
+      lotsPurchased: BigInt(lotsPurchased),
+      salePrice: makeValue(this.ADA(lotPrice))
     });
     return this.mkTxnUpdateRecord(
-      "buy from MarketSale",
       mktSale,
       {
+        txnName: `buy: ${mktSale.data?.name}`,
         activity,
         addedUtxoValue,
         updatedFields: this.mkUpdatedDetails(mktSaleData, {
@@ -17445,8 +17604,8 @@ class MarketSaleController extends WrappedDgDataContract {
                 progressDetails: this.mkUpdatedProgressDetails({
                   lastPurchaseAt: thisPurchaseAt.getTime(),
                   prevPurchaseAt,
-                  chunkUnitCount,
-                  chunkUnitsSold: chunkUnitsSold + BigInt(sellingUnitQuantity)
+                  lotCount,
+                  lotsSold: lotsSold + BigInt(lotsPurchased)
                 }),
                 salePace: nextSalePace
               }
@@ -17474,26 +17633,26 @@ class MarketSaleController extends WrappedDgDataContract {
   mkUpdatedProgressDetails({
     lastPurchaseAt,
     prevPurchaseAt,
-    chunkUnitCount,
-    chunkUnitsSold
+    lotCount,
+    lotsSold
   }) {
     return {
       lastPurchaseAt,
       prevPurchaseAt,
-      chunkUnitCount,
-      chunkUnitsSold
+      lotCount,
+      lotsSold
     };
   }
   // async mkTxnBuyAndSplit(
   //     mktSale: FoundDatumUtxo<MarketSaleData>,
-  //     sellingUnitQuantity: number | bigint,
+  //     lotsPurchased: number | bigint,
   //     tcxIn?: StellarTxnContext
   // ) {
   //     const tcx = tcxIn || this.mkTcx(tcxIn, "buyAndSplit");
   //     const tcx2 = await this.mkTxnBuyFromMarketSale(
   //         mktSale,
   //         {
-  //             sellingUnitQuantity,
+  //             lotsPurchased,
   //             delegateActivityFunc: this.activitySplittingAndBuyingFromChunk
   //         },
   //         tcx
@@ -17544,13 +17703,25 @@ class MarketSaleController extends WrappedDgDataContract {
         requires: [
           "it's created with key details of a sale",
           "Activity:AddTokens allows additional tokens to be added to a Pending mktSale",
+          "Activity:UpdatingPendingSale allows updates to a Pending mktSale",
           "has a state machine for sale lifecycle",
           "Will sell its tokens when conditions are right",
           "updates appropriate sale details as a result of each sale",
           "participates in the Txf protocol for getting paid",
           "participates in the Txf protocol for distributing the tokens",
           "Splits the sale into chunks for scaling"
-        ]
+        ],
+        deltas: {
+          "wip": ["ongoing development"],
+          "0.8.0-beta.9": [
+            "basics implemented previously to beta.9"
+          ],
+          "0.8.0-beta.10": [
+            "added UpdatingPendingSale activity",
+            "adjusted policies for expressing the token bundle/lot contents",
+            "added constraints on AddTokens activity"
+          ]
+        }
       },
       "it's created with key details of a sale": {
         purpose: "Supports accurate administration of the sale process",
@@ -17558,8 +17729,17 @@ class MarketSaleController extends WrappedDgDataContract {
         mech: [
           "has expected labels and other high-level details",
           "has initial timestamps",
-          "has key details of price, sale-sizes and token to be sold"
+          "has key details of price, sale-sizes and token to be sold",
+          "rejects creation when saleLotAssets contains any tokens other than the primary asset"
         ],
+        deltas: {
+          "0.8.0-beta.9": [
+            "basics implemented previously to beta.9"
+          ],
+          "0.8.0-beta.10": [
+            "constrains the saleLotAssets to only contain the primary asset when created"
+          ]
+        },
         requires: []
       },
       "participates in the Txf protocol for getting paid": {
@@ -17574,7 +17754,12 @@ class MarketSaleController extends WrappedDgDataContract {
           "won't seal the funds-receiver without the receiver's participation",
           "requires the gov authority to seal the Txf for funds",
           "requires the Txf funds-receiver's participation during a sale, if so configured"
-        ]
+        ],
+        deltas: {
+          "0.8.0-beta.9": [
+            "requires the payment to be deposited with the sale's UUT"
+          ]
+        }
       },
       "participates in the Txf protocol for distributing the tokens": {
         purpose: "Allows other contract-script collaborators to be assured of being a custodian of the tokens",
@@ -17588,19 +17773,59 @@ class MarketSaleController extends WrappedDgDataContract {
           "won't seal the tokens-receiver without the receiver's participation",
           "requires the gov authority to seal the Vxf for tokens",
           "requires the Vxf tokens-receiver's participation during a sale, if so configured"
-        ]
+        ],
+        deltas: {
+          "0.8.0-beta.9": [
+            "no constraints on distribution of the tokens"
+          ]
+        }
       },
       "Activity:AddTokens allows additional tokens to be added to a Pending mktSale": {
         purpose: "Manages the addition of tokens to a pending market sale",
         details: [
-          "Ensures that tokens can be added to a pending sale under the correct conditions"
+          "Ensures that tokens can be added to a pending sale under the correct conditions",
+          "Depositing tokens enforces even distribution of the tokens across the sale's lots",
+          "saleLotAssets can get out of sync with even token distribution when tokens are NOT being added",
+          "^ e.g. by doing a partial deposit of primary token, then changing the primary asset name",
+          "^ or, by doing a partial deposit of non-primary token, then changing the lot-count/totalSaleLots",
+          "Enforcing resync of even values during deposit ensures things are ok before starting the sale"
         ],
         mech: [
+          "saleLotAssets only allows the primary asset tokens when first created",
           "can AddTokens to a Pending sale",
-          "can't add non-primary tokens if the sale-assets aren't even",
-          "requires the gov authority to AddTokens"
+          "can't add non-primary tokens if the saleLotAssets aren't even",
+          "requires the gov authority to AddTokens",
+          "the number of tokens in the UTxO must be evenly divisible by the lot count when depositing those tokens",
+          "starting the sale fails if the saleLotAssets are not evenly divisible by the lot count ",
+          "starting the sale fails if the deposited Value doesn't match the totalSaleLots * saleLotAssets"
         ],
-        requires: []
+        requires: [
+          "Activity:AddTokens constrains stored tokens' consistency with lot-count"
+        ],
+        deltas: {
+          "0.8.0-beta.9": [
+            "implemented previously to beta.9"
+          ],
+          "0.8.0-beta.10": [
+            "forces newly-deposited tokens to achieve an even multiple of the lot count",
+            "allows the primary asset to be changed, if everything remains consistent"
+          ]
+        }
+      },
+      "Activity:AddTokens constrains stored tokens' consistency with lot-count": {
+        purpose: "Provides assurances leading to an easy launch, while allowing flexilbity to change all details before launch",
+        details: [
+          "Ensures that tokens are stored in a consistent way with the lot-count"
+        ],
+        mech: [
+          "when depositing tokens, the token count in the UTxO must be an even multiple of the lot count"
+        ],
+        requires: [],
+        deltas: {
+          "0.8.0-beta.10": [
+            "first implemented in beta.10"
+          ]
+        }
       },
       "has a state machine for sale lifecycle": {
         purpose: "Manages the state transitions of a market sale",
@@ -17611,7 +17836,78 @@ class MarketSaleController extends WrappedDgDataContract {
           "starts in Pending state",
           "moves to Active state when ActivatingSale"
         ],
-        requires: []
+        requires: [],
+        deltas: {
+          "0.8.0-beta.9": [
+            "implemented previously to beta.9"
+          ]
+        }
+      },
+      "Activity:UpdatingPendingSale allows updates to a Pending mktSale": {
+        purpose: "Manages updates to pending market sales while maintaining data integrity",
+        details: [
+          "Enforces immutability of core identity fields, state, and progress details",
+          "Validates asset and lot-count consistency when updating sale configuration",
+          "Doesn't allow tokens to be added or removed from the UTxO when editing details"
+        ],
+        mech: [
+          "requires governance authority to update the sale details",
+          "can update saleAssets, fixedSaleDetails, and name fields",
+          "prevents the sale from leaving Pending state",
+          "doesn't allow changing sale pace, progress details, or thread info",
+          "fails if primaryAssetTargetCount is not an even multiple of the lot count",
+          "fails if the token count in the UTxO is modified during the update"
+        ],
+        requires: [
+          "Updating a pending sale keeps the saleAssets consistent"
+        ],
+        deltas: {
+          "wip": ["in progress"],
+          "0.8.0-beta.10": [
+            "first implemented in beta.10"
+          ]
+        }
+      },
+      "Updating a pending sale keeps the saleAssets consistent": {
+        purpose: "Ensures saleAssets remain consistent during updates, while remaining flexible to end-user changes",
+        details: [
+          "Maintains even lot sizes and prevents removal of already deposited tokens from the lot/token bundle (saleLotAssets)",
+          "Allows primary asset changes when consistency is preserved"
+        ],
+        mech: [
+          "can update saleAssets.totalSaleLots if primaryAssetTargetCount remains an even multiple",
+          "if previous primary tokens exist in UTxO, saleLotAssets\u2039primaryAsset\u203A must keep a minimum lot-size, \u2265 depositedTokens/totalSaleLots",
+          "if primaryAsset changes and old tokens exist, saleLotAssets must contain the NEW primary token",
+          "if primaryAsset changes and old tokens don't exist, saleLotAssets must not reference previous primary token"
+        ],
+        requires: ["Maintains consistency of saleAssets while Pending"],
+        deltas: {
+          "wip": ["in progress"],
+          "0.8.0-beta.10": [
+            "first implemented in beta.10"
+          ]
+        }
+      },
+      "Maintains consistency of saleAssets while Pending": {
+        purpose: "Ensures saleAssets are always consistent prior to starting the sale",
+        details: [
+          "Enforces consistency rules while allowing necessary changes"
+        ],
+        mech: [
+          "saleLotAssets only allows the primary asset tokens when first created",
+          "saleLotAssets MUST always contain the primary asset, even if no tokens have been deposited yet",
+          "saleLotAssets\u2039primaryAsset\u203A count must equal primaryAssetTargetCount / totalSaleLots",
+          "primaryAssetTargetCount must be an even multiple of the lot count "
+        ],
+        requires: [
+          "Activity:AddTokens constrains stored tokens' consistency with lot-count"
+        ],
+        deltas: {
+          "wip": ["in progress"],
+          "0.8.0-beta.10": [
+            "first implemented in beta.10"
+          ]
+        }
       },
       "Will sell its tokens when conditions are right": {
         purpose: "Handles the sale of tokens under the correct conditions",
@@ -17621,24 +17917,35 @@ class MarketSaleController extends WrappedDgDataContract {
         mech: [
           "doesn't sell while state is Pending",
           "doesn't sell tokens before the start date",
-          "won't sell more than singleBuyMaxUnits, or less than 1 unit",
+          "won't sell more than singleBuyMaxLots, or less than 1 unit",
           "sells tokens when Active and in the selling period",
           "won't sell tokens from a sale chunk less than 10 minutes old"
         ],
-        requires: []
+        requires: [],
+        deltas: {
+          "0.8.0-beta.9": [
+            "implemented previously to beta.9"
+          ]
+        }
       },
       "updates appropriate sale details as a result of each sale": {
         purpose: "Updates the sale details after each sale",
         details: [
-          "Ensures that the sale details are updated correctly after each sale"
+          "Ensures the sale record is updated with sale-progress details after each sale",
+          "Ensures the sale record is updated with dynamic sale details after each sale"
         ],
         mech: [
           "updates the timestamps and units-sold",
           "fails if it changes the settings or unit-counts",
-          "updates the stratState's sellingPace field",
+          "updates the saleState's sellingPace field",
           "fails without the correct next dynamicPace"
         ],
-        requires: []
+        requires: [],
+        deltas: {
+          "0.8.0-beta.9": [
+            "implemented previously to beta.9"
+          ]
+        }
       },
       "Splits the sale into chunks for scaling": {
         purpose: "Manages the splitting of sales into chunks for better scaling",
@@ -17653,7 +17960,12 @@ class MarketSaleController extends WrappedDgDataContract {
           "sets correct details for the new chunk",
           "won't split off a child chunk without correct updates to the parent"
         ],
-        requires: []
+        requires: [],
+        deltas: {
+          "0.8.0-beta.9": [
+            "implemented previously to beta.9"
+          ]
+        }
       }
     });
   }
@@ -17889,13 +18201,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **VxfExpectedActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -17909,13 +18221,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **VxfDestination*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -17929,13 +18241,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **VestingState*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -17949,13 +18261,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **VestingFrequency*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -17969,13 +18281,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **VestingDetails*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -17992,13 +18304,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **DelegateDatum*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18012,13 +18324,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **DelegateRole*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18032,13 +18344,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **ManifestActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18052,13 +18364,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **CapoLifecycleActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18072,13 +18384,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **DelegateLifecycleActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18092,13 +18404,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **SpendingActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18112,13 +18424,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **MintingActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18132,13 +18444,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **BurningActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18152,13 +18464,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **DelegateActivity*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18172,13 +18484,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **PendingDelegateAction*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18192,13 +18504,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **ManifestEntryType*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18212,13 +18524,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **PendingCharterChange*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18232,13 +18544,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **cctx_CharterInputType*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18252,13 +18564,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **dgd_DataSrc*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18272,13 +18584,13 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
       * reads UplcData *known to fit the **AbstractDelegateActivitiesEnum*** enum type,
       * for the BasicDelegate script.
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the enum type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18290,15 +18602,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* enumReader helper */
   /**
       * reads UplcData *known to fit the **AnyData*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * AnyData or AnyDataLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18309,15 +18622,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **DelegationDetail*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * DelegationDetail or DelegationDetailLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18328,15 +18642,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **RelativeDelegateLink*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * RelativeDelegateLink or RelativeDelegateLinkLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18347,15 +18662,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **VestingProgress*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * VestingProgress or VestingProgressLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18366,15 +18682,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **VestingData*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * VestingData or VestingDataLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18385,15 +18702,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **PendingDelegateChange*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * PendingDelegateChange or PendingDelegateChangeLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18404,15 +18722,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **CapoManifestEntry*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * CapoManifestEntry or CapoManifestEntryLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18423,15 +18742,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **CapoCtx*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * CapoCtx or CapoCtxLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */
@@ -18442,15 +18762,16 @@ class VestingPolicyDataBridgeReader extends DataBridgeReaderClass {
   /* structReader helper */
   /**
       * reads UplcData *known to fit the **DgDataDetails*** struct type,
-      * for the BasicDelegate script.
+      * for the BasicDelegate script.  You may choose to recast this data to
+      * DgDataDetails or DgDataDetailsLike
       * #### Standard WARNING
-      * 
+      *
       * This is a low-level data-reader for use in ***advanced development scenarios***.
-      * 
+      *
       * Used correctly with data that matches the type, this reader
       * returns strongly-typed data - your code using these types will be safe.
-      * 
-      * On the other hand, reading non-matching data will not give you a valid result.  
+      *
+      * On the other hand, reading non-matching data will not give you a valid result.
       * It may throw an error, or it may throw no error, but return a value that
       * causes some error later on in your code, when you try to use it.
       */

@@ -27,7 +27,7 @@ class AbstractVestingBundle extends DelegatedDataBundle {
 class GenericVestingBundle extends AbstractVestingBundle.usingCapoBundleClass(CapoHeliosBundle) {
   precompiledScriptDetails = {
     singleton: {
-      scriptHash: "b77c2d4a7ee9ae764207ca39da535d78131726b9d7128b231ba54d51",
+      scriptHash: "df7c5a0675234ed2f33e385df358a311737100a31390b553a03faa4f",
       config: { "rev": "1", "delegateName": "VestingPolicy", "isMintDelegate": false, "isSpendDelegate": false, "isDgDataPolicy": true, "requiresGovAuthority": true }
     }
   };

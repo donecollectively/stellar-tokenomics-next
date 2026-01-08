@@ -149,8 +149,8 @@ export declare class MarketSalePolicyDataBridge extends ContractDataBridge {
         SaleProgressDetailsV1: (fields: SaleProgressDetailsV1Like | {
             lastPurchaseAt: TimeLike;
             prevPurchaseAt: TimeLike;
-            chunkUnitCount: IntLike;
-            chunkUnitsSold: IntLike;
+            lotCount: IntLike;
+            lotsSold: IntLike;
         }) => UplcData;
         /**
          * generates UplcData for the enum type ***OtherSaleStateV1*** for the `BasicDelegate` script
@@ -196,18 +196,18 @@ export declare class MarketSalePolicyDataBridge extends ContractDataBridge {
          * generates UplcData for the enum type ***SaleAssetsV1*** for the `BasicDelegate` script
          */
         SaleAssetsV1: (fields: SaleAssetsV1Like | {
-            saleUnitAssets: /*minStructField*/ Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {
+            saleLotAssets: /*minStructField*/ Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {
                 mph: MintingPolicyHash | string | number[];
                 tokens: {
                     name: number[] | string;
                     qty: IntLike;
                 }[];
             }[];
-            singleBuyMaxUnits: IntLike;
+            singleBuyMaxLots: IntLike;
             primaryAssetMph: /*minStructField*/ MintingPolicyHash | string | number[];
             primaryAssetName: number[];
             primaryAssetTargetCount: IntLike;
-            totalSaleUnits: IntLike;
+            totalSaleLots: IntLike;
         }) => UplcData;
         /**
          * generates UplcData for the enum type ***ThreadInfoV1*** for the `BasicDelegate` script
@@ -267,7 +267,7 @@ export declare class MarketSalePolicyDataBridge extends ContractDataBridge {
         DTS_PurchaseInfo: (fields: DTS_PurchaseInfoLike | {
             inferredPace: number;
             hoursSinceLastPurchase: number;
-            unitsPurchased: IntLike;
+            lotsPurchased: IntLike;
             purchaseTime: TimeLike;
             prevSalePace: number;
             totalProgress: SaleProgressDetailsV1Like;
@@ -1521,6 +1521,7 @@ export declare class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
     ᱺᱺcast: Cast<SpendingActivity, Partial<{
         UpdatingRecord: number[];
         AddingToSale: SpendingActivity$AddingToSaleLike;
+        UpdatingPendingSale: number[];
         Activating: number[];
         SellingTokens: SpendingActivity$SellingTokensLike;
         MergingChildChunk: SpendingActivity$MergingChildChunkLike;
@@ -1540,6 +1541,10 @@ export declare class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
         tn: number[];
     }): UplcData;
     /**
+     * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPendingSale"***
+     */
+    UpdatingPendingSale(id: number[]): UplcData;
+    /**
      * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.Activating"***
      */
     Activating(id: number[]): UplcData;
@@ -1549,7 +1554,7 @@ export declare class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
      */
     SellingTokens(fields: SpendingActivity$SellingTokensLike | {
         id: number[];
-        sellingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
         salePrice: Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {
             mph: MintingPolicyHash | string | number[];
             tokens: {
@@ -1624,7 +1629,7 @@ export declare class MintingActivityHelper extends EnumBridge<JustAnEnum> {
      */
     SplittingSaleChunkAndBuying(value: hasSeed, fields: {
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }): UplcData;
     /**
      * generates  UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***
@@ -1633,11 +1638,11 @@ export declare class MintingActivityHelper extends EnumBridge<JustAnEnum> {
     SplittingSaleChunkAndBuying(fields: MintingActivity$SplittingSaleChunkAndBuyingLike | {
         seed: TxOutputId | string;
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }): UplcData;
     /**
      * generates  UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***,
-     * @param fields - \{ parentChunkId: string, buyingUnitQuantity: IntLike \}
+     * @param fields - \{ parentChunkId: string, lotsPurchased: IntLike \}
      * @remarks
     * ##### Seeded activity
     * This activity  uses the pattern of spending a utxo to provide a uniqueness seed.
@@ -1646,17 +1651,17 @@ export declare class MintingActivityHelper extends EnumBridge<JustAnEnum> {
      * provided implicitly by a SeedActivity-supporting library function.
      *
      * #### Usage
-     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, buyingUnitQuantity })`
+     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, lotsPurchased })`
       *       method with the indicated (non-seed) details.
      *   2. Use the resulting activity in a seed-providing context, such as the delegated-data-controller's
      *       `mkTxnCreateRecord({activity})` method.
      */
     $seeded$SplittingSaleChunkAndBuying: (fields: {
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }) => import("@donecollectively/stellar-contracts").SeedActivity<(value: hasSeed, fields: {
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }) => UplcData>;
 }
 /**
@@ -2122,6 +2127,7 @@ export declare class SpendingActivityHelperNested extends EnumBridge<isActivity>
     ᱺᱺcast: Cast<SpendingActivity, Partial<{
         UpdatingRecord: number[];
         AddingToSale: SpendingActivity$AddingToSaleLike;
+        UpdatingPendingSale: number[];
         Activating: number[];
         SellingTokens: SpendingActivity$SellingTokensLike;
         MergingChildChunk: SpendingActivity$MergingChildChunkLike;
@@ -2150,6 +2156,15 @@ export declare class SpendingActivityHelperNested extends EnumBridge<isActivity>
         tn: number[];
     }): isActivity;
     /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPendingSale"***
+    * @remarks
+    * #### Nested activity:
+    * this is connected to a nested-activity wrapper, so the details are piped through
+    * the parent's uplc-encoder, producing a single uplc object with
+    * a complete wrapper for this inner activity detail.
+     */
+    UpdatingPendingSale(id: number[]): isActivity;
+    /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.Activating"***
     * @remarks
     * #### Nested activity:
@@ -2168,7 +2183,7 @@ export declare class SpendingActivityHelperNested extends EnumBridge<isActivity>
      */
     SellingTokens(fields: SpendingActivity$SellingTokensLike | {
         id: number[];
-        sellingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
         salePrice: Value | [MintingPolicyHash | string | number[], [number[] | string, IntLike][]][] | {
             mph: MintingPolicyHash | string | number[];
             tokens: {
@@ -2264,7 +2279,7 @@ export declare class MintingActivityHelperNested extends EnumBridge<isActivity> 
      */
     SplittingSaleChunkAndBuying(value: hasSeed, fields: {
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }): isActivity;
     /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***
@@ -2273,11 +2288,11 @@ export declare class MintingActivityHelperNested extends EnumBridge<isActivity> 
     SplittingSaleChunkAndBuying(fields: MintingActivity$SplittingSaleChunkAndBuyingLike | {
         seed: TxOutputId | string;
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }): isActivity;
     /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::MintingActivity.SplittingSaleChunkAndBuying"***,
-     * @param fields - \{ parentChunkId: string, buyingUnitQuantity: IntLike \}
+     * @param fields - \{ parentChunkId: string, lotsPurchased: IntLike \}
      * @remarks
     * ##### Seeded activity
     * This activity  uses the pattern of spending a utxo to provide a uniqueness seed.
@@ -2286,7 +2301,7 @@ export declare class MintingActivityHelperNested extends EnumBridge<isActivity> 
      * provided implicitly by a SeedActivity-supporting library function.
      *
      * #### Usage
-     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, buyingUnitQuantity })`
+     *   1. Call the `$seeded$SplittingSaleChunkAndBuying({ parentChunkId, lotsPurchased })`
       *       method with the indicated (non-seed) details.
      *   2. Use the resulting activity in a seed-providing context, such as the delegated-data-controller's
      *       `mkTxnCreateRecord({activity})` method.
@@ -2297,10 +2312,10 @@ export declare class MintingActivityHelperNested extends EnumBridge<isActivity> 
      */
     $seeded$SplittingSaleChunkAndBuying: (fields: {
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }) => import("@donecollectively/stellar-contracts").SeedActivity<(value: hasSeed, fields: {
         parentChunkId: string;
-        buyingUnitQuantity: IntLike;
+        lotsPurchased: IntLike;
     }) => isActivity>;
 }
 /**
