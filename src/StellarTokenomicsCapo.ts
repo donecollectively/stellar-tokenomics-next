@@ -221,14 +221,20 @@ export abstract class StellarTokenomicsCapo<
 
     // }
     
-    async getMarketSaleController(this: SELF,
-        charterData?: CapoDatum$Ergo$CharterData,
-    ): Promise<MarketSaleController> {
-        if (!charterData) {
-            charterData = await this.findCharterData();
-        }
+    async getMarketSaleController(this: SELF, options: {
+        charterData?: CapoDatum$Ergo$CharterData;
+        onchain?: boolean;
+    } = {
+        onchain: true,
+    }): Promise<MarketSaleController> {
+        const {
+            charterData = await this.findCharterData(),
+            onchain = true,
+        } = options;
+
         return this.getDgDataController("mktSale", {
             charterData: charterData as CapoDatum$Ergo$CharterData,
+            onchain,
         }) as Promise<MarketSaleController>;
     }
     

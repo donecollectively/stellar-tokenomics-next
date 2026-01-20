@@ -47,7 +47,10 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
     async mktSaleDgt() {
         return (await this.capo.getDgDataController(
-            "mktSale"
+            "mktSale",
+            {
+                onchain: false,
+            }
         )) as MarketSaleController;
     }
 

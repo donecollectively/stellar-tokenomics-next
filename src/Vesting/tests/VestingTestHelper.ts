@@ -44,9 +44,9 @@ export class VestingTestHelper extends DefaultCapoTestHelper.forCapoClass(
     }
 
     async vestingDgt() {
-        return (await this.capo.getDgDataController(
-            "vesting"
-        )) as VestingController;
+        return (await this.capo.getDgDataController("vesting", {
+            onchain: false,
+        })) as VestingController;
     }
 
     @CapoTestHelper.hasNamedSnapshot("firstVesting", "tina")

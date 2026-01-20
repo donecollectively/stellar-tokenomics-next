@@ -74,8 +74,20 @@ StellarTokenomicsCapo<
      * Fetches the off-chain class for access to the artist/album vault
      * @public
      */
-    async getMarketSaleController(charterData?: CharterData): Promise<MarketSaleController> {
-        return this.getDgDataController("albumVault") as any;
+    async getMarketSaleController(options: {
+        charterData?: CharterData;
+        onchain?: boolean;
+    } = {
+        onchain: true,
+    }): Promise<MarketSaleController> {
+        const {
+            charterData = await this.findCharterData(),
+            onchain = true,
+        } = options;
+        return this.getDgDataController("mktSale", {
+            charterData: charterData as CapoDatum$Ergo$CharterData,
+            onchain,
+        }) as Promise<MarketSaleController>;
     }
 
     // async mkInitialSettings(): Promise<minimalProtocolSettings> {
