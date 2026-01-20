@@ -106,7 +106,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         return "mktSale";
     }
 
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         const module = await import("./MarketSale.hlb.js");
 
         return module.MarketSaleBundle;

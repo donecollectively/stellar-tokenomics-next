@@ -19,7 +19,7 @@ class gtCapoMintDelegate extends STokMintDelegate {
     }
 
     dataBridgeClass = gtCapoMintDelegateDataBridge;
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         return gtCapoMintDelegateBundle
     }
 }
@@ -33,7 +33,7 @@ StellarTokenomicsCapo<
     GenericTokenomicsFeatureFlags
 > {
 
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         return CapoHeliosBundle
     }
 

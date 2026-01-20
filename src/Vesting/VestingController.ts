@@ -49,18 +49,23 @@ export class VestingController extends DelegatedDataContract<
 > {
     dataBridgeClass = VestingPolicyDataBridge;
 
-    async scriptBundleClass() {
-        // TODO: replicate this pattern within DelegatedDataContract,
-        // so that every derived class can just return its unbound bundle class,
-        // the base class will take care of binding it to the capo.
-        const capoBundle = await this.capo!.mkScriptBundle();
-
+    static async scriptBundleClass() {
         const msb: typeof GenericVestingBundle = await import(
             "./Vesting.generic.hlb.js"
         ).then((m) => m.GenericVestingBundle);
 
-        return msb.usingCapoBundleClass(capoBundle.constructor as any);
+        return msb
     }
+
+    // async scriptBundleClass() {
+    //     // TODO: replicate this pattern within DelegatedDataContract,
+    //     // so that every derived class can just return its unbound bundle class,
+    //     // the base class will take care of binding it to the capo.
+    //     const capoBundle = await this.capo!.mkScriptBundle();
+
+    //     const msb = await (this.constructor as typeof VestingController).scriptBundleClass();
+    //     return msb.usingCapoBundleClass(capoBundle.constructor as any);
+    // }
     idPrefix = "vest";
 
     get delegateName() {

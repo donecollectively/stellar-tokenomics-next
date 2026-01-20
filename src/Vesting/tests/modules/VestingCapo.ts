@@ -26,7 +26,7 @@ class vCapoMintDelegate extends STokMintDelegate {
         return "vCapoMintDelegate";
     }
     dataBridgeClass = vCapoMintDelegateBridge;
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         return vCapoMintDelegateBundle
     }
 }
@@ -34,7 +34,7 @@ class vCapoMintDelegate extends STokMintDelegate {
 export class VestingCapo extends Capo<VestingCapo, VestingFeatures> {
     autoSetup = true;
     
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         return VestingCapoBundle
     }
 
