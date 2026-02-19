@@ -332,90 +332,101 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         submitOptions: TestHelperSubmitOptions = {}
     ) {
         const mktSaleDgt = await this.mktSaleDgt();
-        const existingSale = marketSale.data!;
         console.log("  ----- ⚗️ stopping market sale");
 
-        const tcx = this.capo.mkTcx("stop market sale");
-        // TODO: coder builds Stopping txn using mkTxnUpdateRecord + Stopping activity
-        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
-        //     marketSale,
-        //     {
-        //         txnName: "stop market sale",
-        //         activity: mktSaleDgt.activity.SpendingActivities.Stopping(
-        //             existingSale.details.V1.threadInfo.saleId
-        //         ),
-        //         updatedFields: {
-        //             details: { V1: { ...existingSale.details.V1,
-        //                 saleState: { ...existingSale.details.V1.saleState,
-        //                     state: { Paused: {} },
-        //                 },
-        //             }},
-        //         },
-        //     },
-        //     tcx
-        // );
-        // return this.submitTxnWithBlock(tcx2, submitOptions);
-        throw new Error("TODO: implement stopMarketSale");
+        const tcx = await mktSaleDgt.mkTxnStopMarketSale(marketSale);
+        return this.submitTxnWithBlock(tcx, submitOptions);
     }
 
     async resumeMarketSale(
         marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
-        submitOptions: TestHelperSubmitOptions = {},
-        overrideFields: Partial<MarketSaleDataLike> = {}
-    ) {
-        const mktSaleDgt = await this.mktSaleDgt();
-        const existingSale = marketSale.data!;
-        console.log("  ----- ⚗️ resuming market sale");
-
-        const tcx = this.capo.mkTcx("resume market sale");
-        // TODO: coder builds Resuming txn using mkTxnUpdateRecord + Resuming activity
-        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
-        //     marketSale,
-        //     {
-        //         txnName: "resume market sale",
-        //         activity: mktSaleDgt.activity.SpendingActivities.Resuming(
-        //             existingSale.details.V1.threadInfo.saleId
-        //         ),
-        //         updatedFields: {
-        //             details: { V1: { ...existingSale.details.V1,
-        //                 saleState: { ...existingSale.details.V1.saleState,
-        //                     state: { Active: {} },
-        //                 },
-        //             }},
-        //             ...overrideFields,
-        //         },
-        //     },
-        //     tcx
-        // );
-        // return this.submitTxnWithBlock(tcx2, submitOptions);
-        throw new Error("TODO: implement resumeMarketSale");
-    }
-
-    async updatePausedMarketSale(
-        marketSale: FoundDatumUtxo<MarketSaleData>,
-        updatedFields: Partial<MarketSaleDataLike>,
-        description: string = "updating paused market sale",
         submitOptions: TestHelperSubmitOptions = {}
     ) {
         const mktSaleDgt = await this.mktSaleDgt();
-        const existingSale = marketSale.data!;
-        console.log("  ----- ⚗️ " + description);
+        console.log("  ----- ⚗️ resuming market sale");
 
-        const tcx = this.capo.mkTcx(description);
-        // TODO: coder builds UpdatingPausedSale txn — same pattern as updatePendingMarketSale
-        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
-        //     marketSale,
-        //     {
-        //         txnName: description,
-        //         activity: mktSaleDgt.activity.SpendingActivities.UpdatingPausedSale(
-        //             existingSale.details.V1.threadInfo.saleId
-        //         ),
-        //         updatedFields,
-        //     },
-        //     tcx
-        // );
-        // return this.submitTxnWithBlock(tcx2, submitOptions);
-        throw new Error("TODO: implement updatePausedMarketSale");
+        const tcx = await mktSaleDgt.mkTxnResumeMarketSale(marketSale);
+        return this.submitTxnWithBlock(tcx, submitOptions);
+    }
+
+    // REQT/05fzh7rd1q (Paused Sale Management) — test helper for UpdatingPausedSale
+    // REQT/eqd2j44phf (Settings Editability While Paused)
+    // REQT/xygjysee4h (Frozen Fields While Paused)
+    // REQT/d1967hd11e (Editable Fields While Paused)
+    //
+    // Two modes:
+    //   Normal: editableFields interface enforces frozen/editable boundary
+    //   Raw:    options.rawUpdate bypasses the guard for on-chain policy tests
+    async updatePausedMarketSale(
+        marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        editableFields: {
+            name?: string;
+            settings?: Partial<MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["settings"]>;
+            vxfTokensTo?: MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["vxfTokensTo"];
+            vxfFundsTo?: MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["vxfFundsTo"];
+        },
+        options: TestHelperSubmitOptions & {
+            /** Bypasses editableFields guard — passes raw updatedFields
+             *  directly to mkTxnUpdateRecord. For frozen-field policy tests. */
+            rawUpdate?: Partial<MarketSaleDataLike>;
+            /** Injects extra token value into the UTxO output.
+             *  Use with preTcx that mints the tokens. */
+            addedUtxoValue?: ReturnType<typeof makeValue>;
+            /** Pre-built transaction context (e.g., with minting).
+             *  Used instead of creating a fresh tcx. */
+            preTcx?: Awaited<ReturnType<typeof this.capo.mkTcx>>;
+        } = {}
+    ) {
+        const mktSaleDgt = await this.mktSaleDgt();
+        const existingSale = marketSale.data!;
+        console.log("  ----- ⚗️ updating paused market sale");
+
+        const tcx = options.preTcx || this.capo.mkTcx("updating paused market sale");
+
+        // Raw mode: caller provides updatedFields directly (for policy tests)
+        // Normal mode: build updatedFields from editable fields only
+        const updatedFields: Partial<MarketSaleDataLike> = options.rawUpdate || {
+            ...(editableFields.name !== undefined && { name: editableFields.name }),
+            details: {
+                V1: {
+                    // Frozen: saleState, saleAssets, threadInfo — carry from original
+                    ...existingSale.details.V1,
+                    fixedSaleDetails: {
+                        ...existingSale.details.V1.fixedSaleDetails,
+                        // Editable: settings (with bounds validation)
+                        ...(editableFields.settings && {
+                            settings: {
+                                ...existingSale.details.V1.fixedSaleDetails.settings,
+                                ...editableFields.settings,
+                            },
+                        }),
+                        // Editable: vxfTokensTo, vxfFundsTo (validate if present)
+                        ...(editableFields.vxfTokensTo !== undefined && {
+                            vxfTokensTo: editableFields.vxfTokensTo,
+                        }),
+                        ...(editableFields.vxfFundsTo !== undefined && {
+                            vxfFundsTo: editableFields.vxfFundsTo,
+                        }),
+                    },
+                },
+            },
+        };
+
+        const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
+            marketSale,
+            {
+                txnName: "updating paused market sale",
+                activity:
+                    mktSaleDgt.activity.SpendingActivities.UpdatingPausedSale(
+                        existingSale.details.V1.threadInfo.saleId
+                    ),
+                updatedFields,
+                ...(options.addedUtxoValue && { addedUtxoValue: options.addedUtxoValue }),
+            },
+            tcx
+        );
+
+        return this.submitTxnWithBlock(tcx2, options);
     }
 
     async retireMarketSale(
@@ -423,30 +434,22 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         submitOptions: TestHelperSubmitOptions = {}
     ) {
         const mktSaleDgt = await this.mktSaleDgt();
-        const existingSale = marketSale.data!;
         console.log("  ----- ⚗️ retiring market sale");
 
-        const tcx = this.capo.mkTcx("retire market sale");
-        // TODO: coder builds Retiring txn
-        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
-        //     marketSale,
-        //     {
-        //         txnName: "retire market sale",
-        //         activity: mktSaleDgt.activity.SpendingActivities.Retiring(
-        //             existingSale.details.V1.threadInfo.saleId
-        //         ),
-        //         updatedFields: {
-        //             details: { V1: { ...existingSale.details.V1,
-        //                 saleState: { ...existingSale.details.V1.saleState,
-        //                     state: { Retired: {} },
-        //                 },
-        //             }},
-        //         },
-        //     },
-        //     tcx
-        // );
-        // return this.submitTxnWithBlock(tcx2, submitOptions);
-        throw new Error("TODO: implement retireMarketSale");
+        const tcx = await mktSaleDgt.mkTxnRetireMarketSale(marketSale);
+        return this.submitTxnWithBlock(tcx, submitOptions);
+    }
+
+    /**
+     * Asserts that the given transaction's diagnostics include traces
+     * for each of the specified REQT identifiers, proving the shared
+     * validation pipeline is wired and each check actually ran.
+     */
+    assertEnforcedReqts(
+        tcx: Awaited<ReturnType<typeof this.capo.mkTcx>>,
+        reqts: `REQT-${string}`[]
+    ) {
+        throw new Error("TODO: implement assertEnforcedReqts — inspect tcx diagnostics for REQT traces");
     }
 
     // ============================================================

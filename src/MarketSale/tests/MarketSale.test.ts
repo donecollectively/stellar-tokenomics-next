@@ -1839,10 +1839,36 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSaleActivated();
             const activeSale = await h.findFirstMarketSale();
 
-            // TODO: switch to non-gov actor, attempt stop
-            // h.setActor("tom");
+            // Mock gov authority away — on-chain policy must reject
+            // vi.spyOn(h.capo, "txnAddGovAuthority").mockImplementation(
+            //     async (tcx) => tcx as any
+            // );
             // await expect(h.stopMarketSale(activeSale, { expectError: true }))
-            //     .rejects.toThrow(/gov authority/);
+            //     .rejects.toThrow(/missing.* dgTkn capoGov/);
+        });
+
+        it("can't change UTxO token value when stopping (stop-utxo-value-changed/REQT/tx3fyv3eb2)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const activeSale = await h.findFirstMarketSale();
+            // TODO: manually build Stopping txn with injected token value
+            // const mktSaleDgt = await h.mktSaleDgt();
+            // const tcx = h.capo.mkTcx("stop with value change");
+            // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(activeSale, {
+            //     txnName: "stop with value change",
+            //     activity: mktSaleDgt.activity.SpendingActivities.Stopping(
+            //         activeSale.data!.details.V1.threadInfo.saleId),
+            //     updatedFields: { details: { V1: { ...activeSale.data!.details.V1,
+            //         saleState: { ...activeSale.data!.details.V1.saleState,
+            //             state: { Paused: {} },
+            //         },
+            //     }}},
+            //     addedUtxoValue: makeValue(h.capo.mph, textToBytes("FISH"), 1n),
+            // }, await h.capo.txnMintingFungibleTokens(
+            //     h.capo.mkTcx("mint FISH for stop value test"), "FISH", 1n));
+            // await expect(h.submitTxnWithBlock(tcx2, { expectError: true }))
+            //     .rejects.toThrow(/UTxO tokens changed/);
         });
 
         it("can't sell tokens while Paused (sell-while-paused-rejected/REQT/jdepn901ag)", async (context: STOK_TC) => {
@@ -1906,9 +1932,11 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // h.setActor("tom");
+            // vi.spyOn(h.capo, "txnAddGovAuthority").mockImplementation(
+            //     async (tcx) => tcx as any
+            // );
             // await expect(h.resumeMarketSale(pausedSale, { expectError: true }))
-            //     .rejects.toThrow(/gov authority/);
+            //     .rejects.toThrow(/missing.* dgTkn capoGov/);
         });
 
         it("rejects resume when record has invalid name (resume-invalid-name/REQT/fkww59zyt3)", async (context: STOK_TC) => {
@@ -1964,26 +1992,54 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // await h.updatePausedMarketSale(pausedSale, {
+            // const tcx = await h.updatePausedMarketSale(pausedSale, {
             //     name: "Updated Paused Sale Name",
-            //     details: { V1: { fixedSaleDetails: {
-            //         ...pausedSale.data!.details.V1.fixedSaleDetails,
-            //         settings: { ...pausedSale.data!.details.V1.fixedSaleDetails.settings, targetPrice: 2.0 },
-            //         vxfFundsTo: { Anywhere: {} },
-            //     }}}
+            //     settings: { targetPrice: 2.0 },
+            //     vxfFundsTo: { Anywhere: {} },
             // });
             // const updated = await h.findFirstMarketSale();
             // expect(updated.data!.name).toEqual("Updated Paused Sale Name");
             // expect(updated.data!.details.V1.fixedSaleDetails.settings.targetPrice).toEqual(2.0);
+            // expect(updated.data!.details.V1.fixedSaleDetails.vxfFundsTo).toEqual({ Anywhere: {} });
+            //
+            // // Wiring proof: shared validateCommonUpdateChecks pipeline ran
+            // h.assertEnforcedReqts(tcx, [
+            //     "REQT-ntdbhc1xss",  // UTxO Value Unchanged — no token movement during edits
+            //     "REQT-rg5zyhd2gb",  // ThreadInfo Frozen — equality check
+            //     "REQT-6z88fg6j2s",  // Paused Update Validates VXF If Present — vxfTokensTo/vxfFundsTo
+            //     "REQT-b731sye0fz",  // Settings Bounds Validation When Paused — sane pricing ranges
+            //     "REQT-y16j4t955c",  // Name Length — at least 10 characters (via validate())
+            //     "REQT-egttdcamhg",  // Non-Empty Assets — saleLotAssets, totalSaleLots, etc. (via validate())
+            // ]);
         });
+
+        it("rejects invalid vxfFundsTo while Paused (update-paused-invalid-vxf/REQT/6z88fg6j2s)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            // TODO: await h.snapToFirstMarketSalePaused();
+            // const pausedSale = await h.findFirstMarketSale();
+            // await expect(h.updatePausedMarketSale(
+            //     pausedSale,
+            //     { vxfFundsTo: { NotYetDefined: {} } },
+            //     { expectError: true },
+            // )).rejects.toThrow(/VxfDestination: vxfFundsTo: NotYetDefined/);
+        });
+
+        // Frozen-field tests: these bypass the helper (which structurally prevents
+        // passing frozen fields) and build transactions directly via mkTxnUpdateRecord
+        // + UpdatingPausedSale activity, to verify ON-CHAIN policy enforcement.
 
         it("can't change state during edit (update-paused-state-frozen/REQT/krpj42awmt)", async (context: STOK_TC) => {
             const { h } = context;
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // Build UpdatingPausedSale txn that also changes state to Active
-            // await expect(...).rejects.toThrow(/state must be Paused/);
+            // await expect(h.updatePausedMarketSale(pausedSale, {}, {
+            //     rawUpdate: { details: { V1: { ...pausedSale.data!.details.V1,
+            //         saleState: { ...pausedSale.data!.details.V1.saleState, state: { Active: {} } },
+            //     }}},
+            //     expectError: true,
+            // })).rejects.toThrow(/state must be Paused/);
         });
 
         it("can't change salePace (update-paused-pace-frozen/REQT/drdfrj7k96)", async (context: STOK_TC) => {
@@ -1991,8 +2047,12 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // Build UpdatingPausedSale txn that changes salePace
-            // await expect(...).rejects.toThrow(/salePace|carry forward/);
+            // await expect(h.updatePausedMarketSale(pausedSale, {}, {
+            //     rawUpdate: { details: { V1: { ...pausedSale.data!.details.V1,
+            //         saleState: { ...pausedSale.data!.details.V1.saleState, salePace: 2.0 },
+            //     }}},
+            //     expectError: true,
+            // })).rejects.toThrow(/salePace.*must equal previous|carry forward/);
         });
 
         it("can't change progress details (update-paused-progress-frozen/REQT/r20vvfdq05)", async (context: STOK_TC) => {
@@ -2000,8 +2060,16 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // Build UpdatingPausedSale txn that mutates lotsSold
-            // await expect(...).rejects.toThrow(/lotsSold|unchanged|progress/);
+            // await expect(h.updatePausedMarketSale(pausedSale, {}, {
+            //     rawUpdate: { details: { V1: { ...pausedSale.data!.details.V1,
+            //         saleState: { ...pausedSale.data!.details.V1.saleState,
+            //             progressDetails: { ...pausedSale.data!.details.V1.saleState.progressDetails,
+            //                 lotsSold: 999n,
+            //             },
+            //         },
+            //     }}},
+            //     expectError: true,
+            // })).rejects.toThrow(/lotsSold.*must equal previous|progress.*frozen/);
         });
 
         it("can't change saleAssets (update-paused-assets-frozen/REQT/9eeh66pcnw)", async (context: STOK_TC) => {
@@ -2009,8 +2077,14 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // Build UpdatingPausedSale txn that mutates saleAssets.totalSaleLots
-            // await expect(...).rejects.toThrow(/saleAssets|unchanged/);
+            // await expect(h.updatePausedMarketSale(pausedSale, {}, {
+            //     rawUpdate: { details: { V1: { ...pausedSale.data!.details.V1,
+            //         saleAssets: { ...pausedSale.data!.details.V1.saleAssets,
+            //             totalSaleLots: 999n,
+            //         },
+            //     }}},
+            //     expectError: true,
+            // })).rejects.toThrow(/saleAssets.*must equal previous|unchanged/);
         });
 
         it("can't change startAt (update-paused-startAt-frozen/REQT/q5wwj273n4)", async (context: STOK_TC) => {
@@ -2018,8 +2092,14 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // Build UpdatingPausedSale txn that mutates startAt
-            // await expect(...).rejects.toThrow(/startAt|unchanged/);
+            // await expect(h.updatePausedMarketSale(pausedSale, {}, {
+            //     rawUpdate: { details: { V1: { ...pausedSale.data!.details.V1,
+            //         fixedSaleDetails: { ...pausedSale.data!.details.V1.fixedSaleDetails,
+            //             startAt: Date.now() + 99999,
+            //         },
+            //     }}},
+            //     expectError: true,
+            // })).rejects.toThrow(/startAt.*must equal previous|unchanged/);
         });
 
         it("can't change threadInfo (update-paused-threadInfo-frozen/REQT/rg5zyhd2gb)", async (context: STOK_TC) => {
@@ -2027,8 +2107,14 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // Build UpdatingPausedSale txn that mutates threadInfo
-            // await expect(...).rejects.toThrow(/thread info must not change/);
+            // await expect(h.updatePausedMarketSale(pausedSale, {}, {
+            //     rawUpdate: { details: { V1: { ...pausedSale.data!.details.V1,
+            //         threadInfo: { ...pausedSale.data!.details.V1.threadInfo,
+            //             nestedThreads: 1n,
+            //         },
+            //     }}},
+            //     expectError: true,
+            // })).rejects.toThrow(/thread info must not change/);
         });
 
         it("can't change UTxO token value (update-paused-value-frozen/REQT/ntdbhc1xss)", async (context: STOK_TC) => {
@@ -2036,8 +2122,14 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // Build UpdatingPausedSale txn that adds/removes token value
-            // await expect(...).rejects.toThrow(/UTxO tokens changed/);
+            // const mintTcx = await h.capo.txnMintingFungibleTokens(
+            //     h.capo.mkTcx("mint FISH for value test"), "FISH", 1n);
+            // await expect(h.updatePausedMarketSale(pausedSale, {}, {
+            //     rawUpdate: { name: pausedSale.data!.name },
+            //     addedUtxoValue: makeValue(h.capo.mph, textToBytes("FISH"), 1n),
+            //     preTcx: mintTcx,
+            //     expectError: true,
+            // })).rejects.toThrow(/UTxO tokens changed/);
         });
 
         it("requires gov authority to update (update-paused-no-gov-rejected/REQT/4svc8tfffy)", async (context: STOK_TC) => {
@@ -2045,9 +2137,14 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // h.setActor("tom");
-            // await expect(h.updatePausedMarketSale(pausedSale, { name: "New Name Here!" }, { expectError: true }))
-            //     .rejects.toThrow(/gov authority/);
+            // vi.spyOn(h.capo, "txnAddGovAuthority").mockImplementation(
+            //     async (tcx) => tcx as any
+            // );
+            // await expect(h.updatePausedMarketSale(
+            //     pausedSale,
+            //     { name: "New Name Here!" },
+            //     { expectError: true },
+            // )).rejects.toThrow(/missing.* dgTkn capoGov/);
         });
     });
 
@@ -2096,9 +2193,34 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             // TODO: await h.snapToFirstMarketSalePaused();
             // const pausedSale = await h.findFirstMarketSale();
-            // h.setActor("tom");
+            // vi.spyOn(h.capo, "txnAddGovAuthority").mockImplementation(
+            //     async (tcx) => tcx as any
+            // );
             // await expect(h.retireMarketSale(pausedSale, { expectError: true }))
-            //     .rejects.toThrow(/gov authority/);
+            //     .rejects.toThrow(/missing.* dgTkn capoGov/);
+        });
+
+        it("can't change UTxO token value when retiring (retire-utxo-value-changed/REQT/dtpwzjqn9p)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            // TODO: await h.snapToFirstMarketSalePaused();
+            // const pausedSale = await h.findFirstMarketSale();
+            // const mktSaleDgt = await h.mktSaleDgt();
+            // const tcx = h.capo.mkTcx("retire with value change");
+            // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(pausedSale, {
+            //     txnName: "retire with value change",
+            //     activity: mktSaleDgt.activity.SpendingActivities.Retiring(
+            //         pausedSale.data!.details.V1.threadInfo.saleId),
+            //     updatedFields: { details: { V1: { ...pausedSale.data!.details.V1,
+            //         saleState: { ...pausedSale.data!.details.V1.saleState,
+            //             state: { Retired: {} },
+            //         },
+            //     }}},
+            //     addedUtxoValue: makeValue(h.capo.mph, textToBytes("FISH"), 1n),
+            // }, await h.capo.txnMintingFungibleTokens(
+            //     h.capo.mkTcx("mint FISH for retire value test"), "FISH", 1n));
+            // await expect(h.submitTxnWithBlock(tcx2, { expectError: true }))
+            //     .rejects.toThrow(/UTxO tokens changed/);
         });
 
         it("can't transition back from Retired (retired-no-regression/REQT/w0hvrt4xx8)", async (context: STOK_TC) => {
