@@ -54,10 +54,13 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         )) as MarketSaleController;
     }
 
-    @CapoTestHelper.hasNamedSnapshot("firstMarketSale", "tina")
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "bootstrapped",
+    })
     async snapToFirstMarketSale() {
-        throw new Error("never called");
-        this.firstMarketSale();
+        throw new Error("never called; see firstMarketSale()");
+        return this.firstMarketSale();
     }
 
     async firstMarketSale() {
@@ -106,15 +109,17 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         return marketSales[0];
     }
 
-    @CapoTestHelper.hasNamedSnapshot("firstMarketSaleActivated", "tina")
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "firstMarketSale",
+    })
     async snapToFirstMarketSaleActivated() {
-        throw new Error("never called");
-        this.firstMarketSaleActivated();
+        throw new Error("never called; see firstMarketSaleActivated()");
+        return this.firstMarketSaleActivated();
     }
 
     async firstMarketSaleActivated() {
         this.setActor("tina");
-        await this.snapToFirstMarketSale();
         const marketSale = await this.findFirstMarketSale();
         return this.activateMarketSale(marketSale, {
             mintTokenName:
@@ -287,22 +292,174 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         return this.submitTxnWithBlock(tcx2, submitOptions);
     }
 
-    @CapoTestHelper.hasNamedSnapshot("packagedPendingUpdate", "tina")
-    snapToPackagedPendingUpdate() {
-        throw new Error("never called");
-        return this.packagedPendingUpdate();
+    // ============================================================
+    // SKETCH: Paused Sale Management helpers
+    // Pre-work sketch — coder fills in TODOs
+    // ============================================================
+
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "firstMarketSaleActivated",
+    })
+    async snapToFirstMarketSalePaused() {
+        throw new Error("never called; see firstMarketSalePaused()");
+        return this.firstMarketSalePaused();
     }
-    async packagedPendingUpdateXXX(submitOptions?: TestHelperSubmitOptions) {
-        await this.snapToFirstMarketSale();
-        const marketSale = await this.findFirstMarketSale();
-        await this.updatePendingMarketSale(
-            marketSale,
-            {
-                name: "Updated Market Sale Name",
-            },
-            "packagePendingJUpdate",
-            submitOptions
-        );
+
+    async firstMarketSalePaused() {
+        this.setActor("tina");
+        const activeSale = await this.findFirstMarketSale();
+        return this.stopMarketSale(activeSale);
+    }
+
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "firstMarketSalePaused",
+    })
+    async snapToFirstMarketSaleResumed() {
+        throw new Error("never called; see firstMarketSaleResumed()");
+        return this.firstMarketSaleResumed();
+    }
+
+    async firstMarketSaleResumed() {
+        this.setActor("tina");
+        const pausedSale = await this.findFirstMarketSale();
+        return this.resumeMarketSale(pausedSale);
+    }
+
+    async stopMarketSale(
+        marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        submitOptions: TestHelperSubmitOptions = {}
+    ) {
+        const mktSaleDgt = await this.mktSaleDgt();
+        const existingSale = marketSale.data!;
+        console.log("  ----- ⚗️ stopping market sale");
+
+        const tcx = this.capo.mkTcx("stop market sale");
+        // TODO: coder builds Stopping txn using mkTxnUpdateRecord + Stopping activity
+        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
+        //     marketSale,
+        //     {
+        //         txnName: "stop market sale",
+        //         activity: mktSaleDgt.activity.SpendingActivities.Stopping(
+        //             existingSale.details.V1.threadInfo.saleId
+        //         ),
+        //         updatedFields: {
+        //             details: { V1: { ...existingSale.details.V1,
+        //                 saleState: { ...existingSale.details.V1.saleState,
+        //                     state: { Paused: {} },
+        //                 },
+        //             }},
+        //         },
+        //     },
+        //     tcx
+        // );
+        // return this.submitTxnWithBlock(tcx2, submitOptions);
+        throw new Error("TODO: implement stopMarketSale");
+    }
+
+    async resumeMarketSale(
+        marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        submitOptions: TestHelperSubmitOptions = {},
+        overrideFields: Partial<MarketSaleDataLike> = {}
+    ) {
+        const mktSaleDgt = await this.mktSaleDgt();
+        const existingSale = marketSale.data!;
+        console.log("  ----- ⚗️ resuming market sale");
+
+        const tcx = this.capo.mkTcx("resume market sale");
+        // TODO: coder builds Resuming txn using mkTxnUpdateRecord + Resuming activity
+        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
+        //     marketSale,
+        //     {
+        //         txnName: "resume market sale",
+        //         activity: mktSaleDgt.activity.SpendingActivities.Resuming(
+        //             existingSale.details.V1.threadInfo.saleId
+        //         ),
+        //         updatedFields: {
+        //             details: { V1: { ...existingSale.details.V1,
+        //                 saleState: { ...existingSale.details.V1.saleState,
+        //                     state: { Active: {} },
+        //                 },
+        //             }},
+        //             ...overrideFields,
+        //         },
+        //     },
+        //     tcx
+        // );
+        // return this.submitTxnWithBlock(tcx2, submitOptions);
+        throw new Error("TODO: implement resumeMarketSale");
+    }
+
+    async updatePausedMarketSale(
+        marketSale: FoundDatumUtxo<MarketSaleData>,
+        updatedFields: Partial<MarketSaleDataLike>,
+        description: string = "updating paused market sale",
+        submitOptions: TestHelperSubmitOptions = {}
+    ) {
+        const mktSaleDgt = await this.mktSaleDgt();
+        const existingSale = marketSale.data!;
+        console.log("  ----- ⚗️ " + description);
+
+        const tcx = this.capo.mkTcx(description);
+        // TODO: coder builds UpdatingPausedSale txn — same pattern as updatePendingMarketSale
+        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
+        //     marketSale,
+        //     {
+        //         txnName: description,
+        //         activity: mktSaleDgt.activity.SpendingActivities.UpdatingPausedSale(
+        //             existingSale.details.V1.threadInfo.saleId
+        //         ),
+        //         updatedFields,
+        //     },
+        //     tcx
+        // );
+        // return this.submitTxnWithBlock(tcx2, submitOptions);
+        throw new Error("TODO: implement updatePausedMarketSale");
+    }
+
+    async retireMarketSale(
+        marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        submitOptions: TestHelperSubmitOptions = {}
+    ) {
+        const mktSaleDgt = await this.mktSaleDgt();
+        const existingSale = marketSale.data!;
+        console.log("  ----- ⚗️ retiring market sale");
+
+        const tcx = this.capo.mkTcx("retire market sale");
+        // TODO: coder builds Retiring txn
+        // const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
+        //     marketSale,
+        //     {
+        //         txnName: "retire market sale",
+        //         activity: mktSaleDgt.activity.SpendingActivities.Retiring(
+        //             existingSale.details.V1.threadInfo.saleId
+        //         ),
+        //         updatedFields: {
+        //             details: { V1: { ...existingSale.details.V1,
+        //                 saleState: { ...existingSale.details.V1.saleState,
+        //                     state: { Retired: {} },
+        //                 },
+        //             }},
+        //         },
+        //     },
+        //     tcx
+        // );
+        // return this.submitTxnWithBlock(tcx2, submitOptions);
+        throw new Error("TODO: implement retireMarketSale");
+    }
+
+    // ============================================================
+    // END SKETCH
+    // ============================================================
+
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "firstMarketSale",
+    })
+    async snapToPackagedPendingUpdate() {
+        throw new Error("never called; see packagedPendingUpdate()");
+        return this.packagedPendingUpdate();
     }
 
     _cachedNow : number = Date.now();
@@ -321,7 +478,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     async packagedPendingUpdate(
         submitOptions?: TestHelperSubmitOptions
     ) {
-        await this.snapToFirstMarketSale();
+        this.setActor("tina");
         const marketSale = await this.findFirstMarketSale();
 
         const updateDetails = this.packagedUpdateDetails();
@@ -369,3 +526,6 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         );
     }
 }
+
+// Export pre-wired describe/it - tests import these instead of from vitest
+export const { describe, it, fit, xit } = MarketSaleTestHelper.createTestContext();
