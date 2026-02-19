@@ -18,6 +18,8 @@ playStartSound
 # echo "tsc --traceResolution -p ./tsconfig.dts.json"
 # tsc --traceResolution -p ./tsconfig.dts.json
 # exit
+    rm -rf dist/types
+
     inBackground "typecheck all, create .d.ts types for all packages" \
         tsc -p ./tsconfig.all.dts.json  &
 
