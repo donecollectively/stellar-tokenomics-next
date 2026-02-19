@@ -190,6 +190,9 @@ enum SpendingActivity {
     Stopping {
         id: ByteArray
     }
+    Resuming {
+        id: ByteArray
+    }
     Retiring {
         id: ByteArray
     }
@@ -560,6 +563,82 @@ enum DelegateActivity {
                         assertion: mktSaleDD.input().value == mktSaleDD.output().value,
                         showSuccess: true,
                         onError: "UTxO value changed during Stopping"
+                    )
+                    && cctx.requiresGovAuthority().orFail()
+                }),
+                Resuming {saleId} => logGroup("Resuming sale:", false, () -> Bool {
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
+                    updated : MarketSaleData = MarketSaleData::updated(mktSaleDD);
+
+                    previous.v1details().saleState.mustBePaused(
+                        "Resuming: previous sale", "REQT-3h96mdmn5k"
+                    );
+                    updated.v1details().saleState.mustBeActive("Resuming: updated sale");
+
+                    saleAssets = updated.v1details().saleAssets;
+                    remainingLots = saleAssets.totalSaleLots
+                        - updated.v1details().saleState.progressDetails.lotsSold;
+
+                    true
+                    && updated.validateStateOnlyChange(previous, "REQT-60azhtn9dy")
+                    && bREQT(
+                        reqt: "UTxO token value unchanged (REQT-998waf4mz3)",
+                        assertion: mktSaleDD.input().value == mktSaleDD.output().value,
+                        showSuccess: true,
+                        onError: "UTxO value changed during Resuming"
+                    )
+                    && bREQTgroup(
+                        reqt: "remaining sale tokens present in UTxO (REQT-qh3qkk8f92)",
+                        collapsed: false,
+                        callback: () -> Bool {
+                            expectedAssets = saleAssets.saleLotAssets * remainingLots;
+                            utxoValue = mktSaleDD.output().value;
+                            print("   -- expected remaining: " + expectedAssets.show());
+                            print("   -- UTxO value: " + utxoValue.show());
+                            assert(
+                                utxoValue.contains(expectedAssets),
+                                "UTxO must contain remaining sale tokens"
+                            );
+                            true
+                        }
+                    )
+                    && assertREQTgroup(
+                        "validates VxfDestination in vxfTokensTo (REQT-jkbaba8n7n)",
+                        false,
+                        () -> Bool {
+                            updated.v1details().fixedSaleDetails.vxfTokensTo.switch {
+                                Some{vxf} => {
+                                    assert(vxf.validate("vxfTokensTo"), "vxfTokensTo invalid")
+                                },
+                                None => {
+                                    print("  -- vxfTokensTo is not restricted")
+                                }
+                            };
+                            true
+                        }
+                    )
+                    && assertREQTgroup(
+                        "validates VxfDestination in vxfFundsTo (REQT-jkbaba8n7n)",
+                        false,
+                        () -> Bool {
+                            updated.v1details().fixedSaleDetails.vxfFundsTo.switch {
+                                Some{vxf} => {
+                                    assert(vxf.validate("vxfFundsTo"), "vxfFundsTo invalid")
+                                },
+                                None => {
+                                    print("  -- vxfFundsTo is not restricted")
+                                }
+                            };
+                            true
+                        }
+                    )
+                    && bREQT(
+                        reqt: "datum passes general validation on resume (REQT-fkww59zyt3)",
+                        assertion: updated.validate(),
+                        showSuccess: true
                     )
                     && cctx.requiresGovAuthority().orFail()
                 }),
