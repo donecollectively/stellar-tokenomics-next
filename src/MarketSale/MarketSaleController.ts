@@ -20,6 +20,7 @@ import {
     realDiv,
     debugMath,
     WrappedDgDataContract,
+    environment,
 } from "@donecollectively/stellar-contracts";
 
 import type {
@@ -134,6 +135,12 @@ export class MarketSaleController extends WrappedDgDataContract<
     ) {
         // doesn't interfere with the transaction-builder for selling while active:
         if (original.details.V1.saleState.state.Active) {
+            return updated;
+        }
+        // REQT/05fzh7rd1q (Paused Sale Management) — no fixups while Paused;
+        // all progress details are frozen on-chain (REQT/xygjysee4h),
+        // so no adjustments needed for any Paused-origin transition
+        if (original.details.V1.saleState.state.Paused) {
             return updated;
         }
         if (updated.details.V1.saleState.state.Pending) {
@@ -514,6 +521,136 @@ export class MarketSaleController extends WrappedDgDataContract<
         );
         // console.profileEnd("activate sale");
         return tt;
+    }
+
+    // REQT/03ff0mfddc (Stopping Activity) — builds Active → Paused state transition
+    // REQT/fx7m3y1ctf (Active → Paused) — simplified wrapper around generic update
+    async mkTxnStopMarketSale<
+        TCX extends StellarTxnContext
+    >(
+        this: MarketSaleController,
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        tcx?: TCX
+    ): Promise<TCX> {
+        console.log("🏒 stopping mktSale (Active → Paused)");
+
+        const saleData = mktSale.data!;
+        // REQT/fx7m3y1ctf (Active → Paused) — pre-flight state check
+        if (!environment.isTest && !saleData.details.V1.saleState.state.Active) {
+            throw new Error("Can only stop an Active sale");
+        }
+        // Gov authority is added automatically by mkTxnUpdateRecord
+        // (MarketSaleBundle.requiresGovAuthority = true)
+        return this.mkTxnUpdateRecord(
+            mktSale,
+            {
+                txnName: `stop ${saleData.name}`,
+                activity: this.activity.SpendingActivities.Stopping(
+                    saleData.details.V1.threadInfo.saleId
+                ),
+                // REQT/fx7m3y1ctf — only state changes; all other fields frozen
+                updatedFields: {
+                    details: {
+                        V1: {
+                            ...saleData.details.V1,
+                            saleState: {
+                                ...saleData.details.V1.saleState,
+                                state: { Paused: {} },
+                            },
+                        },
+                    },
+                },
+            },
+            tcx
+        );
+    }
+
+    // REQT/qh3qkk8f92 (Resuming Activity) — builds Paused → Active state transition
+    // REQT/3h96mdmn5k (Paused → Active) — simplified wrapper around generic update
+    async mkTxnResumeMarketSale<
+        TCX extends StellarTxnContext
+    >(
+        this: MarketSaleController,
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        tcx?: TCX
+    ): Promise<TCX> {
+        console.log("🏒 resuming mktSale (Paused → Active)");
+
+        const saleData = mktSale.data!;
+        // REQT/3h96mdmn5k (Paused → Active) — pre-flight state check
+        if (!environment.isTest && !saleData.details.V1.saleState.state.Paused) {
+            throw new Error("Can only resume a Paused sale");
+        }
+        // Gov authority is added automatically by mkTxnUpdateRecord
+        // (MarketSaleBundle.requiresGovAuthority = true)
+        return this.mkTxnUpdateRecord(
+            mktSale,
+            {
+                txnName: `resume ${saleData.name}`,
+                activity: this.activity.SpendingActivities.Resuming(
+                    saleData.details.V1.threadInfo.saleId
+                ),
+                // REQT/3h96mdmn5k — only state changes; all other fields frozen
+                // On-chain validates defense-in-depth: validate(), VxfDestination,
+                // non-editable fields unchanged (REQT/fkww59zyt3, REQT/60azhtn9dy)
+                updatedFields: {
+                    details: {
+                        V1: {
+                            ...saleData.details.V1,
+                            saleState: {
+                                ...saleData.details.V1.saleState,
+                                state: { Active: {} },
+                            },
+                        },
+                    },
+                },
+            },
+            tcx
+        );
+    }
+
+    // REQT/6kg1f7h500 (Retiring Activity) — builds Paused → Retired state transition
+    // REQT/hcagxtdt35 (Paused → Retired) — simplified wrapper around generic update
+    async mkTxnRetireMarketSale<
+        TCX extends StellarTxnContext
+    >(
+        this: MarketSaleController,
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        tcx?: TCX
+    ): Promise<TCX> {
+        console.log("🏒 retiring mktSale (Paused → Retired)");
+
+        const saleData = mktSale.data!;
+        // REQT/hcagxtdt35 (Paused → Retired) — pre-flight state check
+        if (!environment.isTest && !saleData.details.V1.saleState.state.Paused) {
+            throw new Error("Can only retire a Paused sale");
+        }
+        // Gov authority is added automatically by mkTxnUpdateRecord
+        // (MarketSaleBundle.requiresGovAuthority = true)
+        return this.mkTxnUpdateRecord(
+            mktSale,
+            {
+                txnName: `retire ${saleData.name}`,
+                activity: this.activity.SpendingActivities.Retiring(
+                    saleData.details.V1.threadInfo.saleId
+                ),
+                // REQT/hcagxtdt35 — only state changes; all other fields frozen
+                // REQT/dtpwzjqn9p — UTxO value unchanged; tokens stay locked
+                // for future CleanupRetired (FUTURE)
+                updatedFields: {
+                    details: {
+                        V1: {
+                            ...saleData.details.V1,
+                            saleState: {
+                                ...saleData.details.V1.saleState,
+                                state: { Retired: {} },
+                            },
+                        },
+                    },
+                },
+            },
+            tcx
+        );
     }
 
     async mkTxnAddToMarketSale<TCX extends hasCharterRef>(
@@ -940,6 +1077,10 @@ export class MarketSaleController extends WrappedDgDataContract<
                     "participates in the Txf protocol for getting paid",
                     "participates in the Txf protocol for distributing the tokens",
                     "Splits the sale into chunks for scaling",
+                    "Stopping activity (REQT/03ff0mfddc)",
+                    "Resuming activity (REQT/qh3qkk8f92)",
+                    "UpdatingPausedSale activity (REQT/b30wn4bdw2)",
+                    "Retiring activity (REQT/6kg1f7h500)",
                 ],
                 deltas: {
                     "wip": ["ongoing development"],
@@ -1217,6 +1358,112 @@ export class MarketSaleController extends WrappedDgDataContract<
                     ],
                 },
 
+            },
+            "Stopping activity (REQT/03ff0mfddc)": {
+                purpose:
+                    "Transitions an Active sale to Paused state, halting all selling",
+                details: [
+                    "Pure state transition — all datum fields except state are frozen",
+                    "UTxO token value must not change",
+                    "Requires gov authority",
+                    "Existing mustBeActive check on SellingTokens automatically prevents selling while Paused",
+                ],
+                mech: [
+                    "stops an Active sale — state becomes Paused, all other fields unchanged (stop-active-sale/REQT/fx7m3y1ctf)",
+                    "can't stop a Pending sale (stop-pending-rejected/REQT/fx7m3y1ctf)",
+                    "can't stop an already-Paused sale (stop-paused-rejected/REQT/fx7m3y1ctf)",
+                    "requires gov authority to stop (stop-no-gov-rejected/REQT/mfpstpdjsp)",
+                    "can't change UTxO token value when stopping (stop-utxo-value-changed/REQT/tx3fyv3eb2)",
+                    "can't sell tokens while Paused (sell-while-paused-rejected/REQT/jdepn901ag)",
+                ],
+                requires: [
+                    "has a state machine for sale lifecycle",
+                ],
+                deltas: {
+                    "wip": ["new in pause-stop work unit"],
+                },
+            },
+            "Resuming activity (REQT/qh3qkk8f92)": {
+                purpose:
+                    "Transitions a Paused sale back to Active state, re-enabling selling",
+                details: [
+                    "Pure state transition — all datum fields except state are frozen",
+                    "On-chain defense-in-depth: validate(), VxfDestination checks, non-editable fields unchanged",
+                    "Requires gov authority",
+                    "Separate from Activating — cannot reuse Activating because it hard-gates on Pending",
+                ],
+                mech: [
+                    "resumes a Paused sale — state becomes Active (resume-paused-sale/REQT/3h96mdmn5k)",
+                    "selling works normally after resume (sell-after-resume/REQT/3h96mdmn5k)",
+                    "can't resume a Pending sale (resume-pending-rejected/REQT/qh3qkk8f92)",
+                    "can't resume an Active sale (resume-active-rejected/REQT/qh3qkk8f92)",
+                    "requires gov authority to resume (resume-no-gov-rejected/REQT/pks8phr4y5)",
+                    "rejects resume when record has invalid name (resume-invalid-name/REQT/fkww59zyt3)",
+                    "rejects resume when saleAssets mutated (resume-frozen-saleAssets/REQT/60azhtn9dy)",
+                    "rejects resume when startAt mutated (resume-frozen-startAt/REQT/60azhtn9dy)",
+                    "rejects resume when progressDetails mutated (resume-frozen-progress/REQT/60azhtn9dy)",
+                ],
+                requires: [
+                    "has a state machine for sale lifecycle",
+                    "Stopping activity (REQT/03ff0mfddc)",
+                ],
+                deltas: {
+                    "wip": ["new in pause-stop work unit"],
+                },
+            },
+            "UpdatingPausedSale activity (REQT/b30wn4bdw2)": {
+                purpose:
+                    "Allows editing of select sale details while Paused, with frozen/editable field enforcement",
+                details: [
+                    "Editable: name, settings (with bounds), vxfTokensTo (validate if present), vxfFundsTo (validate if present)",
+                    "Frozen: state, salePace, all progressDetails, entire saleAssets, startAt, threadInfo, UTxO token value",
+                    "Uses generic mkTxnUpdateRecord + UpdatingPausedSale activity redeemer (no dedicated controller method)",
+                    "Requires gov authority",
+                ],
+                mech: [
+                    "can update name, settings, and vxf destinations while Paused (update-paused-editables/REQT/d1967hd11e)",
+                    "rejects invalid vxfFundsTo while Paused (update-paused-invalid-vxf/REQT/6z88fg6j2s)",
+                    "can't change state during edit (update-paused-state-frozen/REQT/krpj42awmt)",
+                    "can't change salePace (update-paused-pace-frozen/REQT/drdfrj7k96)",
+                    "can't change progress details (update-paused-progress-frozen/REQT/r20vvfdq05)",
+                    "can't change saleAssets (update-paused-assets-frozen/REQT/9eeh66pcnw)",
+                    "can't change startAt (update-paused-startAt-frozen/REQT/q5wwj273n4)",
+                    "can't change threadInfo (update-paused-threadInfo-frozen/REQT/rg5zyhd2gb)",
+                    "can't change UTxO token value (update-paused-value-frozen/REQT/ntdbhc1xss)",
+                    "requires gov authority to update (update-paused-no-gov-rejected/REQT/4svc8tfffy)",
+                ],
+                requires: [
+                    "Stopping activity (REQT/03ff0mfddc)",
+                ],
+                deltas: {
+                    "wip": ["new in pause-stop work unit"],
+                },
+            },
+            "Retiring activity (REQT/6kg1f7h500)": {
+                purpose:
+                    "Transitions a Paused sale to Retired state — terminal, tokens stay locked for future CleanupRetired",
+                details: [
+                    "Pure state transition from Paused only — must Stop before Retiring",
+                    "All datum fields except state are frozen",
+                    "UTxO token value unchanged — tokens stay locked",
+                    "Requires gov authority",
+                    "No direct Active → Retired path",
+                ],
+                mech: [
+                    "retires a Paused sale — state becomes Retired (retire-paused-sale/REQT/hcagxtdt35)",
+                    "can't retire from Active — must Stop first (retire-active-rejected/REQT/7j07yjvpbh)",
+                    "can't retire from Pending (retire-pending-rejected/REQT/7j07yjvpbh)",
+                    "requires gov authority to retire (retire-no-gov-rejected/REQT/3fhy62nx77)",
+                    "can't change UTxO token value when retiring (retire-utxo-value-changed/REQT/dtpwzjqn9p)",
+                    "can't transition back from Retired (retired-no-regression/REQT/w0hvrt4xx8)",
+                ],
+                requires: [
+                    "has a state machine for sale lifecycle",
+                    "Stopping activity (REQT/03ff0mfddc)",
+                ],
+                deltas: {
+                    "wip": ["new in pause-stop work unit"],
+                },
             },
         });
     }
