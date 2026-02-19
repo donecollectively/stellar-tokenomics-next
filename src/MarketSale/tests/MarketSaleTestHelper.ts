@@ -482,7 +482,21 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         tcx: Awaited<ReturnType<typeof this.capo.mkTcx>>,
         reqts: `REQT-${string}`[]
     ) {
-        throw new Error("TODO: implement assertEnforcedReqts — inspect tcx diagnostics for REQT traces");
+        const history = tcx.logger.fullHistory();
+        const missing: string[] = [];
+        for (const reqtId of reqts) {
+            if (!history.includes(reqtId)) {
+                missing.push(reqtId);
+            }
+        }
+        if (missing.length > 0) {
+            throw new Error(
+                `assertEnforcedReqts: ${missing.length} REQT trace(s) missing from transaction log:\n` +
+                `  missing: ${missing.join(", ")}\n` +
+                `  expected: ${reqts.join(", ")}\n` +
+                `  (on-chain code must emit these REQT IDs via REQT/bREQT/REQTgroup helpers)`
+            );
+        }
     }
 
     // ============================================================
