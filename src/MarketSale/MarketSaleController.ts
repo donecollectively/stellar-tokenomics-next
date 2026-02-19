@@ -806,7 +806,9 @@ export class MarketSaleController extends WrappedDgDataContract<
             },
             tcx1
         );
-        return this.capo.txnAddGovAuthority(tcx2);
+        // Gov authority is added automatically by mkTxnUpdateRecord
+        // (MarketSaleBundle.requiresGovAuthority = true)
+        return tcx2;
     }
 
     guardUnevenLots(updatedCount: bigint, existingSale: MarketSaleData) {
