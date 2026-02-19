@@ -56,15 +56,17 @@ extends DefaultCapoTestHelper.forCapoClass(
     // }
 
 
-    @CapoTestHelper.hasNamedSnapshot("firstMember", "pauline")
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "pauline",
+        parentSnapName: "bootstrapped",
+    })
     async snapToFirstMember() {
-        throw new Error("never called");
+        throw new Error("never called; see firstMember()");
         return this.firstMember();
     }
 
     async firstMember() {
-        await this.bootstrap()
-        await this.setActor("pauline");
+        this.setActor("pauline");
         const tcx = await this.capo.mkTxnMintParticipantToken(
             this.wallet.address
         );
@@ -95,3 +97,6 @@ export type STOK_TC = StellarTestContext<GenericTokenomicsTestHelper> & {
     loadSnapshot(this: STOK_TC, snapName: string): void;
     reusableBootstrap(this: STOK_TC): Promise<GenericTokenomicsCapo>;
 };
+
+// Export pre-wired describe/it - tests import these instead of from vitest
+export const { describe, it, fit, xit } = GenericTokenomicsTestHelper.createTestContext();

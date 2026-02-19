@@ -49,10 +49,13 @@ export class VestingTestHelper extends DefaultCapoTestHelper.forCapoClass(
         })) as VestingController;
     }
 
-    @CapoTestHelper.hasNamedSnapshot("firstVesting", "tina")
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "bootstrapped",
+    })
     async snapToFirstVesting() {
-        throw new Error("never called");
-        this.firstVesting();
+        throw new Error("never called; see firstVesting()");
+        return this.firstVesting();
     }
 
     async firstVesting() {
@@ -100,15 +103,17 @@ export class VestingTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
     //Sample "activated" snapshot, with a model using a separate Wrapper class
     // can just remove if not needed
-    @CapoTestHelper.hasNamedSnapshot("firstVestingActivated", "tina")
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "firstVesting",
+    })
     async snapToFirstVestingActivated() {
-        throw new Error("never called");
-        this.firstVestingActivated();
+        throw new Error("never called; see firstVestingActivated()");
+        return this.firstVestingActivated();
     }
 
     async firstVestingActivated() {
         this.setActor("tina");
-        await this.snapToFirstVesting();
         const vesting = await this.findFirstVesting();
         return this.activateVesting(vesting)
     }
@@ -146,3 +151,6 @@ export class VestingTestHelper extends DefaultCapoTestHelper.forCapoClass(
     }
 
 }
+
+// Export pre-wired describe/it - tests import these instead of from vitest
+export const { describe, it, fit, xit } = VestingTestHelper.createTestContext();
