@@ -554,19 +554,41 @@ enum DelegateActivity {
                     );
 
                     true
-                    && updated.validateStateOnlyChange(
-                        previous, mktSaleDD, MarketSaleState::Paused, "REQT-03ff0mfddc"
+                    && updated.validateStateOnlyChange(previous, "REQT-nxqq219k4r")
+                    && bREQT(
+                        reqt: "UTxO token value unchanged (REQT-03ff0mfddc)",
+                        assertion: mktSaleDD.input().value == mktSaleDD.output().value,
+                        showSuccess: true,
+                        onError: "UTxO value changed during Stopping"
                     )
                     && cctx.requiresGovAuthority().orFail()
                 }),
-                Retiring => { //{_ /* recId */} => {
-                    error("todo: Retiring")
-                    // Must not have active child chunks:
-                    // ...  previous.retiredThreads must be === previous.nestedThreads
+                Retiring {saleId} => logGroup("Retiring sale:", false, () -> Bool {
+                    assert(cctx.withCharterRef().orFail(), "can't");
 
-                    // updated
-                    // updated.state must be retired
-                }                
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
+                    updated : MarketSaleData = MarketSaleData::updated(mktSaleDD);
+
+                    previous.v1details().saleState.mustBePaused(
+                        "Retiring: previous sale", "REQT-hcagxtdt35"
+                    );
+                    REQT(
+                        reqt: "Retiring: state must be Retired (REQT-hcagxtdt35)",
+                        assertion: updated.v1details().saleState.state == MarketSaleState::Retired,
+                        showSuccess: true
+                    );
+
+                    true
+                    && updated.validateStateOnlyChange(previous, "REQT-9nsee3zj78")
+                    && bREQT(
+                        reqt: "UTxO token value unchanged (REQT-dtpwzjqn9p)",
+                        assertion: mktSaleDD.input().value == mktSaleDD.output().value,
+                        showSuccess: true,
+                        onError: "UTxO value changed during Retiring"
+                    )
+                    && cctx.requiresGovAuthority().orFail()
+                })                
             },
             BurningActivities{ba} => {
                 ba.switch {

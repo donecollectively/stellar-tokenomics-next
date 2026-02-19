@@ -595,8 +595,6 @@ struct MarketSaleData {
 
     func validateStateOnlyChange(self,
         previous: MarketSaleData,
-        ddd: DgDataDetails,
-        targetState: MarketSaleState,
         reqtId: String
     ) -> Bool {
         prevDetails = previous.v1details();
@@ -616,12 +614,6 @@ struct MarketSaleData {
                 assert(nextState.salePace == prevState.salePace, "salePace can't be modified");
                 true
             }
-        )
-        && bREQT(
-            reqt: "UTxO token value unchanged (" + reqtId + ")",
-            assertion: ddd.input().value == ddd.output().value,
-            showSuccess: true,
-            onError: "UTxO value changed during state-only transition"
         )
     }
 }
