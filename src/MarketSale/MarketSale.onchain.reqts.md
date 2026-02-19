@@ -163,6 +163,10 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 2.2.2: REQT-r1gn242egz: **COMPLETED**/consented: **Progress Details When Pending** - When Pending, `lotsSold` MUST be 0, `lastPurchaseAt` and `prevPurchaseAt` MUST equal `startAt`, and `lotCount` MUST equal `totalSaleLots`.
      - 2.2.3: REQT-q1v92hjxwa: **COMPLETED**/consented: **Thread Info When Pending** - When Pending, `parentChunkId` MUST be empty, `saleId` MUST equal the record's id, and `nestedThreads` and `retiredThreads` MUST be 0.
      - 2.2.4: REQT-5x71zzdpgb: **COMPLETED**/consented: **Settings Validation When Pending** - When Pending, `fixedSaleDetails.settings` MUST pass `validateDetailsWhenPending()` — sane bounds on all pricing parameters.
+ - 2.3.0: REQT-nfk38zrkrz: **NEXT**/draft: **Cross-Cutting State Transition Validations**
+     - 2.3.1: REQT-yy15shmtwb: **NEXT**/draft: **Datum Fields Unchanged** - State-only transitions MUST leave all datum fields unchanged except the state field.
+     - 2.3.2: REQT-hk93w5zb16: **NEXT**/draft: **UTxO Value Unchanged** - State-only transitions MUST verify the UTxO token value does not change — no token movement during the transition.
+     - 2.3.3: REQT-kjbw4p63hf: **NEXT**/draft: **Tokens Remain in UTxO** - State-only transitions MUST NOT move or burn tokens — tokens stay locked in the UTxO. Any token disposal is a separate activity.
 
 ## Area 3: Sale Lifecycle
 
@@ -309,16 +313,16 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
  - 10.1.0: REQT-03ff0mfddc: **NEXT**/draft: **Stopping Activity**
      - 10.1.1: REQT-f12d51rvdz: **NEXT**/draft: **State Transition** - Stopping MUST require previous state == Active and next state == Paused.
      - 10.1.2: REQT-mfpstpdjsp: **NEXT**/draft: **Gov Authority** - Stopping MUST require governance authority.
-     - 10.1.3: REQT-nxqq219k4r: **NEXT**/draft: **All Fields Unchanged** - Stopping MUST verify all datum fields are unchanged except for the state field transition from Active to Paused.
-     - 10.1.4: REQT-tx3fyv3eb2: **NEXT**/draft: **UTxO Value Unchanged** - Stopping MUST verify the UTxO token value does not change — no token movement during a stop.
+     - 10.1.3: REQT-nxqq219k4r: **NEXT**/draft: **All Fields Unchanged** - All datum fields unchanged except state (Active → Paused); per REQT-yy15shmtwb.
+     - 10.1.4: REQT-tx3fyv3eb2: **NEXT**/draft: **UTxO Value Unchanged** - UTxO token value unchanged — no token movement; per REQT-hk93w5zb16.
  - 10.2.0: REQT-qh3qkk8f92: **NEXT**/draft: **Resuming Activity**
      - 10.2.1: REQT-dpkz9kmr81: **NEXT**/draft: **State Transition** - Resuming MUST require previous state == Paused and next state == Active.
      - 10.2.2: REQT-pks8phr4y5: **NEXT**/draft: **Gov Authority** - Resuming MUST require governance authority.
      - 10.2.3: REQT-34yb7jx6tr: **NEXT**/draft: **Token Presence Verification** - Resuming MUST verify that deposited tokens still match `saleLotAssets × totalSaleLots` — the full supply must still be present.
      - 10.2.4: REQT-pypc9vmpfk: **NEXT**/draft: **VXF Validation on Resume** - Resuming MUST validate VXF destinations per REQT-jkbaba8n7n (Resuming Validates VXF) — same checks as Activating since the sale re-enters Active state.
      - 10.2.5: REQT-fkww59zyt3: **NEXT**/draft: **General Validation Passes on Resume** - The resumed record MUST pass `validate()` — defense-in-depth ensuring datum integrity when re-entering Active state, mirroring Activating (REQT-wt32kvjm9f).
-     - 10.2.6: REQT-60azhtn9dy: **NEXT**/draft: **Non-Editable Fields Unchanged on Resume** - Resuming MUST verify that all fields not editable during UpdatingPausedSale are unchanged from input to output: saleAssets (entire struct), startAt, progressDetails (all four fields), threadInfo, salePace, id, type. Only the state field transitions from Paused to Active.
-     - 10.2.7: REQT-998waf4mz3: **NEXT**/draft: **UTxO Value Unchanged** - Resuming MUST verify the UTxO token value does not change — no token movement during resume transition.
+     - 10.2.6: REQT-60azhtn9dy: **NEXT**/draft: **All Fields Unchanged** - All datum fields unchanged except state (Paused → Active); per REQT-yy15shmtwb.
+     - 10.2.7: REQT-998waf4mz3: **NEXT**/draft: **UTxO Value Unchanged** - UTxO token value unchanged — no token movement; per REQT-hk93w5zb16.
  - 10.3.0: REQT-b30wn4bdw2: **NEXT**/draft: **UpdatingPausedSale Activity**
      - 10.3.1: REQT-krpj42awmt: **NEXT**/draft: **Paused State Required** - UpdatingPausedSale MUST require both previous and next state to be Paused.
      - 10.3.2: REQT-4svc8tfffy: **NEXT**/draft: **Gov Authority** - UpdatingPausedSale MUST require governance authority.
@@ -342,9 +346,9 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
  - 11.1.0: REQT-6kg1f7h500: **NEXT**/draft: **Retiring Activity**
      - 11.1.1: REQT-6fb1gwxhvk: **NEXT**/draft: **State Transition** - Retiring MUST require previous state == Paused and next state == Retired.
      - 11.1.2: REQT-3fhy62nx77: **NEXT**/draft: **Gov Authority** - Retiring MUST require governance authority.
-     - 11.1.3: REQT-je621r06f7: **NEXT**/draft: **Tokens Remain in UTxO** - Retiring MUST NOT move or burn tokens — remaining tokens stay locked in the UTxO after state transition to Retired. Token disposal is deferred to the `CleanupRetired` burning activity (FUTURE, REQT-kr9rseqaxf).
-     - 11.1.4: REQT-dtpwzjqn9p: **NEXT**/draft: **UTxO Value Unchanged** - Retiring MUST verify the UTxO token value does not change — no token movement during retirement transition.
-     - 11.1.5: REQT-9nsee3zj78: **NEXT**/draft: **All Datum Fields Unchanged** - Retiring MUST verify all datum fields are unchanged except for the state field transition from Paused to Retired (same structural pattern as Stopping, REQT-nxqq219k4r).
+     - 11.1.3: REQT-je621r06f7: **NEXT**/draft: **Tokens Remain in UTxO** - Tokens stay locked in UTxO; per REQT-kjbw4p63hf. Token disposal deferred to `CleanupRetired` (FUTURE, REQT-kr9rseqaxf).
+     - 11.1.4: REQT-dtpwzjqn9p: **NEXT**/draft: **UTxO Value Unchanged** - UTxO token value unchanged — no token movement; per REQT-hk93w5zb16.
+     - 11.1.5: REQT-9nsee3zj78: **NEXT**/draft: **All Datum Fields Unchanged** - All datum fields unchanged except state (Paused → Retired); per REQT-yy15shmtwb.
  - 11.2.0: REQT-gexqz64w5d: **FUTURE**/draft: **Broader Retirement (Future)**
      - 11.2.1: REQT-wvfhmzb0bf: **FUTURE**/draft: **No Active Child Chunks on Retire** - When chunk-splitting is implemented, Retiring MUST verify that `retiredThreads == nestedThreads` — all child chunks must be merged/retired before the parent can retire.
      - 11.2.2: REQT-kr9rseqaxf: **FUTURE**/draft: **CleanupRetired Burning** - The `CleanupRetired` burning activity MUST burn the UUT and account for remaining tokens after retirement. Currently stubbed.
