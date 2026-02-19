@@ -339,7 +339,8 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
  - 11.1.0: REQT-6kg1f7h500: **NEXT**/draft: **Retiring Activity**
      - 11.1.1: REQT-6fb1gwxhvk: **NEXT**/draft: **State Transition** - Retiring MUST require previous state == Paused and next state == Retired.
      - 11.1.2: REQT-3fhy62nx77: **NEXT**/draft: **Gov Authority** - Retiring MUST require governance authority.
-     - 11.1.3: REQT-je621r06f7: **NEXT**/draft: **Token Withdrawal** - Retiring MUST handle withdrawal/burning of remaining tokens from the sale UTxO. Specific mechanism to be further specified during implementation.
+     - 11.1.3: REQT-je621r06f7: **NEXT**/draft: **Tokens Remain in UTxO** - Retiring MUST NOT move or burn tokens — remaining tokens stay locked in the UTxO after state transition to Retired. Token disposal is deferred to the `CleanupRetired` burning activity (FUTURE, REQT/kr9rseqaxf). All datum fields except state MUST be unchanged (same structural pattern as Stopping).
+     - 11.1.4: REQT-dtpwzjqn9p: **NEXT**/draft: **UTxO Value Unchanged** - Retiring MUST verify the UTxO token value does not change — no token movement during retirement transition.
  - 11.2.0: REQT-gexqz64w5d: **FUTURE**/draft: **Broader Retirement (Future)**
      - 11.2.1: REQT-wvfhmzb0bf: **FUTURE**/draft: **No Active Child Chunks on Retire** - When chunk-splitting is implemented, Retiring MUST verify that `retiredThreads == nestedThreads` — all child chunks must be merged/retired before the parent can retire.
      - 11.2.2: REQT-kr9rseqaxf: **FUTURE**/draft: **CleanupRetired Burning** - The `CleanupRetired` burning activity MUST burn the UUT and account for remaining tokens after retirement. Currently stubbed.
