@@ -340,11 +340,44 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
     async resumeMarketSale(
         marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
-        submitOptions: TestHelperSubmitOptions = {}
+        submitOptions: TestHelperSubmitOptions = {},
+        /** Override fields for defense-in-depth tests (REQT/fkww59zyt3, REQT/60azhtn9dy).
+         *  When provided, bypasses the dedicated builder and uses mkTxnUpdateRecord
+         *  + Resuming activity with merged fields — to inject bad data and verify
+         *  on-chain policy rejection. */
+        overrideFields?: Partial<MarketSaleDataLike>
     ) {
         const mktSaleDgt = await this.mktSaleDgt();
         console.log("  ----- ⚗️ resuming market sale");
 
+        if (overrideFields) {
+            // Defense-in-depth path: bypass dedicated builder to inject mutations
+            const existingSale = marketSale.data!;
+            const tcx = this.capo.mkTcx("resume market sale (override)");
+            const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
+                marketSale,
+                {
+                    txnName: "resume market sale (override)",
+                    activity:
+                        mktSaleDgt.activity.SpendingActivities.Resuming(
+                            existingSale.details.V1.threadInfo.saleId
+                        ),
+                    updatedFields: {
+                        ...existingSale,
+                        details: { V1: { ...existingSale.details.V1,
+                            saleState: { ...existingSale.details.V1.saleState,
+                                state: { Active: {} },
+                            },
+                        }},
+                        ...overrideFields,
+                    },
+                },
+                tcx
+            );
+            return this.submitTxnWithBlock(tcx2, submitOptions);
+        }
+
+        // Normal path: dedicated builder
         const tcx = await mktSaleDgt.mkTxnResumeMarketSale(marketSale);
         return this.submitTxnWithBlock(tcx, submitOptions);
     }
