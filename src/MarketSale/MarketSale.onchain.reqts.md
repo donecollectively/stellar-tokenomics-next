@@ -318,6 +318,7 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 10.2.4: REQT-pypc9vmpfk: **NEXT**/draft: **VXF Validation on Resume** - Resuming MUST validate VXF destinations per REQT-jkbaba8n7n (Resuming Validates VXF) — same checks as Activating since the sale re-enters Active state.
      - 10.2.5: REQT-fkww59zyt3: **NEXT**/draft: **General Validation Passes on Resume** - The resumed record MUST pass `validate()` — defense-in-depth ensuring datum integrity when re-entering Active state, mirroring Activating (REQT-wt32kvjm9f).
      - 10.2.6: REQT-60azhtn9dy: **NEXT**/draft: **Non-Editable Fields Unchanged on Resume** - Resuming MUST verify that all fields not editable during UpdatingPausedSale are unchanged from input to output: saleAssets (entire struct), startAt, progressDetails (all four fields), threadInfo, salePace, id, type. Only the state field transitions from Paused to Active.
+     - 10.2.7: REQT-998waf4mz3: **NEXT**/draft: **UTxO Value Unchanged** - Resuming MUST verify the UTxO token value does not change — no token movement during resume transition.
  - 10.3.0: REQT-b30wn4bdw2: **NEXT**/draft: **UpdatingPausedSale Activity**
      - 10.3.1: REQT-krpj42awmt: **NEXT**/draft: **Paused State Required** - UpdatingPausedSale MUST require both previous and next state to be Paused.
      - 10.3.2: REQT-4svc8tfffy: **NEXT**/draft: **Gov Authority** - UpdatingPausedSale MUST require governance authority.
