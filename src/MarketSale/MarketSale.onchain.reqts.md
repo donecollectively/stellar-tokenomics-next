@@ -21,7 +21,7 @@ The essential technologies are **Helios, Cardano eUTxO, stellar-contracts on-cha
 
 Market sales enable the distribution of token bundles in discrete lots over a specified time period, using an adaptive pricing model that responds to market dynamics. The on-chain policy is the ultimate authority — it enforces all business rules that the off-chain code proposes. Key challenges include:
 
-1. **State machine integrity**: Sales transition through Pending → Active → Paused → Retired/SoldOut, with each transition requiring specific preconditions and authority.
+1. **State machine integrity**: Sales transition through Pending → Active ⇄ Paused, with Paused → Retired/SoldOut, with each transition requiring specific preconditions and authority.
 2. **Data consistency**: Sale assets, lot counts, pricing parameters, and progress details must remain consistent across all mutations.
 3. **Dynamic pricing**: A real-time pricing model adjusts based on sale progress and buying pace, requiring on-chain validation of pricing calculations.
 4. **VXF Protocol**: Funds and tokens must be routed to validated destinations, enforced during sale transactions.
@@ -166,12 +166,12 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
 
 ## Area 3: Sale Lifecycle
 
-### **REQT-3.0/46gmm6198w**: **COMPLETED**/consented: **Sale Lifecycle**
+### **REQT-3.0/46gmm6198w**: **NEXT**/draft: **Sale Lifecycle**
 #### Purpose: Defines the valid states and transitions for a MarketSale record. Applied when reviewing state transition logic, adding new activities, or auditing that illegal transitions are rejected.
 
  - 3.1.0: REQT-j12bhjzrxp: **COMPLETED**/consented: **Valid States**
      - 3.1.1: REQT-6kdmzqf3nk: **COMPLETED**/consented: **Pending State** - The `Pending` state is the initial state for all newly created sales. Sales remain Pending during configuration and token deposits.
-     - 3.1.2: REQT-1whgp2m8jq: **COMPLETED**/consented: **Active State** - The `Active` state indicates the sale is open for token purchases. Entered via Activating (from Pending) or Resuming (from Paused).
+     - 3.1.2: REQT-1whgp2m8jq: **NEXT**/draft: **Active State** - The `Active` state indicates the sale is open for token purchases. Entered via Activating (from Pending) or Resuming (from Paused).
      - 3.1.3: REQT-e7dqc25smj: **NEXT**/draft: **Paused State** - The `Paused` state indicates the sale is temporarily halted. Configuration can be modified while paused. Entered via Stopping (from Active).
      - 3.1.4: REQT-yq3genxzkf: **NEXT**/draft: **Retired State** - The `Retired` state indicates the sale has been permanently wound down. Entered via Retiring (from Paused only — must Stop before Retiring).
      - 3.1.5: REQT-0nnrndkzy2: **FUTURE**/draft: **SoldOut State** - The `SoldOut` state indicates all tokens have been purchased. Transition mechanism TBD.
@@ -235,7 +235,7 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 6.1.2: REQT-9ae13swvwy: **P1**/draft: **Seal vxfFundsTo** - The sale MUST allow sealing a `VxfDestination` into the `vxfFundsTo` field, provided the VXF receiver is participating in the transaction.
      - 6.1.3: REQT-9xhare9c1a: **P1**/draft: **Sealing Requires Gov Authority** - Sealing either VXF destination MUST require governance authority.
      - 6.1.4: REQT-7wfa7b7x3t: **P1**/draft: **Sealing Requires Receiver Participation** - Sealing MUST NOT succeed without the VXF receiver's participation in the transaction — the receiver's UTxO must be present.
- - 6.2.0: REQT-w6e5qsfxq1: **COMPLETED**/consented: **VXF Destination Validation on State Transitions**
+ - 6.2.0: REQT-w6e5qsfxq1: **NEXT**/draft: **VXF Destination Validation on State Transitions**
      - 6.2.1: REQT-x3xkgwp94t: **COMPLETED**/consented: **Activating Requires vxfFundsTo** - The `Activating` activity MUST validate that `vxfFundsTo` is present (Some) and passes `VxfDestination.validate()`. A sale MUST NOT activate without a configured funds destination.
      - 6.2.2: REQT-d67c29t29w: **COMPLETED**/consented: **Activating Validates vxfTokensTo If Present** - The `Activating` activity MUST validate `vxfTokensTo` if present (Some). If None, activation proceeds without token routing constraints.
      - 6.2.3: REQT-g563tb3ks1: **COMPLETED**/consented: **Pending Update Validates VXF If Present** - `UpdatingPendingSale` MUST validate `vxfTokensTo` and `vxfFundsTo` if present (Some). If None, the update proceeds — destinations are optional until activation.
@@ -316,6 +316,8 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 10.2.2: REQT-pks8phr4y5: **NEXT**/draft: **Gov Authority** - Resuming MUST require governance authority.
      - 10.2.3: REQT-34yb7jx6tr: **NEXT**/draft: **Token Presence Verification** - Resuming MUST verify that deposited tokens still match `saleLotAssets × totalSaleLots` — the full supply must still be present.
      - 10.2.4: REQT-pypc9vmpfk: **NEXT**/draft: **VXF Validation on Resume** - Resuming MUST validate VXF destinations per REQT-jkbaba8n7n (Resuming Validates VXF) — same checks as Activating since the sale re-enters Active state.
+     - 10.2.5: REQT-fkww59zyt3: **NEXT**/draft: **General Validation Passes on Resume** - The resumed record MUST pass `validate()` — defense-in-depth ensuring datum integrity when re-entering Active state, mirroring Activating (REQT-wt32kvjm9f).
+     - 10.2.6: REQT-60azhtn9dy: **NEXT**/draft: **Non-Editable Fields Unchanged on Resume** - Resuming MUST verify that all fields not editable during UpdatingPausedSale are unchanged from input to output: saleAssets (entire struct), startAt, progressDetails (all four fields), threadInfo, salePace, id, type. Only the state field transitions from Paused to Active.
  - 10.3.0: REQT-b30wn4bdw2: **NEXT**/draft: **UpdatingPausedSale Activity**
      - 10.3.1: REQT-krpj42awmt: **NEXT**/draft: **Paused State Required** - UpdatingPausedSale MUST require both previous and next state to be Paused.
      - 10.3.2: REQT-4svc8tfffy: **NEXT**/draft: **Gov Authority** - UpdatingPausedSale MUST require governance authority.
@@ -339,8 +341,9 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
  - 11.1.0: REQT-6kg1f7h500: **NEXT**/draft: **Retiring Activity**
      - 11.1.1: REQT-6fb1gwxhvk: **NEXT**/draft: **State Transition** - Retiring MUST require previous state == Paused and next state == Retired.
      - 11.1.2: REQT-3fhy62nx77: **NEXT**/draft: **Gov Authority** - Retiring MUST require governance authority.
-     - 11.1.3: REQT-je621r06f7: **NEXT**/draft: **Tokens Remain in UTxO** - Retiring MUST NOT move or burn tokens — remaining tokens stay locked in the UTxO after state transition to Retired. Token disposal is deferred to the `CleanupRetired` burning activity (FUTURE, REQT/kr9rseqaxf). All datum fields except state MUST be unchanged (same structural pattern as Stopping).
+     - 11.1.3: REQT-je621r06f7: **NEXT**/draft: **Tokens Remain in UTxO** - Retiring MUST NOT move or burn tokens — remaining tokens stay locked in the UTxO after state transition to Retired. Token disposal is deferred to the `CleanupRetired` burning activity (FUTURE, REQT-kr9rseqaxf).
      - 11.1.4: REQT-dtpwzjqn9p: **NEXT**/draft: **UTxO Value Unchanged** - Retiring MUST verify the UTxO token value does not change — no token movement during retirement transition.
+     - 11.1.5: REQT-9nsee3zj78: **NEXT**/draft: **All Datum Fields Unchanged** - Retiring MUST verify all datum fields are unchanged except for the state field transition from Paused to Retired (same structural pattern as Stopping, REQT-nxqq219k4r).
  - 11.2.0: REQT-gexqz64w5d: **FUTURE**/draft: **Broader Retirement (Future)**
      - 11.2.1: REQT-wvfhmzb0bf: **FUTURE**/draft: **No Active Child Chunks on Retire** - When chunk-splitting is implemented, Retiring MUST verify that `retiredThreads == nestedThreads` — all child chunks must be merged/retired before the parent can retire.
      - 11.2.2: REQT-kr9rseqaxf: **FUTURE**/draft: **CleanupRetired Burning** - The `CleanupRetired` burning activity MUST burn the UUT and account for remaining tokens after retirement. Currently stubbed.
