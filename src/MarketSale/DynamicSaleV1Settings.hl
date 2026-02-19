@@ -38,8 +38,8 @@ struct DynamicSaleV1Settings {
     // 5 by default
     pricingWeightDynaPace: Real  // same as weightNextDynaPace
 
-    func validateDetailsWhenPending(self) -> Bool {
-    logGroup("DynamicSaleV1Settings: validateCreatedDetails()" , false, () -> Bool {
+    func validateUpdatedDetails(self) -> Bool {
+    logGroup("DynamicSaleV1Settings: validateUpdatedDetails()" , false, () -> Bool {
         assert(self.progressPricingDiscountFloorPoint > 0.05, "floor point too low");
         assert(self.progressPricingDiscountFloorPoint < 0.50, "floor point too high");
         assert(self.progressPricingDiscountWhenSlow >= 0.0, "negative discount");

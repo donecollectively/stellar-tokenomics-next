@@ -226,7 +226,7 @@ struct MarketSaleData {
 
             saleState.mustBePending(which + ": created sale")
             true
-            && saleDetails.settings.validateDetailsWhenPending()
+            && saleDetails.settings.validateUpdatedDetails()
             && saleState.progressDetails.validateDetailsWhenPending(
                 saleDetails.startAt, 
                 saleAssets.totalSaleLots
@@ -406,26 +406,17 @@ struct MarketSaleData {
         && true
     }
 
-    //! Validates updates to a MarketSale while it's in Pending state.
-    //  This function enforces which fields may be updated and which must remain unchanged.
-    func validateUpdatePendingSale(self, ddd : DgDataDetails) -> Bool {
-        print("mktSale: validateUpdatePendingSale()");
-        previous : MarketSaleData = MarketSaleData::from_data(
-            ddd.inputData()
-        );
-        
+    //! Shared validation checks for ANY sale update regardless of state.
+    //  Called by both validateUpdatePendingSale and validateUpdatePausedSale.
+    func validateCommonUpdateChecks(self,
+        previous: MarketSaleData,
+        ddd: DgDataDetails
+    ) -> Bool {
         prevDetails = previous.v1details();
         nextDetails = self.v1details();
-        
-        prevState = prevDetails.saleState;
-        nextState = nextDetails.saleState;
         nextFixed = nextDetails.fixedSaleDetails;
-        prevAssets = prevDetails.saleAssets;
-        nextAssets = nextDetails.saleAssets;
-        prevUtxoValue : Value = ddd.input().value;
-                
-        // Core constraints (diagnostic-friendly)
-        assertREQTgroup( reqt: "fails if the token count in the UTxO is modified during the update", collapsed:false, 
+
+        assertREQTgroup(reqt: "fails if the token count in the UTxO is modified during the update", collapsed: false,
         callback: () -> Bool {
             inputAssets = ddd.input().value.get_assets();
             outputAssets = ddd.output().value.get_assets();
@@ -433,29 +424,83 @@ struct MarketSaleData {
             true
         })
 
-        REQT("doesn't allow changing sale pace from 1.0",
-            assertion: nextState.salePace == 1.0,
-            showSuccess: true,
-            onError: "sale pace must remain 1.0"
-        );
-
-        prevState.mustBePending("UpdatingPendingSale: previous record") 
-        nextState.mustBePending("UpdatingPendingSale: updated record")
-    
         REQT(
             reqt: "doesn't allow changing thread info",
             assertion: prevDetails.threadInfo == nextDetails.threadInfo,
             showSuccess: true,
             onError: "thread info must not change"
         );
-        
+
+        REQT("validates VxfDestination in vxfTokensTo if Some");
+        nextFixed.vxfTokensTo.switch {
+            Some{vxf} => {
+                assert(vxf.validate("vxfTokensTo"), "vxfTokensTo must be valid");
+            },
+            None => {
+                print("  -- vxfTokensTo is None (allowed)");
+            }
+        }
+
+        REQT("validates VxfDestination in vxfFundsTo if Some");
+        nextFixed.vxfFundsTo.switch {
+            Some{vxf} => {
+                assert(vxf.validate("vxfFundsTo"), "vxfFundsTo must be valid");
+            },
+            None => {
+                print("  -- vxfFundsTo is None (allowed)");
+            }
+        }
+
+        REQT("validates updated record passes all general validations");
+        assert(self.validate(), "updated record must pass general validation");
+
+        REQT("validates settings");
+        assert(
+            nextFixed.settings.validateUpdatedDetails(),
+            "updated settings must pass validation"
+        );
+
+        true
+    }
+
+    //! Validates updates to a MarketSale while it's in Pending state.
+    //  This function calls shared checks, then enforces Pending-specific constraints.
+    func validateUpdatePendingSale(self, ddd : DgDataDetails) -> Bool {
+        print("mktSale: validateUpdatePendingSale()");
+        previous : MarketSaleData = MarketSaleData::from_data(
+            ddd.inputData()
+        );
+
+        prevDetails = previous.v1details();
+        nextDetails = self.v1details();
+
+        prevState = prevDetails.saleState;
+        nextState = nextDetails.saleState;
+        nextFixed = nextDetails.fixedSaleDetails;
+        prevAssets = prevDetails.saleAssets;
+        nextAssets = nextDetails.saleAssets;
+        prevUtxoValue : Value = ddd.input().value;
+
+        // Shared checks
+        assert(self.validateCommonUpdateChecks(previous, ddd), "common update checks failed");
+
+        // Pending-specific checks
+        REQT("doesn't allow changing sale pace from 1.0",
+            assertion: nextState.salePace == 1.0,
+            showSuccess: true,
+            onError: "sale pace must remain 1.0"
+        );
+
+        prevState.mustBePending("UpdatingPendingSale: previous record");
+        nextState.mustBePending("UpdatingPendingSale: updated record");
+
         // Primary asset identity change logic
         primaryAssetChanged : Bool = (
             nextAssets.primaryAssetMph != prevAssets.primaryAssetMph
         ) || (
             nextAssets.primaryAssetName != prevAssets.primaryAssetName
         );
-        
+
         prevPrimaryAssetClass = AssetClass::new(prevAssets.primaryAssetMph, prevAssets.primaryAssetName);
         nextPrimaryAssetClass = AssetClass::new(nextAssets.primaryAssetMph, nextAssets.primaryAssetName);
         if (primaryAssetChanged) {
@@ -463,18 +508,17 @@ struct MarketSaleData {
 
             previousPrimaryAssetName : String = prevAssets.primaryAssetName.decode_utf8_safe();
             nextPrimaryAssetName : String = nextAssets.primaryAssetName.decode_utf8_safe();
-            print("   -- primary asset changed from " + previousPrimaryAssetName + 
+            print("   -- primary asset changed from " + previousPrimaryAssetName +
                 " to " + nextPrimaryAssetName
             );
-            // REQT("if primary asset changes, check if old primary asset tokens exist in previous UTxO");
             prevUtxoAssets : Value = prevUtxoValue - ddd.uutValue();
             oldPrimaryAssetsDeposited : Int = prevUtxoAssets.get_safe(
                 prevPrimaryAssetClass
             )
-            
+
             hasOldPrimaryTokens : Bool = oldPrimaryAssetsDeposited > 0;
-            
-            if (hasOldPrimaryTokens) {                
+
+            if (hasOldPrimaryTokens) {
             bREQTgroup("when old primary asset tokens are present in the UTxO ...", false, () -> Bool {
                 print("   -- utxo has " + oldPrimaryAssetsDeposited.show() + " " + previousPrimaryAssetName);
 
@@ -501,13 +545,13 @@ struct MarketSaleData {
                         "saleLotAssets doesn't contain the new primary asset"
                     );
                     true
-                }) 
+                })
             }) } else {
             bREQTgroup("when no old primary asset tokens are present in the UTxO ...", false, () -> Bool {
                 nextSaleLotOldPrimary : Int = nextAssets.saleLotAssets.get_safe(
                     prevPrimaryAssetClass
                 )
-                
+
                 assertREQTgroup("... saleLotAssets must not reference old primary token", false, () -> Bool {
                     print("   -- " + nextSaleLotOldPrimary.show() + " " + previousPrimaryAssetName);
                     assert(
@@ -516,10 +560,10 @@ struct MarketSaleData {
                     );
                     true
                 });
-                
+
                 nextSaleLotNewPrimary : Int = nextAssets.saleLotAssets.get_safe(nextPrimaryAssetClass);
 
-                bREQTgroup("...saleLotAssets must reference new primary asset", false, () -> Bool {                
+                bREQTgroup("...saleLotAssets must reference new primary asset", false, () -> Bool {
                     print("   -- next saleLot has " + nextSaleLotNewPrimary.show() + " " + nextPrimaryAssetName);
                     assert(
                         nextSaleLotNewPrimary > 0,
@@ -529,7 +573,7 @@ struct MarketSaleData {
                 });
             }) }
         }) }
-        
+
         // Primary asset target count consistency
         assertREQTgroup("fails if primaryAssetTargetCount is missing or not an even multiple of the lot count", false, () -> Bool {
             nextPrimaryLotSize : Int = nextAssets.saleLotAssets.get_safe(
@@ -543,44 +587,13 @@ struct MarketSaleData {
             );
             true
         });
-        
-        // Validate VxfDestination fields
-        REQT("validates VxfDestination in vxfTokensTo if Some");
-        nextFixed.vxfTokensTo.switch {
-            Some{vxf} => {
-                assert(vxf.validate("vxfTokensTo"), "vxfTokensTo must be valid");
-            },
-            None => {
-                print("  -- vxfTokensTo is None (allowed)");
-            }
-        }
-        
-        REQT("validates VxfDestination in vxfFundsTo if Some");
-        nextFixed.vxfFundsTo.switch {
-            Some{vxf} => {
-                assert(vxf.validate("vxfFundsTo"), "vxfFundsTo must be valid");
-            },
-            None => {
-                print("  -- vxfFundsTo is None (allowed for pending updates)");
-            }
-        }
-        
-        // Final validations
-        REQT("validates updated record passes all general validations");
-        assert(self.validate(), "updated record must pass general validation");
-        
+
         REQT("validates updated record passes pending-specific validations");
         assert(
             self.v1details().threadInfo.validateDetailsWhenPending(self.id),
             "updated record must pass pending validations"
         );
-        
-        REQT("validates settings");
-        assert(
-            nextFixed.settings.validateDetailsWhenPending(),
-            "updated settings must pass validation"
-        );
-        
+
         REQT("validates progressDetails still matches startAt and totalSaleLots");
         assert(
             nextState.progressDetails.validateDetailsWhenPending(
@@ -589,7 +602,55 @@ struct MarketSaleData {
             ),
             "progressDetails must be consistent with startAt and totalSaleLots"
         );
-        
+
+        true
+    }
+
+    //! Validates updates to a MarketSale while it's in Paused state.
+    //  Calls shared checks, then enforces Paused-specific frozen/editable constraints.
+    func validateUpdatePausedSale(self, ddd : DgDataDetails) -> Bool {
+        print("mktSale: validateUpdatePausedSale()");
+        previous : MarketSaleData = MarketSaleData::from_data(
+            ddd.inputData()
+        );
+
+        prevDetails = previous.v1details();
+        nextDetails = self.v1details();
+
+        prevState = prevDetails.saleState;
+        nextState = nextDetails.saleState;
+
+        // Shared checks (UTxO tokens, threadInfo, VxfDestination, validate(), settings bounds)
+        assert(self.validateCommonUpdateChecks(previous, ddd), "common update checks failed");
+
+        // Paused-specific checks
+        prevState.mustBePaused("UpdatingPausedSale: previous record", "REQT-b30wn4bdw2");
+        nextState.mustBePaused("UpdatingPausedSale: updated record", "REQT-b30wn4bdw2");
+
+        REQT("salePace must carry forward from previous (REQT-xygjysee4h)",
+            assertion: nextState.salePace == prevState.salePace,
+            showSuccess: true,
+            onError: "salePace can't be modified while Paused"
+        );
+
+        REQT("progressDetails frozen while Paused (REQT-xygjysee4h)");
+        assert(
+            nextState.progressDetails.validateDetailsWhenPaused(prevState.progressDetails),
+            "progressDetails can't be modified while Paused"
+        );
+
+        REQT("saleAssets frozen while Paused (REQT-xygjysee4h)",
+            assertion: nextDetails.saleAssets == prevDetails.saleAssets,
+            showSuccess: true,
+            onError: "saleAssets can't be modified while Paused"
+        );
+
+        REQT("startAt frozen while Paused (REQT-xygjysee4h)",
+            assertion: nextDetails.fixedSaleDetails.startAt == prevDetails.fixedSaleDetails.startAt,
+            showSuccess: true,
+            onError: "startAt can't be modified while Paused"
+        );
+
         true
     }
 

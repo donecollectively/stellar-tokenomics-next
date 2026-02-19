@@ -193,6 +193,9 @@ enum SpendingActivity {
     Resuming {
         id: ByteArray
     }
+    UpdatingPausedSale {
+        id: ByteArray
+    }
     Retiring {
         id: ByteArray
     }
@@ -640,6 +643,16 @@ enum DelegateActivity {
                         assertion: updated.validate(),
                         showSuccess: true
                     )
+                    && cctx.requiresGovAuthority().orFail()
+                }),
+                UpdatingPausedSale {saleId} => logGroup("UpdatingPausedSale:", false, () -> Bool {
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+                    nextRec : MarketSaleData = MarketSaleData::updated(mktSaleDD);
+
+                    true
+                    && nextRec.validateUpdatePausedSale(mktSaleDD)
                     && cctx.requiresGovAuthority().orFail()
                 }),
                 Retiring {saleId} => logGroup("Retiring sale:", false, () -> Bool {

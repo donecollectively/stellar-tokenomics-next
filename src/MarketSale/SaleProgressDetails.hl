@@ -90,4 +90,16 @@ struct SaleProgressDetailsV1 {
             && true
         })
     }
+
+    func validateDetailsWhenPaused(self,
+        prevProgress: SaleProgressDetailsV1
+    ) -> Bool {
+        bREQTgroup("all progress details frozen while Paused", false, () -> Bool {
+            assert(self.lotsSold == prevProgress.lotsSold, "lotsSold can't be modified while Paused");
+            assert(self.lastPurchaseAt == prevProgress.lastPurchaseAt, "lastPurchaseAt can't be modified while Paused");
+            assert(self.prevPurchaseAt == prevProgress.prevPurchaseAt, "prevPurchaseAt can't be modified while Paused");
+            assert(self.lotCount == prevProgress.lotCount, "lotCount can't be modified while Paused");
+            true
+        })
+    }
 }
