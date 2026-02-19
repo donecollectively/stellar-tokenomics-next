@@ -187,8 +187,11 @@ enum SpendingActivity {
         id: ByteArray
         childChunkId: String
     }
+    Stopping {
+        id: ByteArray
+    }
     Retiring {
-        id: ByteArray 
+        id: ByteArray
     }
 }
 
@@ -420,6 +423,12 @@ enum DelegateActivity {
                     // gets the new MarketSaleData record
                     updated = MarketSaleData::updated(mktSaleDD);
 
+                    // IMPORTANT POLICY: When chunk-splitting is implemented, child chunks
+                    // MUST NOT sell while the root sale is Paused.  The root sale's UTxO
+                    // should be required as a reference input, and its state checked here.
+                    // This ensures that Stopping the root effectively halts the entire sale
+                    // across all chunks, without requiring each chunk to be stopped individually.
+
                     correctActiveState = true
                     previous.v1details().saleState.mustBeActive("previous sale")
                     updated.v1details().saleState.mustBeActive("updated sale: selling tokens")
@@ -532,12 +541,30 @@ enum DelegateActivity {
                 MergingChildChunk => { //{_, _ /* recId, childChunkId */} => {
                     error("todo: MergingChildChunk")
                 },
-                Retiring => { //{_ /* recId */} => {                    
+                Stopping {saleId} => logGroup("Stopping sale:", false, () -> Bool {
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+                    previous : MarketSaleData = MarketSaleData::previous(mktSaleDD);
+                    updated : MarketSaleData = MarketSaleData::updated(mktSaleDD);
+
+                    previous.v1details().saleState.mustBeActive("Stopping: previous sale");
+                    updated.v1details().saleState.mustBePaused(
+                        "Stopping: updated sale", "REQT-fx7m3y1ctf"
+                    );
+
+                    true
+                    && updated.validateStateOnlyChange(
+                        previous, mktSaleDD, MarketSaleState::Paused, "REQT-03ff0mfddc"
+                    )
+                    && cctx.requiresGovAuthority().orFail()
+                }),
+                Retiring => { //{_ /* recId */} => {
                     error("todo: Retiring")
                     // Must not have active child chunks:
                     // ...  previous.retiredThreads must be === previous.nestedThreads
 
-                    // updated 
+                    // updated
                     // updated.state must be retired
                 }                
             },

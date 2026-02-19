@@ -34,8 +34,9 @@ import {
 enum MarketSaleState {
     Pending
     Active
-    Retired
-    SoldOut
+    Paused
+    65 : Retired
+    86 : SoldOut
 }
 
 struct SaleAssetsV1 {
@@ -73,8 +74,16 @@ struct OtherSaleStateV1 {
 
     func mustBePending(self, which : String) -> () {
         REQT(
-            reqt: which + ": state must be Pending",  
-            assertion: self.state == MarketSaleState::Pending, 
+            reqt: which + ": state must be Pending",
+            assertion: self.state == MarketSaleState::Pending,
+            showSuccess: true
+        )
+    }
+
+    func mustBePaused(self, which : String, reqtId : String) -> () {
+        REQT(
+            reqt: which + ": state must be Paused (" + reqtId + ")",
+            assertion: self.state == MarketSaleState::Paused,
             showSuccess: true
         )
     }
@@ -582,5 +591,37 @@ struct MarketSaleData {
         );
         
         true
+    }
+
+    func validateStateOnlyChange(self,
+        previous: MarketSaleData,
+        ddd: DgDataDetails,
+        targetState: MarketSaleState,
+        reqtId: String
+    ) -> Bool {
+        prevDetails = previous.v1details();
+        nextDetails = self.v1details();
+        prevState = prevDetails.saleState;
+        nextState = nextDetails.saleState;
+
+        bREQTgroup(
+            reqt: "all datum fields unchanged except state (" + reqtId + ")",
+            collapsed: false,
+            callback: () -> Bool {
+                assert(self.name == previous.name, "name can't be modified");
+                assert(nextDetails.fixedSaleDetails == prevDetails.fixedSaleDetails, "fixedSaleDetails can't be modified");
+                assert(nextDetails.saleAssets == prevDetails.saleAssets, "saleAssets can't be modified");
+                assert(nextDetails.threadInfo == prevDetails.threadInfo, "threadInfo can't be modified");
+                assert(nextState.progressDetails == prevState.progressDetails, "progressDetails can't be modified");
+                assert(nextState.salePace == prevState.salePace, "salePace can't be modified");
+                true
+            }
+        )
+        && bREQT(
+            reqt: "UTxO token value unchanged (" + reqtId + ")",
+            assertion: ddd.input().value == ddd.output().value,
+            showSuccess: true,
+            onError: "UTxO value changed during state-only transition"
+        )
     }
 }
