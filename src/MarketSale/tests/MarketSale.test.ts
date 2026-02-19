@@ -2217,10 +2217,7 @@ describe("MarketSale plugin", async () => {
         it("can't transition back from Retired (retired-no-regression/REQT/w0hvrt4xx8)", async (context: STOK_TC) => {
             const { h } = context;
             await h.reusableBootstrap();
-            // Get to Retired state: pause then retire
-            await h.snapToFirstMarketSalePaused();
-            const pausedSale = await h.findFirstMarketSale();
-            await h.retireMarketSale(pausedSale);
+            await h.snapToFirstMarketSaleRetired();
             const retiredSale = await h.findFirstMarketSale();
             await expect(h.resumeMarketSale(retiredSale, { expectError: true }))
                 .rejects.toThrow(/state must be Paused/);

@@ -327,6 +327,21 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         return this.resumeMarketSale(pausedSale);
     }
 
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "firstMarketSalePaused",
+    })
+    async snapToFirstMarketSaleRetired() {
+        throw new Error("never called; see firstMarketSaleRetired()");
+        return this.firstMarketSaleRetired();
+    }
+
+    async firstMarketSaleRetired() {
+        this.setActor("tina");
+        const pausedSale = await this.findFirstMarketSale();
+        return this.retireMarketSale(pausedSale);
+    }
+
     async stopMarketSale(
         marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
         submitOptions: TestHelperSubmitOptions = {}
