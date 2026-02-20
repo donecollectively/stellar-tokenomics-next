@@ -165,7 +165,7 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 2.2.4: REQT-5x71zzdpgb: **COMPLETED**/consented: **Settings Validation When Pending** - When Pending, `fixedSaleDetails.settings` MUST pass `validateDetailsWhenPending()` — sane bounds on all pricing parameters.
  - 2.3.0: REQT-nfk38zrkrz: **NEXT**/draft: **Cross-Cutting State Transition Validations**
      - 2.3.1: REQT-yy15shmtwb: **NEXT**/draft: **Datum Fields Unchanged** - State-only transitions MUST leave all datum fields unchanged except the state field.
-     - 2.3.2: REQT-hk93w5zb16: **NEXT**/draft: **UTxO Value Unchanged** - State-only transitions MUST verify the UTxO token value does not change — no token movement during the transition.
+     - 2.3.2: REQT-hk93w5zb16: **NEXT**/draft: **UTxO Token Assets Unchanged** - State-only transitions MUST verify that the UTxO token assets (non-ADA) do not change — no token movement during the transition. ADA (lovelace) MAY shift within a 1 ADA tolerance to accommodate minUtxo adjustments caused by datum CBOR encoding size changes when the state field changes.
      - 2.3.3: REQT-kjbw4p63hf: **NEXT**/draft: **Tokens Remain in UTxO** - State-only transitions MUST NOT move or burn tokens — tokens stay locked in the UTxO. Any token disposal is a separate activity.
 
 ## Area 3: Sale Lifecycle
@@ -316,14 +316,14 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 10.1.1: REQT-f12d51rvdz: **NEXT**/draft: **State Transition** - Stopping MUST require previous state == Active and next state == Paused.
      - 10.1.2: REQT-mfpstpdjsp: **NEXT**/draft: **Gov Authority** - Stopping MUST require governance authority.
      - 10.1.3: REQT-nxqq219k4r: **NEXT**/draft: **All Fields Unchanged** - All datum fields unchanged except state (Active → Paused); per REQT-yy15shmtwb.
-     - 10.1.4: REQT-tx3fyv3eb2: **NEXT**/draft: **UTxO Value Unchanged** - UTxO token value unchanged — no token movement; per REQT-hk93w5zb16.
+     - 10.1.4: REQT-tx3fyv3eb2: **NEXT**/draft: **UTxO Token Assets Unchanged** - UTxO token assets (non-ADA) unchanged, ADA within 1 ADA tolerance for minUtxo shifts; per REQT-hk93w5zb16.
  - 10.2.0: REQT-qh3qkk8f92: **NEXT**/draft: **Resuming Activity**
      - 10.2.1: REQT-dpkz9kmr81: **NEXT**/draft: **State Transition** - Resuming MUST require previous state == Paused and next state == Active.
      - 10.2.2: REQT-pks8phr4y5: **NEXT**/draft: **Gov Authority** - Resuming MUST require governance authority.
      - 10.2.3: REQT-34yb7jx6tr: **NEXT**/draft: **Token Presence Verification** - Resuming MUST verify that deposited tokens still match `saleLotAssets × totalSaleLots` — the full supply must still be present.
      - 10.2.4: REQT-pypc9vmpfk: **NEXT**/draft: **VXF Validation on Resume** - Resuming MUST validate VXF destinations per REQT-jkbaba8n7n (Resuming Validates VXF) — same checks as Activating since the sale re-enters Active state.
      - 10.2.6: REQT-60azhtn9dy: **NEXT**/draft: **All Fields Unchanged** - All datum fields unchanged except state (Paused → Active); per REQT-yy15shmtwb.
-     - 10.2.7: REQT-998waf4mz3: **NEXT**/draft: **UTxO Value Unchanged** - UTxO token value unchanged — no token movement; per REQT-hk93w5zb16.
+     - 10.2.7: REQT-998waf4mz3: **NEXT**/draft: **UTxO Token Assets Unchanged** - UTxO token assets (non-ADA) unchanged, ADA within 1 ADA tolerance for minUtxo shifts; per REQT-hk93w5zb16.
  - 10.3.0: REQT-b30wn4bdw2: **NEXT**/draft: **UpdatingPausedSale Activity**
      - 10.3.1: REQT-krpj42awmt: **NEXT**/draft: **Paused State Required** - UpdatingPausedSale MUST require both previous and next state to be Paused.
      - 10.3.2: REQT-4svc8tfffy: **NEXT**/draft: **Gov Authority** - UpdatingPausedSale MUST require governance authority.
@@ -348,7 +348,7 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 11.1.1: REQT-6fb1gwxhvk: **NEXT**/draft: **State Transition** - Retiring MUST require previous state == Paused and next state == Retired.
      - 11.1.2: REQT-3fhy62nx77: **NEXT**/draft: **Gov Authority** - Retiring MUST require governance authority.
      - 11.1.3: REQT-je621r06f7: **NEXT**/draft: **Tokens Remain in UTxO** - Tokens stay locked in UTxO; per REQT-kjbw4p63hf. Token disposal deferred to `CleanupRetired` (FUTURE, REQT-kr9rseqaxf).
-     - 11.1.4: REQT-dtpwzjqn9p: **NEXT**/draft: **UTxO Value Unchanged** - UTxO token value unchanged — no token movement; per REQT-hk93w5zb16.
+     - 11.1.4: REQT-dtpwzjqn9p: **NEXT**/draft: **UTxO Token Assets Unchanged** - UTxO token assets (non-ADA) unchanged, ADA within 1 ADA tolerance for minUtxo shifts; per REQT-hk93w5zb16. Tokens stay locked for future CleanupRetired (FUTURE, REQT-kr9rseqaxf).
      - 11.1.5: REQT-9nsee3zj78: **NEXT**/draft: **All Datum Fields Unchanged** - All datum fields unchanged except state (Paused → Retired); per REQT-yy15shmtwb.
  - 11.2.0: REQT-gexqz64w5d: **FUTURE**/draft: **Broader Retirement (Future)**
      - 11.2.1: REQT-wvfhmzb0bf: **FUTURE**/draft: **No Active Child Chunks on Retire** - When chunk-splitting is implemented, Retiring MUST verify that `retiredThreads == nestedThreads` — all child chunks must be merged/retired before the parent can retire.
