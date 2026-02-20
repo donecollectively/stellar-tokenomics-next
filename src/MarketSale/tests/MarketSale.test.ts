@@ -1721,46 +1721,15 @@ describe("MarketSale plugin", async () => {
             await expect(updating).rejects.toThrow(/missing.* dgTkn capoGov/);
         });
 
-        it("validates VxfDestination in vxfFundsTo if provided", async (context: STOK_TC) => {
+        // VXF None-Mode: rejects any Some value during pending update (shared validateCommonUpdateChecks path)
+        it("rejects pending update when vxfFundsTo is Some (none-mode-pending-funds-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
             const { h } = context;
 
             await h.reusableBootstrap();
             await h.snapToFirstMarketSale();
             const marketSale = await h.findFirstMarketSale();
 
-            // Setting vxfFundsTo to NotYetDefined should fail validation
             const updating = h.updatePendingMarketSale(
-                marketSale,
-                {
-                    details: {
-                        V1: {
-                            ...marketSale.data!.details.V1,
-                            fixedSaleDetails: {
-                                ...marketSale.data!.details.V1.fixedSaleDetails,
-                                vxfFundsTo: {
-                                    NotYetDefined: {},
-                                },
-                            },
-                        },
-                    },
-                } as any,
-                "trying invalid vxfFundsTo",
-                { expectError: true }
-            );
-
-            await expect(updating).rejects.toThrow(
-                /VxfDestination: vxfFundsTo: NotYetDefined/
-            );
-        });
-
-        it("can update vxfFundsTo to a valid value", async (context: STOK_TC) => {
-            const { h } = context;
-
-            await h.reusableBootstrap();
-            await h.snapToFirstMarketSale();
-            const marketSale = await h.findFirstMarketSale();
-
-            await h.updatePendingMarketSale(
                 marketSale,
                 {
                     details: {
@@ -1774,15 +1743,20 @@ describe("MarketSale plugin", async () => {
                             },
                         },
                     },
-                },
-                "updating vxfFundsTo to valid value"
+                } as any,
+                "trying vxfFundsTo = Some (None-mode rejects)",
+                { expectError: true }
             );
 
-            const updatedSale = await h.findFirstMarketSale();
-            expect(
-                updatedSale.data!.details.V1.fixedSaleDetails.vxfFundsTo
-            ).toBeDefined();
+            await expect(updating).rejects.toThrow(
+                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
+            );
         });
+
+        // REMOVED: "can update vxfFundsTo to a valid value"
+        // Under VXF None-mode (REQT/1h49829nsx), setting vxfFundsTo to ANY Some value
+        // is rejected. This positive test is now invalid and redundant with
+        // none-mode-pending-funds-to test above.
 
         it("rejects name shorter than 10 characters (update-pending-short-name/REQT/y16j4t955c)", async (context: STOK_TC) => {
             const { h } = context;
@@ -2009,7 +1983,8 @@ describe("MarketSale plugin", async () => {
 
     describe("UpdatingPausedSale activity (REQT/b30wn4bdw2)", () => {
         // Happy path: update editable fields in one transaction
-        it("can update name, settings, and vxf destinations while Paused (update-paused-editables/REQT/d1967hd11e)", async (context: STOK_TC) => {
+        // VXF None-Mode: vxfFundsTo/vxfTokensTo no longer editable while Paused
+        it("can update name and settings while Paused (update-paused-editables/REQT/d1967hd11e)", async (context: STOK_TC) => {
             const { h } = context;
             await h.reusableBootstrap();
             await h.snapToFirstMarketSalePaused();
@@ -2017,34 +1992,40 @@ describe("MarketSale plugin", async () => {
             const tcx = await h.updatePausedMarketSale(pausedSale, {
                 name: "Updated Paused Sale Name",
                 settings: { targetPrice: 2.0 },
-                vxfFundsTo: { Anywhere: {} },
             });
             const updated = await h.findFirstMarketSale();
             expect(updated.data!.name).toEqual("Updated Paused Sale Name");
             expect(updated.data!.details.V1.fixedSaleDetails.settings.targetPrice).toEqual(2.0);
-            expect(updated.data!.details.V1.fixedSaleDetails.vxfFundsTo).toEqual({ Anywhere: {} });
 
             // Wiring proof: shared validateCommonUpdateChecks pipeline ran
             h.assertEnforcedReqts(tcx, [
                 "REQT-ntdbhc1xss",  // UTxO Value Unchanged — no token movement during edits
                 "REQT-rg5zyhd2gb",  // ThreadInfo Frozen — equality check
-                "REQT-6z88fg6j2s",  // Paused Update Validates VXF If Present — vxfTokensTo/vxfFundsTo
+                "REQT-6z88fg6j2s",  // VXF None-Mode Enforcement — vxfTokensTo/vxfFundsTo must be None
                 "REQT-b731sye0fz",  // Settings Bounds Validation When Paused — sane pricing ranges
                 "REQT-y16j4t955c",  // Name Length — at least 10 characters (via validate())
                 "REQT-egttdcamhg",  // Non-Empty Assets — saleLotAssets, totalSaleLots, etc. (via validate())
             ]);
         });
 
-        it("rejects invalid vxfFundsTo while Paused (update-paused-invalid-vxf/REQT/6z88fg6j2s)", async (context: STOK_TC) => {
+        // VXF None-Mode: rejects any Some value via rawUpdate (shared validateCommonUpdateChecks path)
+        it("rejects paused update when vxfFundsTo is Some (none-mode-paused-funds-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
             const { h } = context;
             await h.reusableBootstrap();
             await h.snapToFirstMarketSalePaused();
             const pausedSale = await h.findFirstMarketSale();
             await expect(h.updatePausedMarketSale(
                 pausedSale,
-                { vxfFundsTo: { NotYetDefined: {} } },
-                { expectError: true },
-            )).rejects.toThrow(/VxfDestination: vxfFundsTo: NotYetDefined/);
+                {},
+                {
+                    rawUpdate: { details: { V1: { ...pausedSale.data!.details.V1,
+                        fixedSaleDetails: { ...pausedSale.data!.details.V1.fixedSaleDetails,
+                            vxfFundsTo: { Anywhere: {} },
+                        },
+                    }}},
+                    expectError: true,
+                },
+            )).rejects.toThrow(/PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/);
         });
 
         // Frozen-field tests: these bypass the helper (which structurally prevents
