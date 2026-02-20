@@ -585,11 +585,23 @@ enum DelegateActivity {
 
                     true
                     && updated.validateStateOnlyChange(previous, "REQT-nxqq219k4r")
-                    && bREQT(
-                        reqt: "UTxO token value unchanged (REQT-03ff0mfddc)",
-                        assertion: mktSaleDD.input().value == mktSaleDD.output().value,
-                        showSuccess: true,
-                        onError: "UTxO value changed during Stopping"
+                    && bREQTgroup(
+                        reqt: "UTxO token assets unchanged, ADA within 1 ADA tolerance (REQT-03ff0mfddc)",
+                        collapsed: false,
+                        callback: () -> Bool {
+                            inputValue = mktSaleDD.input().value;
+                            outputValue = mktSaleDD.output().value;
+                            assert(
+                                inputValue.get_assets() == outputValue.get_assets(),
+                                "UTxO tokens changed during Stopping"
+                            );
+                            adaDiff = (inputValue.get_lovelace() - outputValue.get_lovelace()).abs();
+                            assert(
+                                adaDiff <= 1000000,
+                                "ADA changed by more than 1 ADA during Stopping: delta " + adaDiff.show()
+                            );
+                            true
+                        }
                     )
                     && cctx.requiresGovAuthority().orFail()
                 }),
@@ -611,11 +623,23 @@ enum DelegateActivity {
 
                     true
                     && updated.validateStateOnlyChange(previous, "REQT-60azhtn9dy")
-                    && bREQT(
-                        reqt: "UTxO token value unchanged (REQT-998waf4mz3)",
-                        assertion: mktSaleDD.input().value == mktSaleDD.output().value,
-                        showSuccess: true,
-                        onError: "UTxO value changed during Resuming"
+                    && bREQTgroup(
+                        reqt: "UTxO token assets unchanged, ADA within 1 ADA tolerance (REQT-998waf4mz3)",
+                        collapsed: false,
+                        callback: () -> Bool {
+                            inputValue = mktSaleDD.input().value;
+                            outputValue = mktSaleDD.output().value;
+                            assert(
+                                inputValue.get_assets() == outputValue.get_assets(),
+                                "UTxO tokens changed during Resuming"
+                            );
+                            adaDiff = (inputValue.get_lovelace() - outputValue.get_lovelace()).abs();
+                            assert(
+                                adaDiff <= 1000000,
+                                "ADA changed by more than 1 ADA during Resuming: delta " + adaDiff.show()
+                            );
+                            true
+                        }
                     )
                     && bREQTgroup(
                         reqt: "remaining sale tokens present in UTxO (REQT-qh3qkk8f92)",
@@ -697,11 +721,23 @@ enum DelegateActivity {
 
                     true
                     && updated.validateStateOnlyChange(previous, "REQT-9nsee3zj78")
-                    && bREQT(
-                        reqt: "UTxO token value unchanged (REQT-dtpwzjqn9p)",
-                        assertion: mktSaleDD.input().value == mktSaleDD.output().value,
-                        showSuccess: true,
-                        onError: "UTxO value changed during Retiring"
+                    && bREQTgroup(
+                        reqt: "UTxO token assets unchanged, ADA within 1 ADA tolerance (REQT-dtpwzjqn9p)",
+                        collapsed: false,
+                        callback: () -> Bool {
+                            inputValue = mktSaleDD.input().value;
+                            outputValue = mktSaleDD.output().value;
+                            assert(
+                                inputValue.get_assets() == outputValue.get_assets(),
+                                "UTxO tokens changed during Retiring"
+                            );
+                            adaDiff = (inputValue.get_lovelace() - outputValue.get_lovelace()).abs();
+                            assert(
+                                adaDiff <= 1000000,
+                                "ADA changed by more than 1 ADA during Retiring: delta " + adaDiff.show()
+                            );
+                            true
+                        }
                     )
                     && cctx.requiresGovAuthority().orFail()
                 })                

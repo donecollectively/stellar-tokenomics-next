@@ -158,7 +158,11 @@ struct MarketSaleData {
     func validate(self) -> Bool {
     logGroup("mktSale: validate()", false, () -> Bool {
         assert(self.type == "mktSale", "wrong type");
-        assert(self.name.serialize().length > 10, "name must be at least 10 characters");
+        REQT(
+            reqt: "name must be at least 10 characters (REQT-y16j4t955c)",
+            assertion: self.name.serialize().length > 10,
+            showSuccess: true
+        );
         saleAssets = self.v1details().saleAssets;
         assertREQTgroup("validate: primary asset must be divisible by totalSaleLots", false, () -> Bool {
             lotsStr = saleAssets.totalSaleLots.show(); /** todo: inline */
@@ -174,7 +178,7 @@ struct MarketSaleData {
             print("  -- expectedTargetCount: " + expectedTargetCountStr);
 
             assert(
-                expectedTargetCount == saleAssets.primaryAssetTargetCount, 
+                expectedTargetCount == saleAssets.primaryAssetTargetCount,
                 "saleLotAssets' primaryToken mismatch: lot-size * totalSaleLots != primaryAssetTargetCount"
             );
             true
@@ -182,33 +186,35 @@ struct MarketSaleData {
 
         // assert(self.currentlotPrice > 0, "currentlotPrice must be greater than zero");
 
-        REQT(
-            reqt: "saleLotAssets must not be empty", 
-            assertion: saleAssets.saleLotAssets.to_map().length > 0, 
-            showSuccess: true
-        );
-        REQT(
-            reqt: "totalSaleLots must be greater than zero", 
-            assertion: saleAssets.totalSaleLots > 0, 
-            showSuccess: true
-        );
-        REQT(
-            reqt: "singleBuyMaxLots must be greater than zero", 
-            assertion: saleAssets.singleBuyMaxLots > 0, 
-            showSuccess: true
-        );
-        REQT(
-            reqt: "singleBuyMaxLots must be less than totalSaleLots", 
-            assertion: saleAssets.singleBuyMaxLots < saleAssets.totalSaleLots, 
-            showSuccess: true
-        );
-        REQT(
-            reqt: "primaryAssetTargetCount must be greater than zero", 
-            assertion: saleAssets.primaryAssetTargetCount > 0, 
-            showSuccess: true
-        );
+        assertREQTgroup("validates non-empty assets and sane sale parameters (REQT-egttdcamhg)", false, () -> Bool {
+            REQT(
+                reqt: "saleLotAssets must not be empty",
+                assertion: saleAssets.saleLotAssets.to_map().length > 0,
+                showSuccess: true
+            );
+            REQT(
+                reqt: "totalSaleLots must be greater than zero",
+                assertion: saleAssets.totalSaleLots > 0,
+                showSuccess: true
+            );
+            REQT(
+                reqt: "singleBuyMaxLots must be greater than zero",
+                assertion: saleAssets.singleBuyMaxLots > 0,
+                showSuccess: true
+            );
+            REQT(
+                reqt: "singleBuyMaxLots must be less than totalSaleLots",
+                assertion: saleAssets.singleBuyMaxLots < saleAssets.totalSaleLots,
+                showSuccess: true
+            );
+            REQT(
+                reqt: "primaryAssetTargetCount must be greater than zero",
+                assertion: saleAssets.primaryAssetTargetCount > 0,
+                showSuccess: true
+            );
+            true
+        });
         true
-        && true
     })  }
 
     func validateDetailsWhenPending(self, which : String) -> Bool {
@@ -416,7 +422,7 @@ struct MarketSaleData {
         nextDetails = self.v1details();
         nextFixed = nextDetails.fixedSaleDetails;
 
-        assertREQTgroup(reqt: "fails if the token count in the UTxO is modified during the update", collapsed: false,
+        assertREQTgroup(reqt: "fails if the token count in the UTxO is modified during the update (REQT-ntdbhc1xss)", collapsed: false,
         callback: () -> Bool {
             inputAssets = ddd.input().value.get_assets();
             outputAssets = ddd.output().value.get_assets();
@@ -425,13 +431,13 @@ struct MarketSaleData {
         })
 
         REQT(
-            reqt: "doesn't allow changing thread info",
+            reqt: "doesn't allow changing thread info (REQT-rg5zyhd2gb)",
             assertion: prevDetails.threadInfo == nextDetails.threadInfo,
             showSuccess: true,
             onError: "thread info must not change"
         );
 
-        REQT("validates VxfDestination in vxfTokensTo if Some");
+        REQT("validates VxfDestination in vxfTokensTo if Some (REQT-6z88fg6j2s)");
         nextFixed.vxfTokensTo.switch {
             Some{vxf} => {
                 assert(vxf.validate("vxfTokensTo"), "vxfTokensTo must be valid");
@@ -441,7 +447,7 @@ struct MarketSaleData {
             }
         }
 
-        REQT("validates VxfDestination in vxfFundsTo if Some");
+        REQT("validates VxfDestination in vxfFundsTo if Some (REQT-6z88fg6j2s)");
         nextFixed.vxfFundsTo.switch {
             Some{vxf} => {
                 assert(vxf.validate("vxfFundsTo"), "vxfFundsTo must be valid");
@@ -451,7 +457,7 @@ struct MarketSaleData {
             }
         }
 
-        REQT("validates settings");
+        REQT("validates settings (REQT-b731sye0fz)");
         assert(
             nextFixed.settings.validateUpdatedDetails(),
             "updated settings must pass validation"

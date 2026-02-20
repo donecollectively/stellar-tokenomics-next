@@ -2060,7 +2060,7 @@ describe("MarketSale plugin", async () => {
                     saleState: { ...pausedSale.data!.details.V1.saleState, salePace: 2.0 },
                 }}},
                 expectError: true,
-            })).rejects.toThrow(/salePace.*must equal previous|carry forward/);
+            })).rejects.toThrow(/salePace can't be modified while Paused/);
         });
 
         it("can't change progress details (update-paused-progress-frozen/REQT/r20vvfdq05)", async (context: STOK_TC) => {
@@ -2077,7 +2077,7 @@ describe("MarketSale plugin", async () => {
                     },
                 }}},
                 expectError: true,
-            })).rejects.toThrow(/lotsSold.*must equal previous|progress.*frozen/);
+            })).rejects.toThrow(/lotsSold can't be modified while Paused/);
         });
 
         it("can't change saleAssets (update-paused-assets-frozen/REQT/9eeh66pcnw)", async (context: STOK_TC) => {
@@ -2092,7 +2092,7 @@ describe("MarketSale plugin", async () => {
                     },
                 }}},
                 expectError: true,
-            })).rejects.toThrow(/saleAssets.*must equal previous|unchanged/);
+            })).rejects.toThrow(/saleAssets can't be modified while Paused/);
         });
 
         it("can't change startAt (update-paused-startAt-frozen/REQT/q5wwj273n4)", async (context: STOK_TC) => {
@@ -2107,7 +2107,7 @@ describe("MarketSale plugin", async () => {
                     },
                 }}},
                 expectError: true,
-            })).rejects.toThrow(/startAt.*must equal previous|unchanged/);
+            })).rejects.toThrow(/startAt can't be modified while Paused/);
         });
 
         it("can't change threadInfo (update-paused-threadInfo-frozen/REQT/rg5zyhd2gb)", async (context: STOK_TC) => {
