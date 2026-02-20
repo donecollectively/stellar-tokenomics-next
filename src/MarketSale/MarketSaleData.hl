@@ -451,9 +451,6 @@ struct MarketSaleData {
             }
         }
 
-        REQT("validates updated record passes all general validations");
-        assert(self.validate(), "updated record must pass general validation");
-
         REQT("validates settings");
         assert(
             nextFixed.settings.validateUpdatedDetails(),
@@ -481,6 +478,10 @@ struct MarketSaleData {
         nextAssets = nextDetails.saleAssets;
         prevUtxoValue : Value = ddd.input().value;
 
+        // State gate first — wrong-state failures should be the first diagnostic
+        prevState.mustBePending("UpdatingPendingSale: previous record");
+        nextState.mustBePending("UpdatingPendingSale: updated record");
+
         // Shared checks
         assert(self.validateCommonUpdateChecks(previous, ddd), "common update checks failed");
 
@@ -490,9 +491,6 @@ struct MarketSaleData {
             showSuccess: true,
             onError: "sale pace must remain 1.0"
         );
-
-        prevState.mustBePending("UpdatingPendingSale: previous record");
-        nextState.mustBePending("UpdatingPendingSale: updated record");
 
         // Primary asset identity change logic
         primaryAssetChanged : Bool = (
@@ -603,6 +601,11 @@ struct MarketSaleData {
             "progressDetails must be consistent with startAt and totalSaleLots"
         );
 
+        // General validation runs after state-specific checks to preserve
+        // diagnostic ordering — Pending-specific errors should fire first
+        REQT("validates updated record passes all general validations");
+        assert(self.validate(), "updated record must pass general validation");
+
         true
     }
 
@@ -620,12 +623,12 @@ struct MarketSaleData {
         prevState = prevDetails.saleState;
         nextState = nextDetails.saleState;
 
-        // Shared checks (UTxO tokens, threadInfo, VxfDestination, validate(), settings bounds)
-        assert(self.validateCommonUpdateChecks(previous, ddd), "common update checks failed");
-
-        // Paused-specific checks
+        // State gate first — wrong-state failures should be the first diagnostic
         prevState.mustBePaused("UpdatingPausedSale: previous record", "REQT-b30wn4bdw2");
         nextState.mustBePaused("UpdatingPausedSale: updated record", "REQT-b30wn4bdw2");
+
+        // Shared checks (UTxO tokens, threadInfo, VxfDestination, settings bounds)
+        assert(self.validateCommonUpdateChecks(previous, ddd), "common update checks failed");
 
         REQT("salePace must carry forward from previous (REQT-xygjysee4h)",
             assertion: nextState.salePace == prevState.salePace,
@@ -650,6 +653,11 @@ struct MarketSaleData {
             showSuccess: true,
             onError: "startAt can't be modified while Paused"
         );
+
+        // General validation runs after state-specific checks to preserve
+        // diagnostic ordering — Paused-specific errors should fire first
+        REQT("validates updated record passes all general validations");
+        assert(self.validate(), "updated record must pass general validation");
 
         true
     }

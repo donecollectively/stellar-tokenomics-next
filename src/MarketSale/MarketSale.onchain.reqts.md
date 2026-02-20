@@ -322,7 +322,6 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 10.2.2: REQT-pks8phr4y5: **NEXT**/draft: **Gov Authority** - Resuming MUST require governance authority.
      - 10.2.3: REQT-34yb7jx6tr: **NEXT**/draft: **Token Presence Verification** - Resuming MUST verify that deposited tokens still match `saleLotAssets × totalSaleLots` — the full supply must still be present.
      - 10.2.4: REQT-pypc9vmpfk: **NEXT**/draft: **VXF Validation on Resume** - Resuming MUST validate VXF destinations per REQT-jkbaba8n7n (Resuming Validates VXF) — same checks as Activating since the sale re-enters Active state.
-     - 10.2.5: REQT-fkww59zyt3: **NEXT**/draft: **General Validation Passes on Resume** - The resumed record MUST pass `validate()` — defense-in-depth ensuring datum integrity when re-entering Active state, mirroring Activating (REQT-wt32kvjm9f).
      - 10.2.6: REQT-60azhtn9dy: **NEXT**/draft: **All Fields Unchanged** - All datum fields unchanged except state (Paused → Active); per REQT-yy15shmtwb.
      - 10.2.7: REQT-998waf4mz3: **NEXT**/draft: **UTxO Value Unchanged** - UTxO token value unchanged — no token movement; per REQT-hk93w5zb16.
  - 10.3.0: REQT-b30wn4bdw2: **NEXT**/draft: **UpdatingPausedSale Activity**

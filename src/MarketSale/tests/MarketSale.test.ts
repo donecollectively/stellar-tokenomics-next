@@ -1222,7 +1222,10 @@ describe("MarketSale plugin", async () => {
             } = context;
 
             await h.reusableBootstrap();
-            await h.snapToPackagedPendingUpdate();
+            await h.snapToFirstMarketSale();
+            // Run update inline — not from snapshot — because startAt
+            // is time-sensitive and stale snapshots break exact assertions
+            await h.packagedPendingUpdate();
             const updatedSale = await h.findFirstMarketSale();
             const expectedDetails = h.packagedUpdateDetails();
 
@@ -1782,6 +1785,27 @@ describe("MarketSale plugin", async () => {
                 updatedSale.data!.details.V1.fixedSaleDetails.vxfFundsTo
             ).toBeDefined();
         });
+
+        it("rejects name shorter than 10 characters (update-pending-short-name/REQT/y16j4t955c)", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const marketSale = await h.findFirstMarketSale();
+
+            const updating = h.updatePendingMarketSale(
+                marketSale,
+                {
+                    name: "short",
+                },
+                "trying short name",
+                { expectError: true }
+            );
+
+            await expect(updating).rejects.toThrow(
+                /name must be at least 10 characters/i
+            );
+        });
     });
 
     // ============================================================
@@ -1864,7 +1888,7 @@ describe("MarketSale plugin", async () => {
             }, await h.capo.txnMintingFungibleTokens(
                 h.capo.mkTcx("mint FISH for stop value test"), "FISH", 1n));
             await expect(h.submitTxnWithBlock(tcx2, { expectError: true }))
-                .rejects.toThrow(/UTxO tokens changed/);
+                .rejects.toThrow(/UTxO tokens changed during Stopping/);
         });
 
         it("can't sell tokens while Paused (sell-while-paused-rejected/REQT/jdepn901ag)", async (context: STOK_TC) => {
@@ -1933,16 +1957,10 @@ describe("MarketSale plugin", async () => {
                 .rejects.toThrow(/missing.* dgTkn capoGov/);
         });
 
-        it("rejects resume when record has invalid name (resume-invalid-name/REQT/fkww59zyt3)", async (context: STOK_TC) => {
-            const { h } = context;
-            await h.reusableBootstrap();
-            // Defense-in-depth: validate() called on resume catches datum integrity issues
-            await h.snapToFirstMarketSalePaused();
-            const pausedSale = await h.findFirstMarketSale();
-            await expect(h.resumeMarketSale(pausedSale, { expectError: true },
-                { name: "short" }))
-                .rejects.toThrow(/name must be at least 10 characters/);
-        });
+        // resume-invalid-name/REQT/fkww59zyt3 REMOVED — Resuming uses
+        // validateStateOnlyChange (all fields frozen), not validate().
+        // Name validity is tested in UpdatingPendingSale where name is editable.
+        // REQT/fkww59zyt3 itself is false — Resuming doesn't call validate().
 
         it("rejects resume when saleAssets mutated (resume-frozen-saleAssets/REQT/60azhtn9dy)", async (context: STOK_TC) => {
             const { h } = context;
@@ -1950,8 +1968,8 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSalePaused();
             const pausedSale = await h.findFirstMarketSale();
             await expect(h.resumeMarketSale(pausedSale, { expectError: true },
-                { details: { V1: { saleAssets: { ...pausedSale.data!.details.V1.saleAssets, totalSaleLots: 999n }}}}))
-                .rejects.toThrow(/saleAssets|unchanged/);
+                { details: { V1: { ...pausedSale.data!.details.V1, saleAssets: { ...pausedSale.data!.details.V1.saleAssets, totalSaleLots: 999n }}}}))
+                .rejects.toThrow(/saleAssets can't be modified/);
         });
 
         it("rejects resume when startAt mutated (resume-frozen-startAt/REQT/60azhtn9dy)", async (context: STOK_TC) => {
@@ -1960,8 +1978,8 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSalePaused();
             const pausedSale = await h.findFirstMarketSale();
             await expect(h.resumeMarketSale(pausedSale, { expectError: true },
-                { details: { V1: { fixedSaleDetails: { ...pausedSale.data!.details.V1.fixedSaleDetails, startAt: Date.now() + 99999 }}}}))
-                .rejects.toThrow(/startAt|unchanged/);
+                { details: { V1: { ...pausedSale.data!.details.V1, fixedSaleDetails: { ...pausedSale.data!.details.V1.fixedSaleDetails, startAt: Date.now() + 99999 }}}}))
+                .rejects.toThrow(/fixedSaleDetails can't be modified/);
         });
 
         it("rejects resume when progressDetails mutated (resume-frozen-progress/REQT/60azhtn9dy)", async (context: STOK_TC) => {
@@ -1970,8 +1988,8 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSalePaused();
             const pausedSale = await h.findFirstMarketSale();
             await expect(h.resumeMarketSale(pausedSale, { expectError: true },
-                { details: { V1: { saleState: { ...pausedSale.data!.details.V1.saleState, progressDetails: { ...pausedSale.data!.details.V1.saleState.progressDetails, lotsSold: 999n }}}}}))
-                .rejects.toThrow(/progressDetails|unchanged|lotsSold/);
+                { details: { V1: { ...pausedSale.data!.details.V1, saleState: { ...pausedSale.data!.details.V1.saleState, progressDetails: { ...pausedSale.data!.details.V1.saleState.progressDetails, lotsSold: 999n }}}}}))
+                .rejects.toThrow(/progressDetails can't be modified/);
         });
     });
 

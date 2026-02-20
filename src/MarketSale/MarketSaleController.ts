@@ -145,9 +145,9 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
         // REQT/apddgwqy9q (chunkForkedAt Freshened at Activation) —
         // REQT/stf3bz3fkk (Progress Timestamps Freshened at Activation) —
-        // freshen timestamps when transitioning Pending → Active
-        if (original.details.V1.saleState.state.Pending
-            && updated.details.V1.saleState.state.Active) {
+        // freshen timestamps only for the Activating activity (not UpdatingPendingSale)
+        //throw new Error("activity details: "+ activity.details);
+        if (activity.details.endsWith("::DelegateActivity.SpendingActivities.Activating")) {
             const activationTime = tcx.txnTime.getTime();
             return {
                 ...updated,
@@ -1224,7 +1224,7 @@ export class MarketSaleController extends WrappedDgDataContract<
 
                         ],
                     },
-    
+
                 },
                 "Activity:AddTokens constrains stored tokens' consistency with lot-count": {
                     purpose:
@@ -1242,7 +1242,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                         ]
                     },
                 },
-    
+
             "has a state machine for sale lifecycle": {
                 purpose: "Manages the state transitions of a market sale",
                 details: [
@@ -1322,7 +1322,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                 ],
                 requires: [
                     "Activity:AddTokens constrains stored tokens' consistency with lot-count"
-                ],                
+                ],
                 deltas: {
                     "wip": ["in progress"],
                     "0.8.0-beta.10": [

@@ -369,8 +369,12 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         console.log("  ----- ⚗️ resuming market sale");
 
         if (overrideFields) {
-            // Defense-in-depth path: bypass dedicated builder to inject mutations
+            // Defense-in-depth path: bypass dedicated builder to inject mutations.
+            // overrideFields provides a full details.V1 with one field mutated;
+            // we must merge the Active state into that V1, not the other way around,
+            // so the mutation survives while state transitions to Active.
             const existingSale = marketSale.data!;
+            const overrideV1 = overrideFields.details?.V1 || existingSale.details.V1;
             const tcx = this.capo.mkTcx("resume market sale (override)");
             const tcx2 = await mktSaleDgt.mkTxnUpdateRecord(
                 marketSale,
@@ -382,12 +386,12 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
                         ),
                     updatedFields: {
                         ...existingSale,
-                        details: { V1: { ...existingSale.details.V1,
-                            saleState: { ...existingSale.details.V1.saleState,
+                        ...overrideFields,
+                        details: { V1: { ...overrideV1,
+                            saleState: { ...overrideV1.saleState,
                                 state: { Active: {} },
                             },
                         }},
-                        ...overrideFields,
                     },
                 },
                 tcx
@@ -520,15 +524,6 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     // ============================================================
     // END SKETCH
     // ============================================================
-
-    @CapoTestHelper.hasNamedSnapshot({
-        actor: "tina",
-        parentSnapName: "firstMarketSale",
-    })
-    async snapToPackagedPendingUpdate() {
-        throw new Error("never called; see packagedPendingUpdate()");
-        return this.packagedPendingUpdate();
-    }
 
     _cachedNow : number = Date.now();
     packagedUpdateDetails() {
