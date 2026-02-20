@@ -197,7 +197,13 @@ enum SpendingActivity {
     UpdatingPausedSale {
         id: ByteArray
     }
-    Retiring {
+    51 : WithdrawingProceeds {
+        id: ByteArray
+    }
+    65 : Retiring {
+        id: ByteArray
+    }
+    86 : SoldOut {
         id: ByteArray
     }
 }
@@ -740,7 +746,48 @@ enum DelegateActivity {
                         }
                     )
                     && cctx.requiresGovAuthority().orFail()
-                })                
+                }),
+                WithdrawingProceeds {saleId} => logGroup("WithdrawingProceeds:", false, () -> Bool {
+                    assert(cctx.withCharterRef().orFail(), "can't");
+
+                    mktSaleDD : DgDataDetails = cctx.updatingDgData(recIdBytes: saleId);
+                    current : MarketSaleData = MarketSaleData::previous(mktSaleDD);
+                    currentState = current.v1details().saleState.state;
+
+                    bREQTgroup(
+                        reqt: "withdrawal valid only in Paused, SoldOut, or Retired (REQT-ayvw26q6av)",
+                        collapsed: false,
+                        callback: () -> Bool {
+                            currentState.switch {
+                                Paused => true,
+                                SoldOut => true,
+                                Retired => true,
+                                _ => error("WithdrawingProceeds requires Paused, SoldOut, or Retired")
+                            }
+                        }
+                    )
+                    && bREQTgroup(
+                        reqt: "non-ADA tokens must remain in UTxO (REQT-gy6jd9cjkg)",
+                        collapsed: false,
+                        callback: () -> Bool {
+                            inputAssets = mktSaleDD.input().value.get_assets();
+                            outputAssets = mktSaleDD.output().value.get_assets();
+                            assert(
+                                inputAssets == outputAssets,
+                                "non-ADA tokens changed during WithdrawingProceeds"
+                            );
+                            true
+                        }
+                    )
+                    && bREQT(
+                        reqt: "datum fields unchanged after withdrawal (REQT-ykqx9qgh88)",
+                        assertion: mktSaleDD.inputData() == mktSaleDD.outputData(),
+                        showSuccess: true,
+                        onError: "datum must not change during WithdrawingProceeds"
+                    )
+                    && cctx.requiresGovAuthority().orFail()
+                }),
+                SoldOut => error("todo: SoldOut")
             },
             BurningActivities{ba} => {
                 ba.switch {
