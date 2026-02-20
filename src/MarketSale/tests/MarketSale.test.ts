@@ -1929,8 +1929,13 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             await h.snapToFirstMarketSaleResumed();
             const resumedSale = await h.findFirstMarketSale();
+            const chunkCreatedAt =
+                resumedSale.data!.details.V1.saleState.progressDetails
+                    .lastPurchaseAt;
             h.setActor("tom");
-            await h.buyFromMktSale(resumedSale, 1n, "buy after resume");
+            await h.buyFromMktSale(resumedSale, 1n, "buy after resume", {
+                futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
+            });
             const afterBuy = await h.findFirstMarketSale();
             expect(afterBuy.data!.details.V1.saleState.progressDetails.lotsSold).toBeGreaterThan(0n);
         });
