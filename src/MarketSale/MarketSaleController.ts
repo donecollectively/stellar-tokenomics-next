@@ -279,9 +279,8 @@ export class MarketSaleController extends WrappedDgDataContract<
                         },
                         startAt: startTime,
                         vxfTokensTo: undefined,
-                        vxfFundsTo: {
-                            Anywhere: {},
-                        },
+                        // REQT/1h49829nsx (vxfFundsTo Must Be None) — None-mode default
+                        vxfFundsTo: undefined,
                     },
                     saleAssets: {
                         primaryAssetMph: mph,
@@ -680,6 +679,47 @@ export class MarketSaleController extends WrappedDgDataContract<
                         },
                     },
                 },
+            },
+            tcx
+        );
+    }
+
+    // REQT/adazrztjma (Proceeds Withdrawal) — builds withdrawal transaction
+    // REQT/czp1jhqgdj (WithdrawingProceeds Activity) — offchain transaction builder
+    async mkTxnWithdrawProceeds<TCX extends StellarTxnContext>(
+        this: MarketSaleController,
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        withdrawalAmount: bigint,
+        tcx?: TCX
+    ): Promise<TCX> {
+        console.log("🏒 withdrawing proceeds from mktSale");
+
+        const saleData = mktSale.data! as ErgoMarketSaleData;
+        // REQT/ayvw26q6av (Valid States for Withdrawal) — pre-flight state check
+        if (!environment.isTest) {
+            const state = saleData.details.V1.saleState.state;
+            if (!state.Paused && !state.SoldOut && !state.Retired) {
+                throw new Error("Can only withdraw proceeds from a Paused, SoldOut, or Retired sale");
+            }
+        }
+
+        // REQT/ykqx9qgh88 (Datum Fields Unchanged) — no updatedFields
+        // REQT/5r79v9b4ht (No Constraint on Withdrawal Amount) — caller specifies amount
+        return this.mkTxnUpdateRecord(
+            mktSale,
+            {
+                txnName: `withdraw proceeds from ${saleData.name}`,
+                activity: this.activity.SpendingActivities.WithdrawingProceeds(
+                    saleData.details.V1.threadInfo.saleId
+                ),
+                updatedFields: {
+                    details: {
+                        V1: {
+                            ...saleData.details.V1,
+                        },
+                    },
+                },
+                addedUtxoValue: makeValue(-withdrawalAmount),
             },
             tcx
         );
