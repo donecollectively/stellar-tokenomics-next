@@ -132,6 +132,12 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
 #### Key Requirements:
 1. **Chunk Splitting & Scaling**: Sales can be split into smaller concurrent chunks to enable parallel selling — each chunk has its own UTxO and progress tracking, coordinated with the parent via thread counters and sale identity
 
+### 13. Proceeds Withdrawal
+Governs the WithdrawingProceeds spending activity for extracting accumulated ADA from the sale UTxO. Applicable once funds have accumulated under None-mode vxfFundsTo routing. Valid in Paused, SoldOut, or Retired states.
+
+#### Key Requirements:
+1. **Proceeds Withdrawal**: Governance authority can withdraw accumulated ADA from a sale that is Paused, SoldOut, or Retired — with no constraint on withdrawal amount, and tokens must remain locked in the UTxO
+
 
 # Detailed Requirements
 
@@ -240,15 +246,20 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 6.1.3: REQT-9xhare9c1a: **P1**/draft: **Sealing Requires Gov Authority** - Sealing either VXF destination MUST require governance authority.
      - 6.1.4: REQT-7wfa7b7x3t: **P1**/draft: **Sealing Requires Receiver Participation** - Sealing MUST NOT succeed without the VXF receiver's participation in the transaction — the receiver's UTxO must be present.
  - 6.2.0: REQT-w6e5qsfxq1: **NEXT**/draft: **VXF Destination Validation on State Transitions**
-     - 6.2.1: REQT-x3xkgwp94t: **COMPLETED**/consented: **Activating Requires vxfFundsTo** - The `Activating` activity MUST validate that `vxfFundsTo` is present (Some) and passes `VxfDestination.validate()`. A sale MUST NOT activate without a configured funds destination.
-     - 6.2.2: REQT-d67c29t29w: **COMPLETED**/consented: **Activating Validates vxfTokensTo If Present** - The `Activating` activity MUST validate `vxfTokensTo` if present (Some). If None, activation proceeds without token routing constraints.
-     - 6.2.3: REQT-g563tb3ks1: **COMPLETED**/consented: **Pending Update Validates VXF If Present** - `UpdatingPendingSale` MUST validate `vxfTokensTo` and `vxfFundsTo` if present (Some). If None, the update proceeds — destinations are optional until activation.
+     - 6.2.1: REQT-x3xkgwp94t: **DEPRECATED**/evolved: **Activating Requires vxfFundsTo** - SUPERSEDED by REQT-1h49829nsx (None-mode). Previously: Activating MUST validate that vxfFundsTo is present (Some) and passes VxfDestination.validate(). A sale MUST NOT activate without a configured funds destination.
+     - 6.2.2: REQT-d67c29t29w: **DEPRECATED**/evolved: **Activating Validates vxfTokensTo If Present** - SUPERSEDED by REQT-88cfkdj7p2 (None-mode). Previously: Activating MUST validate vxfTokensTo if present (Some). If None, activation proceeds without token routing constraints.
+     - 6.2.3: REQT-g563tb3ks1: **DEPRECATED**/evolved: **Pending Update Validates VXF If Present** - SUPERSEDED by REQT-1h49829nsx, REQT-88cfkdj7p2 (None-mode). Previously: UpdatingPendingSale MUST validate vxfTokensTo and vxfFundsTo if present (Some).
      - 6.2.4: REQT-6z88fg6j2s: **NEXT**/draft: **Paused Update Validates VXF If Present** - `UpdatingPausedSale` MUST validate `vxfTokensTo` and `vxfFundsTo` if present (Some), using the same validation as pending updates.
      - 6.2.5: REQT-jkbaba8n7n: **NEXT**/draft: **Resuming Validates VXF** - `Resuming` MUST validate `vxfTokensTo` (if present) and `vxfFundsTo` (required) — the same checks as Activating, since the sale is re-entering Active state.
  - 6.3.0: REQT-3g0gz0gdkd: **P1**/draft: **VXF Enforcement During Sale**
-     - 6.3.1: REQT-tyqn2xp802: **P1**/draft: **Route Funds Per vxfFundsTo** - When `SellingTokens`, the payment MUST be routed according to the `vxfFundsTo` destination. The current implementation gathers payment to the sale UTxO — this MUST be replaced with VXF-compliant routing.
+     - 6.3.1: REQT-tyqn2xp802: **P1**/draft: **Route Funds Per vxfFundsTo** - When vxfFundsTo is Some, SellingTokens MUST route payment per the VXF destination. While None-mode is active (REQT-2vmbpk5xw7), funds accumulate to the sale UTxO per REQT-wh3kjtwmj9.
      - 6.3.2: REQT-panxb0gcyv: **P1**/draft: **Route Tokens Per vxfTokensTo** - When `SellingTokens` and `vxfTokensTo` is configured (Some), purchased tokens MUST be routed to the configured VXF destination rather than directly to the buyer.
      - 6.3.3: REQT-mn6ffsd5j8: **P1**/draft: **Receiver Participation During Sale** - When `SellingTokens` with a configured VXF destination, the receiver's participation MUST be verified in the transaction — if so configured.
+ - 6.4.0: REQT-2vmbpk5xw7: **NEXT**/draft: **VXF None-Mode Enforcement**
+     - 6.4.1: REQT-1h49829nsx: **NEXT**/draft: **vxfFundsTo Must Be None** - All activities (Activating, UpdatingPendingSale, UpdatingPausedSale, Resuming, SellingTokens) MUST reject the transaction when `vxfFundsTo` is not None.
+     - 6.4.2: REQT-88cfkdj7p2: **NEXT**/draft: **vxfTokensTo Must Be None** - All activities (Activating, UpdatingPendingSale, UpdatingPausedSale, Resuming, SellingTokens) MUST reject the transaction when `vxfTokensTo` is not None.
+     - 6.4.3: REQT-wh3kjtwmj9: **NEXT**/draft: **Funds Accumulate to Sale UTxO** - When `vxfFundsTo` is None, funds received during SellingTokens MUST accumulate to the mktSale UTxO.
+     - 6.4.4: REQT-nnxpz49srs: **NEXT**/draft: **Tokens Sent to Buyer** - When `vxfTokensTo` is None, purchased tokens MAY be sent anywhere — the buyer receives tokens directly with no on-chain routing constraint.
 
 ## Area 7: Activation
 
@@ -260,7 +271,7 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 7.1.2: REQT-f7m51tgbf0: **COMPLETED**/consented: **Gov Authority** - Activating MUST require governance authority.
      - 7.1.3: REQT-avxdr3ycqc: **COMPLETED**/consented: **Name Unchanged** - Activating MUST verify that `name` has not changed from the previous record.
      - 7.1.4: REQT-m7yz0yd80v: **COMPLETED**/consented: **Token Deposit Verification** - The UTxO MUST contain exactly `saleLotAssets × totalSaleLots` in token value (excluding the UUT). The full supply of tokens must be deposited before activation.
-     - 7.1.5: REQT-4z5dkz9p2p: **COMPLETED**/consented: **VXF Validation** - Activating MUST validate VXF destinations per REQT-x3xkgwp94t (vxfFundsTo required) and REQT-d67c29t29w (vxfTokensTo if present).
+     - 7.1.5: REQT-4z5dkz9p2p: **NEXT**/draft: **VXF Validation** - Activating MUST enforce VXF None-mode per REQT-1h49829nsx (vxfFundsTo must be None) and REQT-88cfkdj7p2 (vxfTokensTo must be None).
      - 7.1.6: REQT-8ptt7tvth7: **COMPLETED**/consented: **Thread Info Structural Integrity** - Activating MUST verify `threadInfo` passes `validateDetailsWhenPending()` — structural fields (parentChunkId, saleId, nestedThreads, retiredThreads) are validated. Note: `chunkForkedAt` is excluded from this check and is freshened separately (REQT-apddgwqy9q).
      - 7.1.7: REQT-wt32kvjm9f: **COMPLETED**/consented: **General Validation Passes** - The activated record MUST pass `validate()`.
      - 7.1.8: REQT-apddgwqy9q: **NEXT**/draft: **chunkForkedAt Freshened at Activation** - Activating MUST set `chunkForkedAt` to the current time — freshening the chunk timestamp so the 10-minute maturity window (REQT/8sg001m18m) starts from when selling becomes possible, not from creation.
@@ -269,7 +280,7 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 7.2.1: REQT-wragmsgcr7: **COMPLETED**/consented: **Missing Extra Tokens** - Activation MUST fail if `saleLotAssets` expects tokens (e.g., bundled non-primary tokens) that aren't deposited in the UTxO.
      - 7.2.2: REQT-8qbbvqg5kq: **COMPLETED**/consented: **Indivisible Primary Tokens** - Activation MUST fail if `primaryAssetTargetCount` is not evenly divisible by lot count, or if deposited primary tokens aren't evenly divisible.
      - 7.2.3: REQT-g0638e8rje: **COMPLETED**/consented: **Indivisible Non-Primary Tokens** - Activation MUST fail if deposited non-primary tokens aren't evenly divisible by lot count.
-     - 7.2.4: REQT-0sa1x0aj4z: **COMPLETED**/consented: **Invalid VXF Destination** - Activation MUST fail if `vxfFundsTo` doesn't validate or is missing.
+     - 7.2.4: REQT-0sa1x0aj4z: **DEPRECATED**/evolved: **Invalid VXF Destination** - SUPERSEDED by REQT-1h49829nsx (None-mode). Previously: Activation MUST fail if vxfFundsTo does not validate or is missing.
 
 ## Area 8: Sale Progress & Dynamic Pricing
 
@@ -369,6 +380,18 @@ Governs splitting sales into concurrent chunks for throughput scaling: minting c
      - 12.2.2: REQT-ecb9p0vf2b: **FUTURE**/draft: **Parent Thread Counter Update** - Merging MUST increment the parent's `retiredThreads` counter.
  - 12.3.0: REQT-vjcyhre037: **COMPLETED**/consented: **Max Sale Size**
      - 12.3.1: REQT-6sa3bf29pc: **COMPLETED**/consented: **Sale Size Limit** - The sale MUST reject creation if the total sale size exceeds the maximum allowed size (enforced by transaction size or policy limits).
+
+## Area 13: Proceeds Withdrawal
+
+### **REQT-13.0/adazrztjma**: **NEXT**/draft: **Proceeds Withdrawal**
+#### Purpose: Governs the WithdrawingProceeds spending activity for extracting accumulated ADA from the sale UTxO. Applied when reviewing proceeds management, testing withdrawal scenarios, or auditing that withdrawal only occurs in appropriate sale states.
+
+ - 13.1.0: REQT-czp1jhqgdj: **NEXT**/draft: **WithdrawingProceeds Activity**
+     - 13.1.1: REQT-ayvw26q6av: **NEXT**/draft: **Valid States for Withdrawal** - WithdrawingProceeds MUST be valid only when the sale state is Paused, SoldOut, or Retired. All other states MUST reject.
+     - 13.1.2: REQT-aexkjfxm2k: **NEXT**/draft: **Gov Authority** - WithdrawingProceeds MUST require governance authority.
+     - 13.1.3: REQT-5r79v9b4ht: **NEXT**/draft: **No Constraint on Withdrawal Amount** - WithdrawingProceeds has no constraint on how much ADA is withdrawn.
+     - 13.1.4: REQT-gy6jd9cjkg: **NEXT**/draft: **Tokens Must Remain** - WithdrawingProceeds MUST NOT move or burn any non-ADA tokens — tokens stay locked in the UTxO.
+     - 13.1.5: REQT-ykqx9qgh88: **NEXT**/draft: **Datum Fields Unchanged** - WithdrawingProceeds MUST leave all datum fields unchanged.
 
 
 # Files
