@@ -106,6 +106,9 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         if (marketSales.length > 1) {
             throw new Error("expected only one market sale");
         }
+        if (!marketSales.length) {
+            throw new Error("no market sales found — check that bootstrap/snapshot created one");
+        }
         return marketSales[0];
     }
 

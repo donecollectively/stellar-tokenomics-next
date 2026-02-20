@@ -1401,8 +1401,18 @@ export class MarketSaleStateHelper extends EnumBridge<JustAnEnum> {
     } /* tagOnly variant accessor */
 
 /**
- * (property getter): UplcData for ***"MarketSaleData::MarketSaleState.Retired"***
+ * (property getter): UplcData for ***"MarketSaleData::MarketSaleState.Paused"***
  * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#2***
+ */
+    get Paused() {
+        const uplc = this.mkUplcData({ Paused: {} }, 
+            "MarketSaleData::MarketSaleState.Paused");
+        return uplc;
+    } /* tagOnly variant accessor */
+
+/**
+ * (property getter): UplcData for ***"MarketSaleData::MarketSaleState.Retired"***
+ * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#65***
  */
     get Retired() {
         const uplc = this.mkUplcData({ Retired: {} }, 
@@ -1412,7 +1422,7 @@ export class MarketSaleStateHelper extends EnumBridge<JustAnEnum> {
 
 /**
  * (property getter): UplcData for ***"MarketSaleData::MarketSaleState.SoldOut"***
- * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#3***
+ * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#86***
  */
     get SoldOut() {
         const uplc = this.mkUplcData({ SoldOut: {} }, 
@@ -2473,6 +2483,42 @@ export class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
     } /*multiFieldVariant enum accessor*/
 
     /**
+     * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.Stopping"***
+     */
+    Stopping(
+        id: number[]
+    ) : UplcData {
+        const uplc = this.mkUplcData({ 
+           Stopping: id
+        }, "MarketSalePolicy::SpendingActivity.Stopping"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
+     * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.Resuming"***
+     */
+    Resuming(
+        id: number[]
+    ) : UplcData {
+        const uplc = this.mkUplcData({ 
+           Resuming: id
+        }, "MarketSalePolicy::SpendingActivity.Resuming"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
+     * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPausedSale"***
+     */
+    UpdatingPausedSale(
+        id: number[]
+    ) : UplcData {
+        const uplc = this.mkUplcData({ 
+           UpdatingPausedSale: id
+        }, "MarketSalePolicy::SpendingActivity.UpdatingPausedSale"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
      * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.Retiring"***
      */
     Retiring(
@@ -3397,6 +3443,57 @@ export class SpendingActivityHelperNested extends EnumBridge<isActivity> {
         }, "MarketSalePolicy::SpendingActivity.MergingChildChunk");
        return uplc;
     } /*multiFieldVariant enum accessor*/
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.Stopping"***
+    * @remarks
+    * #### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    Stopping(
+        id: number[]
+    ) : isActivity {
+        const uplc = this.mkUplcData({ 
+           Stopping: id
+        }, "MarketSalePolicy::SpendingActivity.Stopping"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.Resuming"***
+    * @remarks
+    * #### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    Resuming(
+        id: number[]
+    ) : isActivity {
+        const uplc = this.mkUplcData({ 
+           Resuming: id
+        }, "MarketSalePolicy::SpendingActivity.Resuming"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.UpdatingPausedSale"***
+    * @remarks
+    * #### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    UpdatingPausedSale(
+        id: number[]
+    ) : isActivity {
+        const uplc = this.mkUplcData({ 
+           UpdatingPausedSale: id
+        }, "MarketSalePolicy::SpendingActivity.UpdatingPausedSale"); /*singleField enum variant*/
+       return uplc;
+    }
 
     /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.Retiring"***
@@ -4692,13 +4789,20 @@ export const MarketSaleStateSchema : EnumTypeSchema = {
         {
             "kind": "variant",
             "tag": 2,
+            "id": "__module__MarketSaleData__MarketSaleState[]__Paused",
+            "name": "Paused",
+            "fieldTypes": []
+        },
+        {
+            "kind": "variant",
+            "tag": 65,
             "id": "__module__MarketSaleData__MarketSaleState[]__Retired",
             "name": "Retired",
             "fieldTypes": []
         },
         {
             "kind": "variant",
-            "tag": 3,
+            "tag": 86,
             "id": "__module__MarketSaleData__MarketSaleState[]__SoldOut",
             "name": "SoldOut",
             "fieldTypes": []
@@ -4782,13 +4886,20 @@ export const OtherSaleStateV1Schema : StructTypeSchema = {
                     {
                         "kind": "variant",
                         "tag": 2,
+                        "id": "__module__MarketSaleData__MarketSaleState[]__Paused",
+                        "name": "Paused",
+                        "fieldTypes": []
+                    },
+                    {
+                        "kind": "variant",
+                        "tag": 65,
                         "id": "__module__MarketSaleData__MarketSaleState[]__Retired",
                         "name": "Retired",
                         "fieldTypes": []
                     },
                     {
                         "kind": "variant",
-                        "tag": 3,
+                        "tag": 86,
                         "id": "__module__MarketSaleData__MarketSaleState[]__SoldOut",
                         "name": "SoldOut",
                         "fieldTypes": []
@@ -5995,13 +6106,20 @@ export const MktSaleDetailsSchema : EnumTypeSchema = {
                                         {
                                             "kind": "variant",
                                             "tag": 2,
+                                            "id": "__module__MarketSaleData__MarketSaleState[]__Paused",
+                                            "name": "Paused",
+                                            "fieldTypes": []
+                                        },
+                                        {
+                                            "kind": "variant",
+                                            "tag": 65,
                                             "id": "__module__MarketSaleData__MarketSaleState[]__Retired",
                                             "name": "Retired",
                                             "fieldTypes": []
                                         },
                                         {
                                             "kind": "variant",
-                                            "tag": 3,
+                                            "tag": 86,
                                             "id": "__module__MarketSaleData__MarketSaleState[]__SoldOut",
                                             "name": "SoldOut",
                                             "fieldTypes": []
@@ -6795,13 +6913,20 @@ export const MarketSaleDataSchema : StructTypeSchema = {
                                                     {
                                                         "kind": "variant",
                                                         "tag": 2,
+                                                        "id": "__module__MarketSaleData__MarketSaleState[]__Paused",
+                                                        "name": "Paused",
+                                                        "fieldTypes": []
+                                                    },
+                                                    {
+                                                        "kind": "variant",
+                                                        "tag": 65,
                                                         "id": "__module__MarketSaleData__MarketSaleState[]__Retired",
                                                         "name": "Retired",
                                                         "fieldTypes": []
                                                     },
                                                     {
                                                         "kind": "variant",
-                                                        "tag": 3,
+                                                        "tag": 86,
                                                         "id": "__module__MarketSaleData__MarketSaleState[]__SoldOut",
                                                         "name": "SoldOut",
                                                         "fieldTypes": []
@@ -7701,13 +7826,20 @@ export const DelegateDatumSchema : EnumTypeSchema = {
                                                                         {
                                                                             "kind": "variant",
                                                                             "tag": 2,
+                                                                            "id": "__module__MarketSaleData__MarketSaleState[]__Paused",
+                                                                            "name": "Paused",
+                                                                            "fieldTypes": []
+                                                                        },
+                                                                        {
+                                                                            "kind": "variant",
+                                                                            "tag": 65,
                                                                             "id": "__module__MarketSaleData__MarketSaleState[]__Retired",
                                                                             "name": "Retired",
                                                                             "fieldTypes": []
                                                                         },
                                                                         {
                                                                             "kind": "variant",
-                                                                            "tag": 3,
+                                                                            "tag": 86,
                                                                             "id": "__module__MarketSaleData__MarketSaleState[]__SoldOut",
                                                                             "name": "SoldOut",
                                                                             "fieldTypes": []
@@ -9071,6 +9203,51 @@ export const SpendingActivitySchema : EnumTypeSchema = {
         {
             "kind": "variant",
             "tag": 6,
+            "id": "__module__MarketSalePolicy__SpendingActivity[]__Stopping",
+            "name": "Stopping",
+            "fieldTypes": [
+                {
+                    "name": "id",
+                    "type": {
+                        "kind": "internal",
+                        "name": "ByteArray"
+                    }
+                }
+            ]
+        },
+        {
+            "kind": "variant",
+            "tag": 7,
+            "id": "__module__MarketSalePolicy__SpendingActivity[]__Resuming",
+            "name": "Resuming",
+            "fieldTypes": [
+                {
+                    "name": "id",
+                    "type": {
+                        "kind": "internal",
+                        "name": "ByteArray"
+                    }
+                }
+            ]
+        },
+        {
+            "kind": "variant",
+            "tag": 8,
+            "id": "__module__MarketSalePolicy__SpendingActivity[]__UpdatingPausedSale",
+            "name": "UpdatingPausedSale",
+            "fieldTypes": [
+                {
+                    "name": "id",
+                    "type": {
+                        "kind": "internal",
+                        "name": "ByteArray"
+                    }
+                }
+            ]
+        },
+        {
+            "kind": "variant",
+            "tag": 9,
             "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
             "name": "Retiring",
             "fieldTypes": [
@@ -9707,6 +9884,51 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                             {
                                 "kind": "variant",
                                 "tag": 6,
+                                "id": "__module__MarketSalePolicy__SpendingActivity[]__Stopping",
+                                "name": "Stopping",
+                                "fieldTypes": [
+                                    {
+                                        "name": "id",
+                                        "type": {
+                                            "kind": "internal",
+                                            "name": "ByteArray"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "kind": "variant",
+                                "tag": 7,
+                                "id": "__module__MarketSalePolicy__SpendingActivity[]__Resuming",
+                                "name": "Resuming",
+                                "fieldTypes": [
+                                    {
+                                        "name": "id",
+                                        "type": {
+                                            "kind": "internal",
+                                            "name": "ByteArray"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "kind": "variant",
+                                "tag": 8,
+                                "id": "__module__MarketSalePolicy__SpendingActivity[]__UpdatingPausedSale",
+                                "name": "UpdatingPausedSale",
+                                "fieldTypes": [
+                                    {
+                                        "name": "id",
+                                        "type": {
+                                            "kind": "internal",
+                                            "name": "ByteArray"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "kind": "variant",
+                                "tag": 9,
                                 "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
                                 "name": "Retiring",
                                 "fieldTypes": [
@@ -16350,13 +16572,20 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                                 {
                                                                     "kind": "variant",
                                                                     "tag": 2,
+                                                                    "id": "__module__MarketSaleData__MarketSaleState[]__Paused",
+                                                                    "name": "Paused",
+                                                                    "fieldTypes": []
+                                                                },
+                                                                {
+                                                                    "kind": "variant",
+                                                                    "tag": 65,
                                                                     "id": "__module__MarketSaleData__MarketSaleState[]__Retired",
                                                                     "name": "Retired",
                                                                     "fieldTypes": []
                                                                 },
                                                                 {
                                                                     "kind": "variant",
-                                                                    "tag": 3,
+                                                                    "tag": 86,
                                                                     "id": "__module__MarketSaleData__MarketSaleState[]__SoldOut",
                                                                     "name": "SoldOut",
                                                                     "fieldTypes": []
@@ -17158,13 +17387,20 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                                     {
                                                                         "kind": "variant",
                                                                         "tag": 2,
+                                                                        "id": "__module__MarketSaleData__MarketSaleState[]__Paused",
+                                                                        "name": "Paused",
+                                                                        "fieldTypes": []
+                                                                    },
+                                                                    {
+                                                                        "kind": "variant",
+                                                                        "tag": 65,
                                                                         "id": "__module__MarketSaleData__MarketSaleState[]__Retired",
                                                                         "name": "Retired",
                                                                         "fieldTypes": []
                                                                     },
                                                                     {
                                                                         "kind": "variant",
-                                                                        "tag": 3,
+                                                                        "tag": 86,
                                                                         "id": "__module__MarketSaleData__MarketSaleState[]__SoldOut",
                                                                         "name": "SoldOut",
                                                                         "fieldTypes": []

@@ -231,11 +231,14 @@ export interface SaleProgressDetailsV1Like {
         Active: singleEnumVariantMeta<MarketSaleStateMeta, "Active",
             "Constr#1", "tagOnly", tagOnly, "noSpecialFlags"
         >,
-        Retired: singleEnumVariantMeta<MarketSaleStateMeta, "Retired",
+        Paused: singleEnumVariantMeta<MarketSaleStateMeta, "Paused",
             "Constr#2", "tagOnly", tagOnly, "noSpecialFlags"
         >,
+        Retired: singleEnumVariantMeta<MarketSaleStateMeta, "Retired",
+            "Constr#65", "tagOnly", tagOnly, "noSpecialFlags"
+        >,
         SoldOut: singleEnumVariantMeta<MarketSaleStateMeta, "SoldOut",
-            "Constr#3", "tagOnly", tagOnly, "noSpecialFlags"
+            "Constr#86", "tagOnly", tagOnly, "noSpecialFlags"
         >
     }
 >;
@@ -245,7 +248,7 @@ export interface SaleProgressDetailsV1Like {
  * MarketSaleState enum variants
  * 
  * @remarks - expresses the essential raw data structures
- * supporting the **4 variant(s)** of the MarketSaleState enum type
+ * supporting the **5 variant(s)** of the MarketSaleState enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `MarketSaleStateHelper` class
  *     for generating UPLC data for this enum type
@@ -254,6 +257,7 @@ export interface SaleProgressDetailsV1Like {
 export type MarketSaleState = 
         | { Pending: tagOnly /*minEnumVariant*/ }
         | { Active: tagOnly /*minEnumVariant*/ }
+        | { Paused: tagOnly /*minEnumVariant*/ }
         | { Retired: tagOnly /*minEnumVariant*/ }
         | { SoldOut: tagOnly /*minEnumVariant*/ }
 
@@ -270,7 +274,7 @@ export type ErgoMarketSaleState = IntersectedEnum<MarketSaleState/*like canon en
  * MarketSaleState enum variants (permissive)
  * 
  * @remarks - expresses the allowable data structure
- * for creating any of the **4 variant(s)** of the MarketSaleState enum type
+ * for creating any of the **5 variant(s)** of the MarketSaleState enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `MarketSaleStateHelper` class
  *     for generating UPLC data for this enum type
@@ -283,6 +287,7 @@ export type ErgoMarketSaleState = IntersectedEnum<MarketSaleState/*like canon en
 export type MarketSaleStateLike = IntersectedEnum<
         | { Pending: tagOnly /*minEnumVariant*/ }
         | { Active: tagOnly /*minEnumVariant*/ }
+        | { Paused: tagOnly /*minEnumVariant*/ }
         | { Retired: tagOnly /*minEnumVariant*/ }
         | { SoldOut: tagOnly /*minEnumVariant*/ }
 >
@@ -1972,8 +1977,20 @@ export interface SpendingActivity$MergingChildChunkLike {
             "Constr#5", 
             "fields", SpendingActivity$MergingChildChunk, "noSpecialFlags"
         >,
-        Retiring: singleEnumVariantMeta<SpendingActivityMeta, "Retiring",
+        Stopping: singleEnumVariantMeta<SpendingActivityMeta, "Stopping",
             "Constr#6", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]   , "noSpecialFlags"
+        >,
+        Resuming: singleEnumVariantMeta<SpendingActivityMeta, "Resuming",
+            "Constr#7", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]   , "noSpecialFlags"
+        >,
+        UpdatingPausedSale: singleEnumVariantMeta<SpendingActivityMeta, "UpdatingPausedSale",
+            "Constr#8", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]   , "noSpecialFlags"
+        >,
+        Retiring: singleEnumVariantMeta<SpendingActivityMeta, "Retiring",
+            "Constr#9", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]   , "noSpecialFlags"
         >
     }
@@ -1984,7 +2001,7 @@ export interface SpendingActivity$MergingChildChunkLike {
  * SpendingActivity enum variants
  * 
  * @remarks - expresses the essential raw data structures
- * supporting the **7 variant(s)** of the SpendingActivity enum type
+ * supporting the **10 variant(s)** of the SpendingActivity enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `SpendingActivityHelper` class
  *     for generating UPLC data for this enum type
@@ -2000,6 +2017,12 @@ export type SpendingActivity =
 			number[]    /*minEnumVariant*/ }
         | { SellingTokens: SpendingActivity$SellingTokens /*minEnumVariant*/ }
         | { MergingChildChunk: SpendingActivity$MergingChildChunk /*minEnumVariant*/ }
+        | { Stopping: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { Resuming: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { UpdatingPausedSale: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Retiring: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
 
@@ -2020,6 +2043,12 @@ export type ErgoSpendingActivity = IntersectedEnum<
 			number[]    /*minEnumVariant*/ }
         | { SellingTokens: SpendingActivity$Ergo$SellingTokens /*minEnumVariant*/ }
         | { MergingChildChunk: SpendingActivity$Ergo$MergingChildChunk /*minEnumVariant*/ }
+        | { Stopping: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { Resuming: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { UpdatingPausedSale: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Retiring: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
 >
@@ -2028,7 +2057,7 @@ export type ErgoSpendingActivity = IntersectedEnum<
  * SpendingActivity enum variants (permissive)
  * 
  * @remarks - expresses the allowable data structure
- * for creating any of the **7 variant(s)** of the SpendingActivity enum type
+ * for creating any of the **10 variant(s)** of the SpendingActivity enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `SpendingActivityHelper` class
  *     for generating UPLC data for this enum type
@@ -2048,6 +2077,12 @@ export type SpendingActivityLike = IntersectedEnum<
 			number[]    /*minEnumVariant*/ }
         | { SellingTokens: SpendingActivity$SellingTokensLike /*minEnumVariant*/ }
         | { MergingChildChunk: SpendingActivity$MergingChildChunkLike /*minEnumVariant*/ }
+        | { Stopping: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { Resuming: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { UpdatingPausedSale: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Retiring: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
 >

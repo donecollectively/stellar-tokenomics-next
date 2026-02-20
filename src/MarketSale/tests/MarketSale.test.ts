@@ -106,38 +106,25 @@ describe("MarketSale plugin", async () => {
             h.ts("ok bootstrapped");
             await h.snapToFirstMarketSale();
             h.ts("ok first sale snapped");
-            const { data: mktSale, utxo } = await h.findFirstMarketSale();
-            if (!mktSale) throw new Error("for TS");
-            h.ts("find first sale");
-
-            const now = Date.now();
-            expect(mktSale.details.V1.fixedSaleDetails.startAt).toBeCloseTo(
-                now,
-                -5
-            ); // within ~10 seconds is close enough to absorb txn-building time
-            // starts with lastSaleAt = startDate
-            expect(
-                mktSale.details.V1.saleState.progressDetails.lastPurchaseAt
-            ).toEqual(mktSale.details.V1.fixedSaleDetails.startAt);
-        });
-
-        it("has key details of price, sale-sizes and token to be sold", async (context: STOK_TC) => {
-            const {
-                h,
-                h: { network, actors, delay, state },
-            } = context;
-
-            h.ts("start");
-            await h.reusableBootstrap();
-            h.ts("ok bootstrapped");
-            await h.snapToFirstMarketSale();
-            h.ts("ok first sale snapped");
-            const { capo } = h;
             const {
                 data: mktSale,
                 dataWrapped: mktSaleObj,
                 utxo,
             } = await h.findFirstMarketSale();
+            if (!mktSale) throw new Error("for TS");
+            h.ts("find first sale");
+
+            // on-disk SNAPSHOT won't be current with NOW:
+            // const now = Date.now();
+            // expect(mktSale.details.V1.fixedSaleDetails.startAt).toBeCloseTo(
+            //    now,
+            //    -5
+            // ); // within ~10 seconds is close enough to absorb txn-building time
+            // starts with lastSaleAt = startDate
+            expect(
+                mktSale.details.V1.saleState.progressDetails.lastPurchaseAt
+            ).toEqual(mktSale.details.V1.fixedSaleDetails.startAt);
+
             if (!mktSale) throw new Error("for TS");
             const controller = await h.mktSaleDgt();
             const exampleData = await controller.exampleData();
@@ -148,6 +135,7 @@ describe("MarketSale plugin", async () => {
             // ).toBeTruthy();
             expect(mktSale.details.V1.saleState.salePace).toEqual(1.0);
             // expect(mktSale.tokenName).toEqual(sampleMarketSale.tokenName);
+            const { capo } = h;
             const expectedSaleAsset = makeValue(
                 capo.mintingPolicyHash,
                 exampleData.details.V1.saleAssets.primaryAssetName,
@@ -867,30 +855,39 @@ describe("MarketSale plugin", async () => {
             } = context;
 
             await h.reusableBootstrap();
-            await h.snapToFirstMarketSaleActivated();
+            await h.snapToFirstMarketSale();
+
+            // Activate inline so the activation time is fresh (not from a stale snapshot)
+            const pendingSale = await h.findFirstMarketSale();
+            await h.activateMarketSale(pendingSale, {
+                mintTokenName:
+                    pendingSale.data!.details.V1.saleAssets.primaryAssetName,
+            });
 
             const activatedSale = await h.findFirstMarketSale();
+            const chunkCreatedAt =
+                activatedSale.data!.details.V1.saleState.progressDetails
+                    .lastPurchaseAt;
+
+            // Try to buy 9 minutes after chunk creation — too fresh
             const buying = h.buyFromMktSale(
                 activatedSale,
                 1n,
                 "won't sell from a sale chunk less than 10 minutes old",
                 {
-                    futureDate: new Date(
-                        activatedSale.data!.details.V1.saleState.progressDetails
-                            .lastPurchaseAt +
-                            1000 * 60 * 9
-                    ),
+                    futureDate: new Date(chunkCreatedAt + 1000 * 60 * 9),
                     expectError: true,
                 }
             );
             await expect(buying).rejects.toThrow("sale chunk too fresh");
 
+            // Buy 10 minutes after — should succeed
             return h.buyFromMktSale(
                 activatedSale,
                 1n,
                 "will sell from a sale chunk 10 minutes old",
                 {
-                    futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                    futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
                 }
             );
         });
