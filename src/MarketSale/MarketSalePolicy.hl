@@ -409,14 +409,37 @@ enum DelegateActivity {
                     prevState.mustBePending("previous sale")
                     nextState.mustBeActive("updated sale: activating")
 
+                    nowRange = getTimeRange(5*Duration::MINUTE);
                     newValue : Value = mktSaleDD.output().value;
                     true
                     && cctx.requiresGovAuthority().orFail()
                     // // validates updated record
                     && updated.validate()
                     && updated.validateActivating(newValue, mktSaleDD)
+                    && bREQT(
+                        reqt: "chunkForkedAt freshened to activation time (REQT-apddgwqy9q)",
+                        assertion: updated.v1details().threadInfo.chunkForkedAt == nowRange.start,
+                        showSuccess: true,
+                        onError: "chunkForkedAt must be set to current time at activation"
+                    )
+                    && bREQTgroup(
+                        reqt: "progress timestamps freshened to activation time (REQT-stf3bz3fkk)",
+                        collapsed: false,
+                        callback: () -> Bool {
+                            progressDetails = updated.v1details().saleState.progressDetails;
+                            assert(
+                                progressDetails.lastPurchaseAt == nowRange.start,
+                                "lastPurchaseAt must be freshened to activation time"
+                            );
+                            assert(
+                                progressDetails.prevPurchaseAt == nowRange.start,
+                                "prevPurchaseAt must be freshened to activation time"
+                            );
+                            true
+                        }
+                    )
                     && true
-                }), 
+                }),
                 SellingTokens { recId, lotsPurchased, lotSellPrice : Value } => logGroup("SellingTokens:", false, () -> Bool {
                     assert(cctx.withCharterRef().orFail(), "can't");
 

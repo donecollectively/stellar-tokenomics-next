@@ -54,7 +54,7 @@ import {
 // } from "./MarketSale.generic.typeInfo.js";
 // import MarketSalePolicyDataBridge from "./MarketSale.generic.bridge.js";
 // import type MarketSaleBundle from "./MarketSale.generic.hlb.js";
-import { encodeUtf8 } from "@helios-lang/codec-utils";
+import { encodeUtf8, equalsBytes } from "@helios-lang/codec-utils";
 import { MarketSaleDataWrapper } from "./MarketSaleDataWrapper.js";
 import MarketSalePolicyDataBridge from "./MarketSale.bridge.js";
 import type {
@@ -131,7 +131,7 @@ export class MarketSaleController extends WrappedDgDataContract<
 
     beforeUpdate(
         updated: MarketSaleDataLike,
-        { activity, original }: updateContext<ErgoMarketSaleData>
+        { activity, original, tcx }: updateContext<ErgoMarketSaleData>
     ) {
         // doesn't interfere with the transaction-builder for selling while active:
         if (original.details.V1.saleState.state.Active) {
@@ -142,6 +142,36 @@ export class MarketSaleController extends WrappedDgDataContract<
         // so no adjustments needed for any Paused-origin transition
         if (original.details.V1.saleState.state.Paused) {
             return updated;
+        }
+        // REQT/apddgwqy9q (chunkForkedAt Freshened at Activation) —
+        // REQT/stf3bz3fkk (Progress Timestamps Freshened at Activation) —
+        // freshen timestamps when transitioning Pending → Active
+        if (original.details.V1.saleState.state.Pending
+            && updated.details.V1.saleState.state.Active) {
+            const activationTime = tcx.txnTime.getTime();
+            return {
+                ...updated,
+                details: {
+                    ...updated.details,
+                    V1: {
+                        ...updated.details.V1,
+                        saleState: {
+                            ...updated.details.V1.saleState,
+                            progressDetails: {
+                                ...updated.details.V1.saleState.progressDetails,
+                                // REQT/stf3bz3fkk — sync progress baseline to activation time
+                                lastPurchaseAt: activationTime,
+                                prevPurchaseAt: activationTime,
+                            },
+                        },
+                        threadInfo: {
+                            ...updated.details.V1.threadInfo,
+                            // REQT/apddgwqy9q — freshen chunk timestamp to activation time
+                            chunkForkedAt: activationTime,
+                        },
+                    },
+                },
+            };
         }
         if (updated.details.V1.saleState.state.Pending) {
             return this.fixLotCount(
@@ -319,15 +349,15 @@ export class MarketSaleController extends WrappedDgDataContract<
             predicate(utxo, data) {
                 if (
                     !!saleId &&
-                    data.details.V1.threadInfo.saleId != targetSaleId
+                    !equalsBytes(data.details.V1.threadInfo.saleId, targetSaleId!)
                 )
                     return false;
                 if (
                     !!parentId &&
-                    data.details.V1.threadInfo.parentChunkId != targetParentId
+                    !equalsBytes(data.details.V1.threadInfo.parentChunkId, targetParentId!)
                 )
                     return false;
-                if (!!isRoot && data.id != data.details.V1.threadInfo.saleId)
+                if (!!isRoot && !equalsBytes(data.id, data.details.V1.threadInfo.saleId))
                     return false;
 
                 {
@@ -482,13 +512,16 @@ export class MarketSaleController extends WrappedDgDataContract<
     ): Promise<TCX> {
         console.log("🏒 activating mktSale");
 
-        // console.profile("activate sale");
+        const existingData = mktSale.data!;
+        const activationTcx = (tcx || this.mkTcx("activate market sale"))
+            .validFor(5 * 60 * 1000); // on-chain policy enforces ≤5min window
+
         const tt = await this.mkTxnUpdateRecord(
             mktSale,
             {
-                txnName: `activate ${mktSale.data!.name}`,
+                txnName: `activate ${existingData.name}`,
                 activity: this.activity.SpendingActivities.Activating(
-                    mktSale.data!.details.V1.threadInfo.saleId
+                    existingData.details.V1.threadInfo.saleId
                 ),
                 updatedFields: {
                     ...newAttrs,
@@ -496,20 +529,20 @@ export class MarketSaleController extends WrappedDgDataContract<
                         V1: {
                             ...newAttrs.details?.V1,
                             saleState: {
-                                ...mktSale.data!.details.V1.saleState,
+                                ...existingData.details.V1.saleState,
                                 ...newAttrs.details?.V1?.saleState,
                                 state: { Active: {} },
                             },
                             fixedSaleDetails: {
-                                ...mktSale.data!.details.V1.fixedSaleDetails,
+                                ...existingData.details.V1.fixedSaleDetails,
                                 ...newAttrs.details?.V1?.fixedSaleDetails,
                             },
                             saleAssets: {
-                                ...mktSale.data!.details.V1.saleAssets,
+                                ...existingData.details.V1.saleAssets,
                                 ...newAttrs.details?.V1?.saleAssets,
                             },
                             threadInfo: {
-                                ...mktSale.data!.details.V1.threadInfo,
+                                ...existingData.details.V1.threadInfo,
                                 ...newAttrs.details?.V1?.threadInfo,
                             },
                         },
@@ -517,9 +550,8 @@ export class MarketSaleController extends WrappedDgDataContract<
                 },
                 addedUtxoValue: addedTokenValue,
             },
-            tcx
+            activationTcx
         );
-        // console.profileEnd("activate sale");
         return tt;
     }
 
@@ -534,7 +566,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     ): Promise<TCX> {
         console.log("🏒 stopping mktSale (Active → Paused)");
 
-        const saleData = mktSale.data!;
+        const saleData = mktSale.data! as ErgoMarketSaleData;
         // REQT/fx7m3y1ctf (Active → Paused) — pre-flight state check
         if (!environment.isTest && !saleData.details.V1.saleState.state.Active) {
             throw new Error("Can only stop an Active sale");
@@ -576,7 +608,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     ): Promise<TCX> {
         console.log("🏒 resuming mktSale (Paused → Active)");
 
-        const saleData = mktSale.data!;
+        const saleData = mktSale.data! as ErgoMarketSaleData;
         // REQT/3h96mdmn5k (Paused → Active) — pre-flight state check
         if (!environment.isTest && !saleData.details.V1.saleState.state.Paused) {
             throw new Error("Can only resume a Paused sale");
@@ -620,7 +652,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     ): Promise<TCX> {
         console.log("🏒 retiring mktSale (Paused → Retired)");
 
-        const saleData = mktSale.data!;
+        const saleData = mktSale.data! as ErgoMarketSaleData;
         // REQT/hcagxtdt35 (Paused → Retired) — pre-flight state check
         if (!environment.isTest && !saleData.details.V1.saleState.state.Paused) {
             throw new Error("Can only retire a Paused sale");
