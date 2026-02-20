@@ -45,6 +45,7 @@ import {
     REQT,
     bREQT,
     assertREQTgroup,
+    bREQTgroup,
     REQTgroup,
     REQTgroupUnit,
     logGroupUnit,
@@ -608,10 +609,10 @@ enum DelegateActivity {
                             true
                         }
                     )
-                    && assertREQTgroup(
-                        "validates VxfDestination in vxfTokensTo (REQT-jkbaba8n7n)",
-                        false,
-                        () -> Bool {
+                    && bREQTgroup(
+                        reqt: "validates VxfDestination in vxfTokensTo (REQT-jkbaba8n7n)",
+                        collapsed: false,
+                        callback: () -> Bool {
                             updated.v1details().fixedSaleDetails.vxfTokensTo.switch {
                                 Some{vxf} => {
                                     assert(vxf.validate("vxfTokensTo"), "vxfTokensTo invalid")
@@ -623,10 +624,10 @@ enum DelegateActivity {
                             true
                         }
                     )
-                    && assertREQTgroup(
-                        "validates VxfDestination in vxfFundsTo (REQT-jkbaba8n7n)",
-                        false,
-                        () -> Bool {
+                    && bREQTgroup(
+                        reqt: "validates VxfDestination in vxfFundsTo (REQT-jkbaba8n7n)",
+                        collapsed: false,
+                        callback: () -> Bool {
                             updated.v1details().fixedSaleDetails.vxfFundsTo.switch {
                                 Some{vxf} => {
                                     assert(vxf.validate("vxfFundsTo"), "vxfFundsTo invalid")
