@@ -21,7 +21,7 @@ type MktSaleFeatures = {
 };
 
 class ConcreteMSC extends MarketSaleController {
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         const module = await import("../../MarketSale.hlb.js");
         
         return module.MarketSaleBundle
@@ -33,7 +33,7 @@ class msCapoMintDelegate extends STokMintDelegate {
         return "msCapoMintDelegate";
     }
     dataBridgeClass = msCapoMintDelegateDataBridge;
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         return msCapoMintDelegateBundle
     }
 }
@@ -41,7 +41,7 @@ class msCapoMintDelegate extends STokMintDelegate {
 export class MarketSaleCapo extends Capo<MarketSaleCapo, MktSaleFeatures> {
     autoSetup = true;
     
-    async scriptBundleClass() {
+    static async scriptBundleClass() {
         return MarketSaleCapoBundle
     }
 
