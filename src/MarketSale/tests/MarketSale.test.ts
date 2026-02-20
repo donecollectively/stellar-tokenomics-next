@@ -457,11 +457,9 @@ describe("MarketSale plugin", async () => {
             expect(data.details.V1.saleState.state.Active).toBeTruthy();
         });
 
-        it("won't activate if the txfFundsTo setting doesn't validate", async (context: STOK_TC) => {
-            const {
-                h,
-                h: { network, actors, delay, state },
-            } = context;
+        // VXF None-Mode: rejects any Some value, not just NotYetDefined
+        it("rejects activation when vxfFundsTo is Some (none-mode-funds-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
+            const { h } = context;
 
             await h.reusableBootstrap();
             await h.snapToFirstMarketSale();
@@ -470,14 +468,14 @@ describe("MarketSale plugin", async () => {
             const mktSaleData = marketSale.data!;
 
             mktSaleData.details.V1.fixedSaleDetails.vxfFundsTo = {
-                NotYetDefined: {},
+                Anywhere: {},
             };
             const submitting = h.activateMarketSale(marketSale, {
                 mintTokenName:
                     mktSaleData.details.V1.saleAssets.primaryAssetName,
             });
             await expect(submitting).rejects.toThrow(
-                "VxfDestination: vxfFundsTo: NotYetDefined"
+                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
             );
         });
 
