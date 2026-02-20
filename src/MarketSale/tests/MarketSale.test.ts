@@ -1909,9 +1909,19 @@ describe("MarketSale plugin", async () => {
             await h.reusableBootstrap();
             await h.snapToFirstMarketSalePaused();
             const pausedSale = await h.findFirstMarketSale();
-            await h.resumeMarketSale(pausedSale);
+            const tcx = await h.resumeMarketSale(pausedSale);
             const resumedSale = await h.findFirstMarketSale();
             expect("Active" in resumedSale.data!.details.V1.saleState.state).toBe(true);
+
+            // Wiring proof: Resuming defense-in-depth pipeline ran
+            h.assertEnforcedReqts(tcx, [
+                "REQT-3h96mdmn5k",  // Paused → Active state transition
+                "REQT-60azhtn9dy",  // Non-editable fields unchanged (validateStateOnlyChange)
+                "REQT-998waf4mz3",  // UTxO token value unchanged
+                "REQT-qh3qkk8f92",  // Remaining sale tokens present
+                "REQT-jkbaba8n7n",  // VxfDestination validation
+                "REQT-fkww59zyt3",  // validate() defense-in-depth
+            ]);
         });
 
         it("selling works normally after resume (sell-after-resume/REQT/3h96mdmn5k)", async (context: STOK_TC) => {
@@ -1957,10 +1967,11 @@ describe("MarketSale plugin", async () => {
                 .rejects.toThrow(/missing.* dgTkn capoGov/);
         });
 
-        // resume-invalid-name/REQT/fkww59zyt3 REMOVED — Resuming uses
-        // validateStateOnlyChange (all fields frozen), not validate().
-        // Name validity is tested in UpdatingPendingSale where name is editable.
-        // REQT/fkww59zyt3 itself is false — Resuming doesn't call validate().
+        // resume-invalid-name negative test NOT included — validateStateOnlyChange
+        // freezes all fields (including name), so you can't inject a bad name for
+        // validate() to catch. REQT/fkww59zyt3 IS implemented on-chain (Resuming
+        // calls validate() as defense-in-depth); coverage via assertEnforcedReqts
+        // wiring proof in the happy path above.
 
         it("rejects resume when saleAssets mutated (resume-frozen-saleAssets/REQT/60azhtn9dy)", async (context: STOK_TC) => {
             const { h } = context;
