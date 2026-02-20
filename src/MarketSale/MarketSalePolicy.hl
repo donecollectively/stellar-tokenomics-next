@@ -465,6 +465,11 @@ enum DelegateActivity {
                     // This ensures that Stopping the root effectively halts the entire sale
                     // across all chunks, without requiring each chunk to be stopped individually.
 
+                    assert(
+                        previous.v1details().fixedSaleDetails.requireVxfFieldsNone(),
+                        "VXF fields must be None"
+                    );
+
                     correctActiveState = true
                     previous.v1details().saleState.mustBeActive("previous sale")
                     updated.v1details().saleState.mustBeActive("updated sale: selling tokens")
@@ -492,10 +497,12 @@ enum DelegateActivity {
                     prevProgress = previous.v1details().saleState.progressDetails;
                     nextProgress = updated.v1details().saleState.progressDetails;
 
-                    TODO("don't gather the payments to the mktSale, but follow the VxfDestination instead");
+                    // funds accumulate to sale UTxO under None-mode (REQT-wh3kjtwmj9)
+                    TODO("when VXF routing is implemented, route per vxfFundsTo instead");
                     oldValue : Value = mktSaleDD.input().value;
                     newValue : Value = mktSaleDD.output().value;
 
+                    // tokens go to buyer with no routing constraint (REQT-nnxpz49srs)
                     purchasedTokens : Value = previous.v1details().saleAssets.saleLotAssets * lotsPurchased;
 
                     totalProgress = SaleProgressDetailsV1{
