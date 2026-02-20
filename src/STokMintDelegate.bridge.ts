@@ -1803,7 +1803,8 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
         });
         nestedAccessor.mkDataVia(
             (role: DelegateRoleLike, innerPath?: string) => {
-                const variantSuffix = innerPath ? "." + innerPath.split(".").pop() : "";
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ removePendingChange: role },
             "CapoDelegateHelpers::CapoLifecycleActivity.removePendingChange" + variantSuffix);
         });
@@ -1973,7 +1974,8 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
         });
         nestedAccessor.mkDataVia(
             (activity: ManifestActivityLike, innerPath?: string) => {
-                const variantSuffix = innerPath ? "." + innerPath.split(".").pop() : "";
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ updatingManifest: activity },
             "CapoDelegateHelpers::CapoLifecycleActivity.updatingManifest" + variantSuffix);
         });
@@ -2268,7 +2270,8 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         });
         nestedAccessor.mkDataVia(
             (activity: CapoLifecycleActivityLike, innerPath?: string) => {
-                const variantSuffix = innerPath ? "." + innerPath.split(".").pop() : "";
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ CapoLifecycleActivities: activity },
             "STokMintDelegate::DelegateActivity.CapoLifecycleActivities" + variantSuffix);
         });
@@ -2284,7 +2287,8 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         });
         nestedAccessor.mkDataVia(
             (activity: DelegateLifecycleActivityLike, innerPath?: string) => {
-                const variantSuffix = innerPath ? "." + innerPath.split(".").pop() : "";
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ DelegateLifecycleActivities: activity },
             "STokMintDelegate::DelegateActivity.DelegateLifecycleActivities" + variantSuffix);
         });
@@ -2300,7 +2304,8 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         });
         nestedAccessor.mkDataVia(
             (activity: SpendingActivityLike, innerPath?: string) => {
-                const variantSuffix = innerPath ? "." + innerPath.split(".").pop() : "";
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ SpendingActivities: activity },
             "STokMintDelegate::DelegateActivity.SpendingActivities" + variantSuffix);
         });
@@ -2316,7 +2321,8 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         });
         nestedAccessor.mkDataVia(
             (activity: MintingActivityLike, innerPath?: string) => {
-                const variantSuffix = innerPath ? "." + innerPath.split(".").pop() : "";
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ MintingActivities: activity },
             "STokMintDelegate::DelegateActivity.MintingActivities" + variantSuffix);
         });
@@ -2332,7 +2338,8 @@ export class DelegateActivityHelper extends EnumBridge<isActivity> {
         });
         nestedAccessor.mkDataVia(
             (activity: BurningActivityLike, innerPath?: string) => {
-                const variantSuffix = innerPath ? "." + innerPath.split(".").pop() : "";
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ BurningActivities: activity },
             "STokMintDelegate::DelegateActivity.BurningActivities" + variantSuffix);
         });

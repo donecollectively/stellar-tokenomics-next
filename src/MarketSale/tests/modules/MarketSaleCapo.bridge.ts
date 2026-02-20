@@ -1676,9 +1676,11 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
             isMainnet: this.isMainnet, isNested: true, isActivity: true
         });
         nestedAccessor.mkDataVia(
-            (role: DelegateRoleLike) => {
+            (role: DelegateRoleLike, innerPath?: string) => {
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ removePendingChange: role },
-            "CapoDelegateHelpers::CapoLifecycleActivity.removePendingChange");
+            "CapoDelegateHelpers::CapoLifecycleActivity.removePendingChange" + variantSuffix);
         });
         return nestedAccessor;
     } /* nested enum accessor */
@@ -1845,9 +1847,11 @@ export class CapoLifecycleActivityHelperNested extends EnumBridge<isActivity> {
             isMainnet: this.isMainnet, isNested: true, isActivity: true
         });
         nestedAccessor.mkDataVia(
-            (activity: ManifestActivityLike) => {
+            (activity: ManifestActivityLike, innerPath?: string) => {
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ updatingManifest: activity },
-            "CapoDelegateHelpers::CapoLifecycleActivity.updatingManifest");
+            "CapoDelegateHelpers::CapoLifecycleActivity.updatingManifest" + variantSuffix);
         });
         return nestedAccessor;
     } /* nested enum accessor */
@@ -1877,9 +1881,11 @@ export class CapoActivityHelper extends EnumBridge<isActivity> {
             isMainnet: this.isMainnet, isNested: true, isActivity: true
         });
         nestedAccessor.mkDataVia(
-            (activity: CapoLifecycleActivityLike) => {
+            (activity: CapoLifecycleActivityLike, innerPath?: string) => {
+                const pathParts = innerPath ? innerPath.split("::").pop()!.split(".").slice(1) : [];
+                const variantSuffix = pathParts.length ? "." + pathParts.join(".") : "";
                 return  this.mkUplcData({ capoLifecycleActivity: activity },
-            "CapoHelpers::CapoActivity.capoLifecycleActivity");
+            "CapoHelpers::CapoActivity.capoLifecycleActivity" + variantSuffix);
         });
         return nestedAccessor;
     } /* nested enum accessor */

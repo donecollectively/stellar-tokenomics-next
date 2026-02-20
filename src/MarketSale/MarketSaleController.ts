@@ -147,7 +147,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         // REQT/stf3bz3fkk (Progress Timestamps Freshened at Activation) —
         // freshen timestamps only for the Activating activity (not UpdatingPendingSale)
         //throw new Error("activity details: "+ activity.details);
-        if (activity.details.endsWith("::DelegateActivity.SpendingActivities.Activating")) {
+        if (activity.activityName == "DelegateActivity.SpendingActivities.Activating") {
             const activationTime = tcx.txnTime.getTime();
             return {
                 ...updated,
