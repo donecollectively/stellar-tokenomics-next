@@ -662,35 +662,10 @@ enum DelegateActivity {
                             true
                         }
                     )
-                    && bREQTgroup(
-                        reqt: "validates VxfDestination in vxfTokensTo (REQT-jkbaba8n7n)",
-                        collapsed: false,
-                        callback: () -> Bool {
-                            updated.v1details().fixedSaleDetails.vxfTokensTo.switch {
-                                Some{vxf} => {
-                                    assert(vxf.validate("vxfTokensTo"), "vxfTokensTo invalid")
-                                },
-                                None => {
-                                    print("  -- vxfTokensTo is not restricted")
-                                }
-                            };
-                            true
-                        }
-                    )
-                    && bREQTgroup(
-                        reqt: "validates VxfDestination in vxfFundsTo (REQT-jkbaba8n7n)",
-                        collapsed: false,
-                        callback: () -> Bool {
-                            updated.v1details().fixedSaleDetails.vxfFundsTo.switch {
-                                Some{vxf} => {
-                                    assert(vxf.validate("vxfFundsTo"), "vxfFundsTo invalid")
-                                },
-                                None => {
-                                    print("  -- vxfFundsTo is not restricted")
-                                }
-                            };
-                            true
-                        }
+                    && bREQT(
+                        reqt: "VXF fields must be None on resume (REQT-1h49829nsx,88cfkdj7p2)",
+                        assertion: updated.v1details().fixedSaleDetails.requireVxfFieldsNone(),
+                        showSuccess: true
                     )
                     && bREQT(
                         reqt: "datum passes general validation on resume (REQT-fkww59zyt3)",

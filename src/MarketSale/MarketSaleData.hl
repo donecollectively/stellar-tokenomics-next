@@ -55,7 +55,24 @@ struct FixedSaleDetailsV1 {
 
     // these details about the sale should always be sync'd to nested chunks
     vxfTokensTo: Option[VxfDestination]
-    vxfFundsTo: Option[VxfDestination] 
+    vxfFundsTo: Option[VxfDestination]
+
+    func requireVxfFieldsNone(self) -> Bool {
+        bREQTgroup(
+            reqt: "VXF fields must be None (REQT-1h49829nsx,88cfkdj7p2)",
+            collapsed: false,
+            callback: () -> Bool {
+                self.vxfTokensTo.switch {
+                    None => true,
+                    _ => error("vxfTokensTo must be None")
+                }
+                && self.vxfFundsTo.switch {
+                    None => true,
+                    _ => error("vxfFundsTo must be None")
+                }
+            }
+        )
+    }
 }
 
 struct OtherSaleStateV1 {
@@ -318,27 +335,10 @@ struct MarketSaleData {
             true
         });
 
-        assertREQTgroup("validates VxfDestination in vxfTokensTo field", false, 
-        () -> Bool {
-            self.v1details().fixedSaleDetails.vxfTokensTo.switch {
-                Some{vxf} => {
-                    assert(vxf.validate("vxfTokensTo"), "<-- that fails; this can't");
-                },
-                None => {
-                    print("  -- vxfTokensTo is not restricted");
-                }
-            };
-            true
-        });
-
-        assertREQTgroup("validates VxfDestination in vxfFundsTo field", false, 
-        () -> Bool {
-            assert(
-                self.v1details().fixedSaleDetails.vxfFundsTo.unwrap().validate("vxfFundsTo"),
-                "vxfFundsTo invalid"
-            );
-            true
-        });
+        assert(
+            self.v1details().fixedSaleDetails.requireVxfFieldsNone(),
+            "VXF fields must be None"
+        );
 
         true
         && self.v1details().threadInfo.validateDetailsWhenPending(self.id)
@@ -437,25 +437,10 @@ struct MarketSaleData {
             onError: "thread info must not change"
         );
 
-        REQT("validates VxfDestination in vxfTokensTo if Some (REQT-6z88fg6j2s)");
-        nextFixed.vxfTokensTo.switch {
-            Some{vxf} => {
-                assert(vxf.validate("vxfTokensTo"), "vxfTokensTo must be valid");
-            },
-            None => {
-                print("  -- vxfTokensTo is None (allowed)");
-            }
-        }
-
-        REQT("validates VxfDestination in vxfFundsTo if Some (REQT-6z88fg6j2s)");
-        nextFixed.vxfFundsTo.switch {
-            Some{vxf} => {
-                assert(vxf.validate("vxfFundsTo"), "vxfFundsTo must be valid");
-            },
-            None => {
-                print("  -- vxfFundsTo is None (allowed)");
-            }
-        }
+        assert(
+            nextFixed.requireVxfFieldsNone(),
+            "VXF fields must be None"
+        )
 
         REQT("validates settings (REQT-b731sye0fz)");
         assert(
