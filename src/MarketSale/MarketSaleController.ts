@@ -947,15 +947,19 @@ export class MarketSaleController extends WrappedDgDataContract<
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
         lotsPurchased: number | bigint,
         tcx: StellarTxnContext<any>
-    ): Value {
+    ): { lotPrice: Value; totalSalePrice: Value } {
         const mktSaleObj = mktSale.dataWrapped!;
         const pCtx: PurchaseContext = {
             prevSale: mktSaleObj,
             now: tcx.txnTime,
             lotCount: BigInt(lotsPurchased),
         };
-        const lotPrice = mktSaleObj.getLotPrice(pCtx);
-        return makeValue(this.ADA(lotPrice));
+        const lotPriceAda = mktSaleObj.getLotPrice(pCtx);
+        const totalAda = realMul(Number(lotsPurchased), lotPriceAda);
+        return {
+            lotPrice: makeValue(this.ADA(lotPriceAda)),
+            totalSalePrice: makeValue(this.ADA(totalAda)),
+        };
     }
 
     /**
@@ -966,7 +970,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
         fundsAvailable: Value,
         tcx: StellarTxnContext<any>
-    ): { lots: number; pricePerLot: Value } {
+    ): { lots: number; lotPrice: Value, totalSalePrice: Value } {
         const availableLovelace = fundsAvailable.lovelace;
         const saleData = mktSale.data!;
         const settings = saleData.details.V1.fixedSaleDetails.settings;
@@ -982,28 +986,21 @@ export class MarketSaleController extends WrappedDgDataContract<
         if (upperBound <= 0 || availableLovelace <= 0n) {
             return {
                 lots: 0,
-                pricePerLot: this.salePricePerLot(mktSale, 1, tcx),
+                ...this.salePricePerLot(mktSale, 1, tcx),
             };
         }
 
-        const mktSaleObj = mktSale.dataWrapped!;
         const canAfford = (lots: number): boolean => {
             if (lots <= 0) return true;
-            const pCtx: PurchaseContext = {
-                prevSale: mktSaleObj,
-                now: tcx.txnTime,
-                lotCount: BigInt(lots),
-            };
-            const lotPrice = mktSaleObj.getLotPrice(pCtx);
-            const totalAda = realMul(lots, lotPrice);
-            return this.ADA(totalAda) <= availableLovelace;
+            const { totalSalePrice } = this.salePricePerLot(mktSale, lots, tcx);
+            return totalSalePrice.lovelace <= availableLovelace;
         };
 
         // Can't even afford a single lot
         if (!canAfford(1)) {
             return {
                 lots: 0,
-                pricePerLot: this.salePricePerLot(mktSale, 1, tcx),
+                ...this.salePricePerLot(mktSale, 1, tcx),
             };
         }
 
@@ -1028,7 +1025,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             }
             return {
                 lots: lo,
-                pricePerLot: this.salePricePerLot(mktSale, lo, tcx),
+                ...this.salePricePerLot(mktSale, lo, tcx),
             };
         }
 
@@ -1045,7 +1042,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         if (canAfford(ceiling)) {
             return {
                 lots: ceiling,
-                pricePerLot: this.salePricePerLot(mktSale, ceiling, tcx),
+                ...this.salePricePerLot(mktSale, ceiling, tcx),
             };
         }
 
@@ -1059,7 +1056,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
         return {
             lots: lo,
-            pricePerLot: this.salePricePerLot(mktSale, lo, tcx),
+            ...this.salePricePerLot(mktSale, lo, tcx),
         };
     }
 
@@ -1084,32 +1081,31 @@ export class MarketSaleController extends WrappedDgDataContract<
         const mktSaleData = mktSale.data!;
         const mktSaleObj = mktSale.dataWrapped!;
 
+        console.log("🏒 buying from mktSale");
+
+        const { lotPrice, totalSalePrice } =
+            this.salePricePerLot(mktSale, lotsPurchased, tcx);
+        console.log("    -- lot price", dumpAny(lotPrice));
+        console.log("    -- total sale price", dumpAny(totalSalePrice));
+
+        // PurchaseContext still needed for computeNextSalePace
         const thisPurchaseAt = tcx.txnTime;
         const pCtx: PurchaseContext = {
             prevSale: mktSaleObj,
             now: thisPurchaseAt,
             lotCount: BigInt(lotsPurchased),
         };
-        console.log("🏒 buying from mktSale");
-
-        const lotPrice = mktSaleObj.getLotPrice(pCtx);
-        console.log("    -- lot price", lotPrice);
-
         const nextSalePace = mktSaleObj.computeNextSalePace(pCtx);
         console.log("    -- next sale pace", nextSalePace);
 
-        const pmtAda = realMul(Number(lotsPurchased), lotPrice);
-        const pmtLovelace = this.ADA(pmtAda);
-        const pricePerLot = makeValue(this.ADA(lotPrice));
-        const pmtValue = makeValue(pmtLovelace);
-
-        const addedUtxoValue = pmtValue.subtract(tokenValuePurchase);
+        const pmtLovelace = totalSalePrice.lovelace;
+        const addedUtxoValue = totalSalePrice.subtract(tokenValuePurchase);
 
         console.log("    -- existing value", dumpAny(mktSale.utxo.value));
         console.log("    -- tokenValuePurchase", dumpAny(tokenValuePurchase));
         console.log("    -- value adjustment", dumpAny(addedUtxoValue));
         console.log("    -- payment lovelace", pmtLovelace);
-        console.log("    -- payment", dumpAny(pmtValue));
+        console.log("    -- payment", dumpAny(totalSalePrice));
 
         const { lastPurchaseAt: prevPurchaseAt } =
             mktSaleData.details.V1.saleState.progressDetails;
@@ -1141,7 +1137,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             this.activity.SpendingActivities.SellingTokens({
                 id: mktSale.data!.id,
                 lotsPurchased: BigInt(lotsPurchased),
-                salePrice: pricePerLot,
+                salePrice: lotPrice,
             });
         return this.mkTxnUpdateRecord(
             mktSale,
