@@ -701,7 +701,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "no sale while pending",
                 {
-                    futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                    travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
                     expectError: true,
                 }
             );
@@ -785,14 +785,14 @@ describe("MarketSale plugin", async () => {
             //    ^^^^ this error - from the contract!
             // );
 
-            const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 10);
+            const travelToFuture = new Date(Date.now() + 1000 * 60 * 60 * 10);
 
             const buyingZero = h.buyFromMktSale(
                 activeSale,
                 0n,
                 "case 2: buying zero amount FAILS",
                 {
-                    futureDate,
+                    travelToFuture,
                     expectError: true,
                 }
             );
@@ -804,7 +804,7 @@ describe("MarketSale plugin", async () => {
                     1n,
                 "case 3: buying too many lots FAILS",
                 {
-                    futureDate,
+                    travelToFuture,
                     expectError: true,
                 }
             );
@@ -815,7 +815,7 @@ describe("MarketSale plugin", async () => {
                 exampleData.details.V1.saleAssets.singleBuyMaxLots,
                 "case 4: buying the max number of lots WORKS",
                 {
-                    futureDate,
+                    travelToFuture,
                 }
             );
 
@@ -825,7 +825,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "case 5: buying the min number of lots WORKS",
                 {
-                    futureDate: new Date(futureDate.getTime() + 1000 * 60 * 13),
+                    travelToFuture: new Date(travelToFuture.getTime() + 1000 * 60 * 13),
                 }
             );
         });
@@ -842,7 +842,7 @@ describe("MarketSale plugin", async () => {
             const marketSale = await h.findFirstMarketSale();
 
             await h.buyFromMktSale(marketSale, 1n, "sells when active", {
-                futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
             });
         });
 
@@ -868,7 +868,7 @@ describe("MarketSale plugin", async () => {
             );
 
             const buying = h.buyFromMktSale(marketSale, 1n, "funds diverted from UTxO", {
-                futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
@@ -903,7 +903,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "won't sell from a sale chunk less than 10 minutes old",
                 {
-                    futureDate: new Date(chunkCreatedAt + 1000 * 60 * 9),
+                    travelToFuture: new Date(chunkCreatedAt + 1000 * 60 * 9),
                     expectError: true,
                 }
             );
@@ -915,7 +915,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "will sell from a sale chunk 10 minutes old",
                 {
-                    futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
+                    travelToFuture: new Date(chunkCreatedAt + 1000 * 60 * 10),
                 }
             );
         });
@@ -934,7 +934,7 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSaleActivated();
 
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 week from now
                 Date.now() + 1000 * 60 * 60 * 24 * 7
             );
@@ -943,7 +943,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "update timestamps for first chunk",
                 {
-                    futureDate,
+                    travelToFuture,
                 }
             );
 
@@ -958,14 +958,14 @@ describe("MarketSale plugin", async () => {
             ).toEqual(1n);
 
             const futurePlus3h = new Date(
-                futureDate.getTime() + 1000 * 60 * 60 * 3
+                travelToFuture.getTime() + 1000 * 60 * 60 * 3
             );
             await h.buyFromMktSale(
                 updatedSale,
                 19n,
                 "CHECK incremental lotsSold",
                 {
-                    futureDate: futurePlus3h,
+                    travelToFuture: futurePlus3h,
                 }
             );
             updatedSale = await h.findFirstMarketSale();
@@ -984,20 +984,20 @@ describe("MarketSale plugin", async () => {
                 19n,
                 "CHECK incremental lotsSold",
                 {
-                    futureDate: futurePlus190m,
+                    travelToFuture: futurePlus190m,
                 }
             );
 
             updatedSale = await h.findFirstMarketSale();
             const futurePlus9h = new Date(
-                futureDate.getTime() + 1000 * 60 * 60 * 9
+                travelToFuture.getTime() + 1000 * 60 * 60 * 9
             );
             await h.buyFromMktSale(
                 updatedSale,
                 21n,
                 "CHECK incremental lotsSold",
                 {
-                    futureDate: futurePlus9h,
+                    travelToFuture: futurePlus9h,
                 }
             );
 
@@ -1019,7 +1019,7 @@ describe("MarketSale plugin", async () => {
 
             const delegate = await h.mktSaleDgt();
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
@@ -1032,7 +1032,7 @@ describe("MarketSale plugin", async () => {
                     };
                 });
             const buying = h.buyFromMktSale(marketSale, 1n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
@@ -1073,7 +1073,7 @@ describe("MarketSale plugin", async () => {
                     };
                 });
             const buying2 = h.buyFromMktSale(marketSale, 1n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying2).rejects.toThrow("settings were changed");
@@ -1090,13 +1090,13 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSaleActivated();
 
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
             debugger;
             await h.buyFromMktSale(marketSale, 25n, undefined, {
-                futureDate,
+                travelToFuture,
             });
 
             const updatedSale = await h.findFirstMarketSale();
@@ -1118,7 +1118,7 @@ describe("MarketSale plugin", async () => {
 
             const delegate = await h.mktSaleDgt();
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
@@ -1130,7 +1130,7 @@ describe("MarketSale plugin", async () => {
                     return 8061555.424242;
                 });
             const buying = h.buyFromMktSale(marketSale, 1n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying).rejects.toThrow("wrong next salePace");
@@ -1145,12 +1145,12 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSaleActivated();
             // buys 26 lots
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
             const buying = h.buyFromMktSale(marketSale, 26n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
@@ -1180,18 +1180,18 @@ describe("MarketSale plugin", async () => {
                 await h.snapToFirstMarketSaleActivated();
 
                 const marketSale = await h.findFirstMarketSale();
-                const futureDate = new Date(
+                const travelToFuture = new Date(
                     // 1 day from now
                     Date.now() + 1000 * 60 * 60 * 24 * 1
                 );
                 await h.buyFromMktSale(marketSale, 25n, undefined, {
-                    futureDate,
+                    travelToFuture,
                 });
 
                 const updatedSale = await h.findFirstMarketSale();
                 const futureDate2 = new Date(
                     // 1 hour from the first purchase
-                    futureDate.getTime() + 1000 * 60 * 60
+                    travelToFuture.getTime() + 1000 * 60 * 60
                 );
                 //todo
                 const buying = h.buyAndSplitMktSale(
@@ -1199,7 +1199,7 @@ describe("MarketSale plugin", async () => {
                     25n,
                     undefined,
                     {
-                        futureDate: futureDate2,
+                        travelToFuture: futureDate2,
                         expectError: true,
                     }
                 );
@@ -1940,7 +1940,7 @@ describe("MarketSale plugin", async () => {
             // Use Date.now() offset — lastPurchaseAt is from snapshot time and the
             // emulator has advanced well past it through buy+stop+resume chain
             await h.buyFromMktSale(resumedSale, 1n, "buy after resume", {
-                futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
             });
             const afterBuy = await h.findFirstMarketSale();
             expect(afterBuy.data!.details.V1.saleState.progressDetails.lotsSold).toBeGreaterThan(0n);
@@ -2265,6 +2265,34 @@ describe("MarketSale plugin", async () => {
             const retiredSale = await h.findFirstMarketSale();
             await expect(h.resumeMarketSale(retiredSale, { expectError: true }))
                 .rejects.toThrow(/state must be Paused/);
+        });
+    });
+
+    describe("WithdrawingProceeds activity (REQT/ayvw26q6av)", () => {
+        it("withdraws ADA from a Paused sale — tokens and datum unchanged (withdraw-while-paused/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSalePaused();
+            const pausedSale = await h.findFirstMarketSale();
+
+            const prevValue = pausedSale.utxo.value;
+            const prevData = pausedSale.data!;
+            const withdrawAmount = 2_000_000n; // 2 ADA
+
+            h.setActor("tina");
+            await h.withdrawProceeds(pausedSale, withdrawAmount);
+
+            const afterSale = await h.findFirstMarketSale();
+            // ADA decreased by withdrawal amount
+            expect(afterSale.utxo.value.lovelace).toBe(
+                prevValue.lovelace - withdrawAmount
+            );
+            // Tokens unchanged (REQT/gy6jd9cjkg)
+            expect(afterSale.utxo.value.assets.dump()).toEqual(
+                prevValue.assets.dump()
+            );
+            // Datum unchanged (REQT/ykqx9qgh88)
+            expect(afterSale.data!.details.V1).toEqual(prevData.details.V1);
         });
     });
 });

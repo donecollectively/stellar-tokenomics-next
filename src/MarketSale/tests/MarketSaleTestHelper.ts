@@ -137,13 +137,13 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         txnOptions: {
             mintTokenName?: string | number[];
             txnDescription?: string;
-            futureDate?: Date;
+            travelToFuture?: Date;
         } = {},
         newAttrs: Partial<MarketSaleDataLike> = {}
     ) {
         const { capo } = this;
         const mktSaleDgt = await this.mktSaleDgt();
-        const { futureDate, mintTokenName, txnDescription } = txnOptions;
+        const { travelToFuture, mintTokenName, txnDescription } = txnOptions;
 
         if (txnDescription) {
             console.log("  ----- ⚗️ " + txnDescription);
@@ -198,7 +198,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
             },
             tcx
         );
-        return this.submitTxnWithBlock(tcx2, { futureDate });
+        return this.submitTxnWithBlock(tcx2, { travelToFuture });
     }
 
     async mintAndAddAssets(
@@ -251,13 +251,13 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
         let tcx = capo.mkTcx(description);
 
-        const { futureDate } = submitOptions;
+        const { travelToFuture } = submitOptions;
         const tcx2 = await mktSaleDgt.mkTxnBuyFromMarketSale(
             marketSale,
             {
                 lotsPurchased: quantity,
             },
-            futureDate ? tcx.futureDate(futureDate) : tcx
+            travelToFuture ? tcx.futureDate(travelToFuture) : tcx
         );
 
         return this.submitTxnWithBlock(tcx2, submitOptions);
@@ -315,11 +315,8 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     async firstMarketSalePaused() {
         // Buy some lots so the UTxO has accumulated funds (needed for WithdrawingProceeds tests)
         const activeSale = await this.findFirstMarketSale();
-        const chunkCreatedAt = activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
         this.setActor("tom");
-        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing", {
-            futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
-        });
+        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing");
         const saleAfterBuy = await this.findFirstMarketSale();
         this.setActor("tina");
         return this.stopMarketSale(saleAfterBuy);
