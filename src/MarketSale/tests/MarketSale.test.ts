@@ -846,6 +846,36 @@ describe("MarketSale plugin", async () => {
             });
         });
 
+        // VXF None-Mode: funds MUST accumulate to the sale UTxO (REQT/wh3kjtwmj9)
+        // Mock salePricePerLot to rug-pull 10k lovelace from the UTxO output
+        // while the redeemer still claims the correct per-lot price.
+        it("rejects selling when funds are diverted from the sale UTxO (funds-must-accumulate/REQT/wh3kjtwmj9)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const controller = await h.mktSaleDgt();
+            const marketSale = await h.findFirstMarketSale();
+
+            const realMethod = controller.salePricePerLot.bind(controller);
+            vi.spyOn(controller, "salePricePerLot").mockImplementation(
+                (sale, lots, tcx) => {
+                    const real = realMethod(sale, lots, tcx);
+                    return {
+                        lotPrice: real.lotPrice,
+                        totalSalePrice: makeValue(real.totalSalePrice.lovelace - 10_000n),
+                    };
+                }
+            );
+
+            const buying = h.buyFromMktSale(marketSale, 1n, "funds diverted from UTxO", {
+                futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                expectError: true,
+            });
+            await expect(buying).rejects.toThrow(
+                /Matches redeemer payment with paid value/
+            );
+        });
+
         it("won't sell tokens from a sale chunk less than 10 minutes old", async (context: STOK_TC) => {
             const {
                 h,
