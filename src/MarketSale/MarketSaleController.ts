@@ -939,6 +939,18 @@ export class MarketSaleController extends WrappedDgDataContract<
     //     return 1.42;
     // }
 
+    buyPriceTokenScale(mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>) : number {
+
+    // We're about to change to allowing the price to be denominated in non-ADA tokens, which may be denominated in non-1,000,000 multiples.
+    // So we'll be changing the data model to include a scale factor (default=6) and use 6 implicitly for ADA.  that will be enum buyToken { ADA, Other{tokenName, scale, mph} }
+        // if buyToken.Other, return buyToken.scale
+        return 6;
+    }
+
+    usesADAforBuy() {
+        return false // temp
+    }
+
     /**
     * Computes the dynamic purchase price for the given number of lots, based on the current time
     * and the current state of a specific market sale instance.
@@ -954,11 +966,14 @@ export class MarketSaleController extends WrappedDgDataContract<
             now: tcx.txnTime,
             lotCount: BigInt(lotsPurchased),
         };
-        const lotPriceAda = mktSaleObj.getLotPrice(pCtx);
-        const totalAda = realMul(Number(lotsPurchased), lotPriceAda);
+        const lotPriceReal = mktSaleObj.getLotPrice(pCtx);
+        const totalPriceReal = realMul(Number(lotsPurchased), lotPriceReal);
+        const scale = 10 ** this.buyPriceTokenScale(mktSale);
+        const toSmallestUnit = (real: number) =>
+            BigInt(Math.round(scale * real));
         return {
-            lotPrice: makeValue(this.ADA(lotPriceAda)),
-            totalSalePrice: makeValue(this.ADA(totalAda)),
+            lotPrice: makeValue(toSmallestUnit(lotPriceReal)),
+            totalSalePrice: makeValue(toSmallestUnit(totalPriceReal)),
         };
     }
 
@@ -1013,7 +1028,8 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
 
         // Seed lo with target-price guess if affordable
-        const availableAda = Number(availableLovelace) / 1_000_000;
+        const scale = 10 ** this.buyPriceTokenScale(mktSale);
+        const availableFunds = Number(availableLovelace) / scale;
         const targetGuess = Math.max(
             1,
             Math.min(
