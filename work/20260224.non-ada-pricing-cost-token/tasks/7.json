@@ -1,0 +1,9 @@
+{
+  "id": "7",
+  "subject": "2.2: Evolve REQT-hk93w5zb16 — UTxO check distinguishes sale/cost/ADA",
+  "description": "Statement already sufficient. State-only transitions don't move proceeds — \"non-ADA unchanged\" correctly applies regardless of cost token denomination.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

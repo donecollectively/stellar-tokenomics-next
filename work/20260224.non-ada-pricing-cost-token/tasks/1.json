@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "subject": "1.1: CostToken enum — ADA variant semantics",
+  "description": "Define what CostToken::ADA means: implicit scale=6, Value via lovelace, no mph/tokenName needed.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

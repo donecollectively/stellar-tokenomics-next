@@ -1,0 +1,9 @@
+{
+  "id": "3",
+  "subject": "1.3: CostToken helpers — scale, value construction, extraction",
+  "description": "Helpers are implementation details, not requirements. Covered by 14.1.0's functional statement. Deferred to work unit plan.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

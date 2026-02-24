@@ -1,0 +1,9 @@
+{
+  "id": "6",
+  "subject": "2.1: Evolve REQT-jdkhmeg463 — cost-token-aware payment matching",
+  "description": "Statement already token-agnostic. No evolution needed — implementation fix covered in work unit plan.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

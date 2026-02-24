@@ -1,0 +1,9 @@
+{
+  "id": "5",
+  "subject": "1.5: CostToken — isCostToken(ac) discriminator",
+  "description": "isCostToken discriminator is also implementation detail. Deferred to work unit plan.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

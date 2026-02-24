@@ -1,0 +1,9 @@
+{
+  "id": "10",
+  "subject": "3.3: Stopping/Resuming/Retiring UTxO checks — cost-token-aware tolerance",
+  "description": "Stopping/Resuming/Retiring UTxO checks (REQT-03ff0mfddc, 998waf4mz3, dtpwzjqn9p) all reference REQT-hk93w5zb16 which is sufficient as-is. No evolution needed.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

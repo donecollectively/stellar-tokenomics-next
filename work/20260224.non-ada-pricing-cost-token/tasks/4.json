@@ -1,0 +1,9 @@
+{
+  "id": "4",
+  "subject": "1.4: CostToken field in DynamicSaleV1Settings",
+  "description": "Where the costToken field lives, validation bounds, immutability across lifecycle.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,9 @@
+{
+  "id": "9",
+  "subject": "3.2: Evolve REQT-5r79v9b4ht — withdrawal amount is cost-token-denominated",
+  "description": "\"No constraint on withdrawal amount\" — language change from ADA to cost token.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,9 @@
+{
+  "id": "2",
+  "subject": "1.2: CostToken enum — Other variant fields",
+  "description": "Define CostToken::Other{mph, tokenName, scale} — what each field means, bounds on scale.",
+  "owner": "osiris",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}
