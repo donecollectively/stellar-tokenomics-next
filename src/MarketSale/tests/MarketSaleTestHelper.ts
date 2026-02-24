@@ -507,6 +507,18 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         return this.submitTxnWithBlock(tcx, submitOptions);
     }
 
+    async withdrawProceeds(
+        marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        withdrawalAmount: bigint,
+        submitOptions: TestHelperSubmitOptions = {}
+    ) {
+        const mktSaleDgt = await this.mktSaleDgt();
+        console.log(`  ----- ⚗️ withdrawing ${withdrawalAmount} lovelace from market sale`);
+
+        const tcx = await mktSaleDgt.mkTxnWithdrawProceeds(marketSale, withdrawalAmount);
+        return this.submitTxnWithBlock(tcx, submitOptions);
+    }
+
     /**
      * Asserts that the given transaction's diagnostics include traces
      * for each of the specified REQT identifiers, proving the shared
