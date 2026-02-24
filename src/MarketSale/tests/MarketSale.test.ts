@@ -1916,12 +1916,14 @@ describe("MarketSale plugin", async () => {
             expect("Active" in resumedSale.data!.details.V1.saleState.state).toBe(true);
 
             // Wiring proof: Resuming defense-in-depth pipeline ran
+            // Note: REQT-jkbaba8n7n (VxfDestination validation) removed — under None-mode
+            // (REQT/2vmbpk5xw7), VXF fields are None so the validation trace changes.
+            // Will be re-added once on-chain None-mode enforcement emits its own REQT.
             h.assertEnforcedReqts(tcx, [
                 "REQT-3h96mdmn5k",  // Paused → Active state transition
                 "REQT-60azhtn9dy",  // Non-editable fields unchanged (validateStateOnlyChange)
                 "REQT-998waf4mz3",  // UTxO token value unchanged
                 "REQT-qh3qkk8f92",  // Remaining sale tokens present
-                "REQT-jkbaba8n7n",  // VxfDestination validation
                 "REQT-fkww59zyt3",  // validate() defense-in-depth
             ]);
         });
@@ -1935,8 +1937,10 @@ describe("MarketSale plugin", async () => {
                 resumedSale.data!.details.V1.saleState.progressDetails
                     .lastPurchaseAt;
             h.setActor("tom");
+            // Use Date.now() offset — lastPurchaseAt is from snapshot time and the
+            // emulator has advanced well past it through buy+stop+resume chain
             await h.buyFromMktSale(resumedSale, 1n, "buy after resume", {
-                futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
+                futureDate: new Date(Date.now() + 1000 * 60 * 10),
             });
             const afterBuy = await h.findFirstMarketSale();
             expect(afterBuy.data!.details.V1.saleState.progressDetails.lotsSold).toBeGreaterThan(0n);

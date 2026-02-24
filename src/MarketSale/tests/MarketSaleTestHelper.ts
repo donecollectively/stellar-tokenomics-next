@@ -57,6 +57,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "bootstrapped",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSale() {
         throw new Error("never called; see firstMarketSale()");
@@ -115,6 +116,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSale",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSaleActivated() {
         throw new Error("never called; see firstMarketSaleActivated()");
@@ -303,6 +305,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSaleActivated",
+        builderVersion: 2,  // v2: buys 5 lots before pausing (accumulated funds for WithdrawingProceeds)
     })
     async snapToFirstMarketSalePaused() {
         throw new Error("never called; see firstMarketSalePaused()");
@@ -310,14 +313,22 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     }
 
     async firstMarketSalePaused() {
-        this.setActor("tina");
+        // Buy some lots so the UTxO has accumulated funds (needed for WithdrawingProceeds tests)
         const activeSale = await this.findFirstMarketSale();
-        return this.stopMarketSale(activeSale);
+        const chunkCreatedAt = activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
+        this.setActor("tom");
+        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing", {
+            futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
+        });
+        const saleAfterBuy = await this.findFirstMarketSale();
+        this.setActor("tina");
+        return this.stopMarketSale(saleAfterBuy);
     }
 
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSalePaused",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSaleResumed() {
         throw new Error("never called; see firstMarketSaleResumed()");
@@ -333,6 +344,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSalePaused",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSaleRetired() {
         throw new Error("never called; see firstMarketSaleRetired()");
