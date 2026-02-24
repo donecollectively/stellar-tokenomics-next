@@ -939,6 +939,130 @@ export class MarketSaleController extends WrappedDgDataContract<
     //     return 1.42;
     // }
 
+    /**
+    * Computes the dynamic purchase price for the given number of lots, based on the current time
+    * and the current state of a specific market sale instance.
+    */
+    salePricePerLot(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        lotsPurchased: number | bigint,
+        tcx: StellarTxnContext<any>
+    ): Value {
+        const mktSaleObj = mktSale.dataWrapped!;
+        const pCtx: PurchaseContext = {
+            prevSale: mktSaleObj,
+            now: tcx.txnTime,
+            lotCount: BigInt(lotsPurchased),
+        };
+        const lotPrice = mktSaleObj.getLotPrice(pCtx);
+        return makeValue(this.ADA(lotPrice));
+    }
+
+    /**
+    * Determines the maximum number of lots that can be purchased for a specific market sale instance,
+    * given the funds available and the dynamic purchase-price algorithm
+    */
+    computeLotsForPurchase(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        fundsAvailable: Value,
+        tcx: StellarTxnContext<any>
+    ): { lots: number; pricePerLot: Value } {
+        const availableLovelace = fundsAvailable.lovelace;
+        const saleData = mktSale.data!;
+        const settings = saleData.details.V1.fixedSaleDetails.settings;
+        const saleAssets = saleData.details.V1.saleAssets;
+        const { lotCount, lotsSold } =
+            saleData.details.V1.saleState.progressDetails;
+        const remainingLots = Number(lotCount - lotsSold);
+        const upperBound = Math.min(
+            Number(saleAssets.singleBuyMaxLots),
+            remainingLots
+        );
+
+        if (upperBound <= 0 || availableLovelace <= 0n) {
+            return {
+                lots: 0,
+                pricePerLot: this.salePricePerLot(mktSale, 1, tcx),
+            };
+        }
+
+        const mktSaleObj = mktSale.dataWrapped!;
+        const canAfford = (lots: number): boolean => {
+            if (lots <= 0) return true;
+            const pCtx: PurchaseContext = {
+                prevSale: mktSaleObj,
+                now: tcx.txnTime,
+                lotCount: BigInt(lots),
+            };
+            const lotPrice = mktSaleObj.getLotPrice(pCtx);
+            const totalAda = realMul(lots, lotPrice);
+            return this.ADA(totalAda) <= availableLovelace;
+        };
+
+        // Can't even afford a single lot
+        if (!canAfford(1)) {
+            return {
+                lots: 0,
+                pricePerLot: this.salePricePerLot(mktSale, 1, tcx),
+            };
+        }
+
+        // Initial guess based on target price
+        const availableAda = Number(availableLovelace) / 1_000_000;
+        let guess = Math.max(
+            1,
+            Math.min(
+                Math.floor(availableAda / settings.targetPrice),
+                upperBound
+            )
+        );
+
+        if (!canAfford(guess)) {
+            // Guess too high — binary search downward
+            let lo = 1;
+            let hi = guess - 1;
+            while (lo < hi) {
+                const mid = Math.ceil((lo + hi) / 2);
+                if (canAfford(mid)) lo = mid;
+                else hi = mid - 1;
+            }
+            return {
+                lots: lo,
+                pricePerLot: this.salePricePerLot(mktSale, lo, tcx),
+            };
+        }
+
+        // Guess is affordable — grow by 1.61x to find a ceiling
+        let ceiling = guess;
+        while (canAfford(ceiling) && ceiling < upperBound) {
+            ceiling = Math.min(
+                Math.ceil(ceiling * 1.61),
+                upperBound
+            );
+        }
+
+        // Can afford the upper bound
+        if (canAfford(ceiling)) {
+            return {
+                lots: ceiling,
+                pricePerLot: this.salePricePerLot(mktSale, ceiling, tcx),
+            };
+        }
+
+        // Binary search between guess and ceiling
+        let lo = guess;
+        let hi = ceiling;
+        while (lo < hi) {
+            const mid = Math.ceil((lo + hi) / 2);
+            if (canAfford(mid)) lo = mid;
+            else hi = mid - 1;
+        }
+        return {
+            lots: lo,
+            pricePerLot: this.salePricePerLot(mktSale, lo, tcx),
+        };
+    }
+
     async mkTxnBuyFromMarketSale<TCX extends StellarTxnContext>(
         this: MarketSaleController,
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
@@ -967,15 +1091,16 @@ export class MarketSaleController extends WrappedDgDataContract<
             lotCount: BigInt(lotsPurchased),
         };
         console.log("🏒 buying from mktSale");
-        debugger;
+
         const lotPrice = mktSaleObj.getLotPrice(pCtx);
         console.log("    -- lot price", lotPrice);
 
         const nextSalePace = mktSaleObj.computeNextSalePace(pCtx);
         console.log("    -- next sale pace", nextSalePace);
-        const pmtAda = realMul(Number(lotsPurchased), lotPrice);
 
+        const pmtAda = realMul(Number(lotsPurchased), lotPrice);
         const pmtLovelace = this.ADA(pmtAda);
+        const pricePerLot = makeValue(this.ADA(lotPrice));
         const pmtValue = makeValue(pmtLovelace);
 
         const addedUtxoValue = pmtValue.subtract(tokenValuePurchase);
@@ -1016,7 +1141,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             this.activity.SpendingActivities.SellingTokens({
                 id: mktSale.data!.id,
                 lotsPurchased: BigInt(lotsPurchased),
-                salePrice: makeValue(this.ADA(lotPrice)),
+                salePrice: pricePerLot,
             });
         return this.mkTxnUpdateRecord(
             mktSale,
