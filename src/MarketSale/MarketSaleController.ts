@@ -939,16 +939,51 @@ export class MarketSaleController extends WrappedDgDataContract<
     //     return 1.42;
     // }
 
-    buyPriceTokenScale(mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>) : number {
+    costTokenScale(mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>) : number {
+        // We're about to change to allowing the price to be denominated in non-ADA tokens, which may be denominated in non-1,000,000 multiples.
+        // So we'll be changing the data model to include a scale factor (default=6) and use 6 implicitly for ADA.  that will be enum buyToken { ADA, Other{tokenName, scale, mph} }
 
-    // We're about to change to allowing the price to be denominated in non-ADA tokens, which may be denominated in non-1,000,000 multiples.
-    // So we'll be changing the data model to include a scale factor (default=6) and use 6 implicitly for ADA.  that will be enum buyToken { ADA, Other{tokenName, scale, mph} }
         // if buyToken.Other, return buyToken.scale
         return 6;
     }
 
-    usesADAforBuy() {
-        return false // temp
+    costTokenIsADA(
+        _mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>
+    ): boolean {
+        // TODO: check mktSale costToken enum; return true when ADA, false when Other
+        return true; // temp — ADA-only until costToken enum lands
+    }
+
+    /**
+     * Creates a Value denominated in the sale's cost token.
+     * For ADA sales, this is a lovelace Value; for non-ADA sales,
+     * it will be a token Value using the cost token's mph and name.
+     */
+    mkCostTokenValue(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        amount: bigint
+    ): Value {
+        if (this.costTokenIsADA(mktSale)) {
+            return makeValue(amount);
+        }
+        // TODO: when costToken.Other lands, extract mph + tokenName from sale data
+        // return makeValue(costTokenMph, costTokenName, amount);
+        throw new Error("non-ADA cost token not yet supported");
+    }
+
+    /**
+     * Extracts the cost-token quantity from a Value, in smallest-unit terms.
+     * For ADA sales, returns lovelace; for non-ADA, returns the token quantity.
+     */
+    costTokenAmount(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        v: Value
+    ): bigint {
+        if (this.costTokenIsADA(mktSale)) {
+            return v.lovelace;
+        }
+        // TODO: when costToken.Other lands, extract from v.assets using mph + tokenName
+        throw new Error("non-ADA cost token not yet supported");
     }
 
     /**
@@ -968,12 +1003,12 @@ export class MarketSaleController extends WrappedDgDataContract<
         };
         const lotPriceReal = mktSaleObj.getLotPrice(pCtx);
         const totalPriceReal = realMul(Number(lotsPurchased), lotPriceReal);
-        const scale = 10 ** this.buyPriceTokenScale(mktSale);
+        const scale = 10 ** this.costTokenScale(mktSale);
         const toSmallestUnit = (real: number) =>
             BigInt(Math.round(scale * real));
         return {
-            lotPrice: makeValue(toSmallestUnit(lotPriceReal)),
-            totalSalePrice: makeValue(toSmallestUnit(totalPriceReal)),
+            lotPrice: this.mkCostTokenValue(mktSale, toSmallestUnit(lotPriceReal)),
+            totalSalePrice: this.mkCostTokenValue(mktSale, toSmallestUnit(totalPriceReal)),
         };
     }
 
@@ -983,10 +1018,9 @@ export class MarketSaleController extends WrappedDgDataContract<
     */
     computeLotsForPurchase(
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
-        fundsAvailable: Value,
+        costTokensAvailable: Value,
         tcx: StellarTxnContext<any>
     ): { lots: number; lotPrice: Value; totalSalePrice: Value } {
-        const availableLovelace = fundsAvailable.lovelace;
         const saleData = mktSale.data!;
         const settings = saleData.details.V1.fixedSaleDetails.settings;
         const saleAssets = saleData.details.V1.saleAssets;
@@ -998,7 +1032,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             remainingLots
         );
 
-        if (upperBound <= 0 || availableLovelace <= 0n) {
+        if (upperBound <= 0 || this.costTokenAmount(mktSale, costTokensAvailable) <= 0n) {
             return { lots: 0, ...this.salePricePerLot(mktSale, 1, tcx) };
         }
 
@@ -1012,7 +1046,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         const canAfford = (lots: number): boolean => {
             if (lots <= 0) return true;
             const result = this.salePricePerLot(mktSale, lots, tcx);
-            if (result.totalSalePrice.lovelace <= availableLovelace) {
+            if (costTokensAvailable.isGreaterOrEqual(result.totalSalePrice)) {
                 lastAffordable = result;
                 return true;
             }
@@ -1028,12 +1062,12 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
 
         // Seed lo with target-price guess if affordable
-        const scale = 10 ** this.buyPriceTokenScale(mktSale);
-        const availableFunds = Number(availableLovelace) / scale;
+        const scale = 10 ** this.costTokenScale(mktSale);
+        const availableCostTokens = Number(this.costTokenAmount(mktSale, costTokensAvailable)) / scale;
         const targetGuess = Math.max(
             1,
             Math.min(
-                Math.floor(availableAda / settings.targetPrice),
+                Math.floor(availableCostTokens / settings.targetPrice),
                 upperBound
             )
         );
@@ -1087,13 +1121,11 @@ export class MarketSaleController extends WrappedDgDataContract<
         const nextSalePace = mktSaleObj.computeNextSalePace(pCtx);
         console.log("    -- next sale pace", nextSalePace);
 
-        const pmtLovelace = totalSalePrice.lovelace;
         const addedUtxoValue = totalSalePrice.subtract(tokenValuePurchase);
 
         console.log("    -- existing value", dumpAny(mktSale.utxo.value));
         console.log("    -- tokenValuePurchase", dumpAny(tokenValuePurchase));
         console.log("    -- value adjustment", dumpAny(addedUtxoValue));
-        console.log("    -- payment lovelace", pmtLovelace);
         console.log("    -- payment", dumpAny(totalSalePrice));
 
         const { lastPurchaseAt: prevPurchaseAt } =
@@ -1104,9 +1136,13 @@ export class MarketSaleController extends WrappedDgDataContract<
             5 * 60 * 1000 // 5 minutes
         );
 
+        // TODO: for non-ADA cost tokens, use a token-aware predicate
+        const paymentPredicate = this.uh.mkValuePredicate(
+            this.costTokenAmount(mktSale, totalSalePrice), tcxIn
+        );
         const paymentUtxo = await this.uh.findActorUtxo(
             "token-purchase payment",
-            this.uh.mkValuePredicate(pmtLovelace, tcxIn),
+            paymentPredicate,
             {
                 exceptInTcx: tcx,
             }
