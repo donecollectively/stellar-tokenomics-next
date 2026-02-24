@@ -970,7 +970,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
         fundsAvailable: Value,
         tcx: StellarTxnContext<any>
-    ): { lots: number; lotPrice: Value, totalSalePrice: Value } {
+    ): { lots: number; lotPrice: Value; totalSalePrice: Value } {
         const availableLovelace = fundsAvailable.lovelace;
         const saleData = mktSale.data!;
         const settings = saleData.details.V1.fixedSaleDetails.settings;
@@ -984,80 +984,53 @@ export class MarketSaleController extends WrappedDgDataContract<
         );
 
         if (upperBound <= 0 || availableLovelace <= 0n) {
-            return {
-                lots: 0,
-                ...this.salePricePerLot(mktSale, 1, tcx),
-            };
+            return { lots: 0, ...this.salePricePerLot(mktSale, 1, tcx) };
         }
 
+        // Golden-ratio-biased midpoint — biases toward lo to reduce
+        // overshoot when exponential pricing factors are present.
+        const middlePoint = (lo: number, hi: number) =>
+            Math.ceil(hi - (hi - lo) / 1.61);
+
+        // Track last affordable result to avoid recomputing at return
+        let lastAffordable: { lotPrice: Value; totalSalePrice: Value } | undefined;
         const canAfford = (lots: number): boolean => {
             if (lots <= 0) return true;
-            const { totalSalePrice } = this.salePricePerLot(mktSale, lots, tcx);
-            return totalSalePrice.lovelace <= availableLovelace;
+            const result = this.salePricePerLot(mktSale, lots, tcx);
+            if (result.totalSalePrice.lovelace <= availableLovelace) {
+                lastAffordable = result;
+                return true;
+            }
+            return false;
         };
 
-        // Can't even afford a single lot
+        // Quick bounds checks
         if (!canAfford(1)) {
-            return {
-                lots: 0,
-                ...this.salePricePerLot(mktSale, 1, tcx),
-            };
+            return { lots: 0, ...this.salePricePerLot(mktSale, 1, tcx) };
+        }
+        if (canAfford(upperBound)) {
+            return { lots: upperBound, ...lastAffordable! };
         }
 
-        // Initial guess based on target price
+        // Seed lo with target-price guess if affordable
         const availableAda = Number(availableLovelace) / 1_000_000;
-        let guess = Math.max(
+        const targetGuess = Math.max(
             1,
             Math.min(
                 Math.floor(availableAda / settings.targetPrice),
                 upperBound
             )
         );
+        let lo = canAfford(targetGuess) ? targetGuess : 1;
+        let hi = upperBound;
 
-        if (!canAfford(guess)) {
-            // Guess too high — binary search downward
-            let lo = 1;
-            let hi = guess - 1;
-            while (lo < hi) {
-                const mid = Math.ceil((lo + hi) / 2);
-                if (canAfford(mid)) lo = mid;
-                else hi = mid - 1;
-            }
-            return {
-                lots: lo,
-                ...this.salePricePerLot(mktSale, lo, tcx),
-            };
-        }
-
-        // Guess is affordable — grow by 1.61x to find a ceiling
-        let ceiling = guess;
-        while (canAfford(ceiling) && ceiling < upperBound) {
-            ceiling = Math.min(
-                Math.ceil(ceiling * 1.61),
-                upperBound
-            );
-        }
-
-        // Can afford the upper bound
-        if (canAfford(ceiling)) {
-            return {
-                lots: ceiling,
-                ...this.salePricePerLot(mktSale, ceiling, tcx),
-            };
-        }
-
-        // Binary search between guess and ceiling
-        let lo = guess;
-        let hi = ceiling;
+        // Golden-ratio-biased binary search
         while (lo < hi) {
-            const mid = Math.ceil((lo + hi) / 2);
+            const mid = middlePoint(lo, hi);
             if (canAfford(mid)) lo = mid;
             else hi = mid - 1;
         }
-        return {
-            lots: lo,
-            ...this.salePricePerLot(mktSale, lo, tcx),
-        };
+        return { lots: lo, ...lastAffordable! };
     }
 
     async mkTxnBuyFromMarketSale<TCX extends StellarTxnContext>(
