@@ -64,7 +64,20 @@ struct DynamicSaleV1Settings {
         assert(self.pricingWeightDynaPace >= 0.0, "dyna pace weight negative");
         assert(self.pricingWeightDynaPace < 15, "dyna pace weight way too high");
 
-        true
+        bREQTgroup(
+            reqt: "rejects CostToken::Other with scale outside 1-19 (REQT-4zkj5q4n38)",
+            collapsed: false,
+            callback: () -> Bool {
+                self.costToken.switch {
+                    ADA => true,
+                    Other{_, _, scale} => {
+                        assert(scale >= 1, "costToken scale too low (must be >= 1)");
+                        assert(scale <= 19, "costToken scale too high (must be <= 19)");
+                        true
+                    }
+                }
+            }
+        )
     })}
 
     // func validateUpdatedDetails(self) -> Bool {
