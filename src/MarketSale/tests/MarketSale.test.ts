@@ -479,6 +479,27 @@ describe("MarketSale plugin", async () => {
             );
         });
 
+        it("rejects activation when vxfTokensTo is Some (none-mode-tokens-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+
+            const marketSale = await h.findFirstMarketSale();
+            const mktSaleData = marketSale.data!;
+
+            mktSaleData.details.V1.fixedSaleDetails.vxfTokensTo = {
+                Anywhere: {},
+            };
+            const submitting = h.activateMarketSale(marketSale, {
+                mintTokenName:
+                    mktSaleData.details.V1.saleAssets.primaryAssetName,
+            });
+            await expect(submitting).rejects.toThrow(
+                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
+            );
+        });
+
         it("won't activate if saleLotAssets expect extra tokens that aren't deposited", async (context: STOK_TC) => {
             const { h } = context;
 
@@ -873,6 +894,25 @@ describe("MarketSale plugin", async () => {
             });
             await expect(buying).rejects.toThrow(
                 /Matches redeemer payment with paid value/
+            );
+        });
+
+        // VXF None-Mode: rejects selling when vxfFundsTo is Some
+        it("rejects selling when vxfFundsTo is Some (none-mode-selling-funds-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const marketSale = await h.findFirstMarketSale();
+
+            marketSale.data!.details.V1.fixedSaleDetails.vxfFundsTo = {
+                Anywhere: {},
+            };
+            const buying = h.buyFromMktSale(marketSale, 1n, "sell with vxfFundsTo Some", {
+                travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
+                expectError: true,
+            });
+            await expect(buying).rejects.toThrow(
+                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
             );
         });
 
@@ -2012,6 +2052,16 @@ describe("MarketSale plugin", async () => {
             await expect(h.resumeMarketSale(pausedSale, { expectError: true },
                 { details: { V1: { ...pausedSale.data!.details.V1, saleState: { ...pausedSale.data!.details.V1.saleState, progressDetails: { ...pausedSale.data!.details.V1.saleState.progressDetails, lotsSold: 999n }}}}}))
                 .rejects.toThrow(/progressDetails can't be modified/);
+        });
+
+        it("rejects resume when vxfFundsTo is Some (none-mode-resume-funds-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSalePaused();
+            const pausedSale = await h.findFirstMarketSale();
+            await expect(h.resumeMarketSale(pausedSale, { expectError: true },
+                { details: { V1: { ...pausedSale.data!.details.V1, fixedSaleDetails: { ...pausedSale.data!.details.V1.fixedSaleDetails, vxfFundsTo: { Anywhere: {} } }}}}))
+                .rejects.toThrow(/PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/);
         });
     });
 
