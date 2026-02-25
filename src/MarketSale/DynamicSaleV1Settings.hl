@@ -17,17 +17,18 @@ import {
 // factor for converting between Real prices and on-chain Values.
 // (REQT-nb3v1zg4fv,j7cf4ew85g,y5gge63n84)
 enum CostToken {
-    ADA  // implicit scale=6; 1 ADA = 10^6 lovelace
+    ADA  // implicit multiplier=1_000_000; 1 ADA = 10^6 lovelace
     Other {
         mph: MintingPolicyHash
         tokenName: ByteArray
-        scale: Int  // e.g. 6 for USDC (1 USDC = 10^6 base units)
+        scale: Int  // multiplier, e.g. 1_000_000 for USDC (1 USDC = 10^6 base units)
     }
 
-    // Returns the decimal-place scale factor (6 for ADA = 10^6 lovelace per ADA).
+    // Returns the multiplier from macro-token to micro-token units
+    // (1_000_000 for ADA = 10^6 lovelace per ADA).
     func costTokenScale(self) -> Int {
         self.switch {
-            ADA => 6,
+            ADA => 1_000_000,
             Other{_, _, scale} => scale
         }
     }
@@ -99,14 +100,14 @@ struct DynamicSaleV1Settings {
         assert(self.pricingWeightDynaPace < 15, "dyna pace weight way too high");
 
         bREQTgroup(
-            reqt: "rejects CostToken::Other with scale outside 1-19 (REQT-4zkj5q4n38)",
+            reqt: "rejects CostToken::Other with scale multiplier outside 1–10^19 (REQT-4zkj5q4n38)",
             collapsed: false,
             callback: () -> Bool {
                 self.costToken.switch {
                     ADA => true,
                     Other{_, _, scale} => {
                         assert(scale >= 1, "costToken scale too low (must be >= 1)");
-                        assert(scale <= 19, "costToken scale too high (must be <= 19)");
+                        assert(scale <= 10_000_000_000_000_000_000, "costToken scale too high (must be <= 10^19)");
                         true
                     }
                 }
