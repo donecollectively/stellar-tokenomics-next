@@ -1158,10 +1158,9 @@ export class MarketSaleController extends WrappedDgDataContract<
             5 * 60 * 1000 // 5 minutes
         );
 
-        // TODO: for non-ADA cost tokens, use a token-aware predicate
-        const paymentPredicate = this.uh.mkValuePredicate(
-            this.costTokenAmount(mktSale, totalSalePrice), tcxIn
-        );
+        const paymentPredicate = this.costTokenIsADA(mktSale)
+            ? this.uh.mkValuePredicate(totalSalePrice.lovelace, tcxIn)
+            : this.uh.mkTokenPredicate(totalSalePrice);
         const paymentUtxo = await this.uh.findActorUtxo(
             "token-purchase payment",
             paymentPredicate,
