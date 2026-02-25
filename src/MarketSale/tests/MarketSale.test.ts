@@ -2320,5 +2320,43 @@ describe("MarketSale plugin", async () => {
             // Datum unchanged (REQT/ykqx9qgh88)
             expect(afterSale.data!.details.V1).toEqual(prevData.details.V1);
         });
+
+        it("rejects withdrawal from an Active sale (withdraw-active-rejected/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const activeSale = await h.findFirstMarketSale();
+
+            h.setActor("tina");
+            await expect(
+                h.withdrawProceeds(activeSale, 2_000_000n, { expectError: true })
+            ).rejects.toThrow(/WithdrawingProceeds requires Paused, SoldOut, or Retired/);
+        });
+
+        it("rejects withdrawal from a Pending sale (withdraw-pending-rejected/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const pendingSale = await h.findFirstMarketSale();
+
+            h.setActor("tina");
+            await expect(
+                h.withdrawProceeds(pendingSale, 2_000_000n, { expectError: true })
+            ).rejects.toThrow(/WithdrawingProceeds requires Paused, SoldOut, or Retired/);
+        });
+
+        it("requires gov authority to withdraw (withdraw-no-gov-rejected/REQT/aexkjfxm2k)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSalePaused();
+            const pausedSale = await h.findFirstMarketSale();
+
+            vi.spyOn(h.capo, "txnAddGovAuthority").mockImplementation(
+                async (tcx) => tcx as any
+            );
+            await expect(
+                h.withdrawProceeds(pausedSale, 2_000_000n, { expectError: true })
+            ).rejects.toThrow(/missing.* dgTkn capoGov/);
+        });
     });
 });
