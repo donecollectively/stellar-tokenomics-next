@@ -6,7 +6,7 @@ import {
     type TestHelperSubmitOptions,
 } from "@donecollectively/stellar-contracts/testing";
 import { MarketSaleCapo } from "./modules/MarketSaleCapo.js";
-import { makeValue } from "@helios-lang/ledger";
+import { makeAssets, makeMintingPolicyHash, makeValue } from "@helios-lang/ledger";
 import type {
     ErgoMarketSaleData,
     MarketSaleData,
@@ -22,6 +22,14 @@ import {
 import type { MarketSaleController } from "../MarketSaleController.js";
 import { equalsBytes } from "@helios-lang/codec-utils";
 import type { MarketSaleDataWrapper } from "../MarketSaleDataWrapper.js";
+
+// ── Test cost-token: TUNA ────────────────────────────────────────────────────
+// Fake deterministic MPH — 28 × 0xba — clearly not a real policy.
+// TUNA uses scale=1_000 (1 TUNA = 1_000 micro-TUNA), unlike ADA's 1_000_000.
+export const TUNA_MPH = makeMintingPolicyHash(Array(28).fill(0xba));
+export const TUNA_TOKEN_NAME = textToBytes("TUNA");
+export const TUNA_SCALE = 1_000n;
+// ────────────────────────────────────────────────────────────────────────────
 
 export let helperState: TestHelperState<MarketSaleCapo> = {
     snapshots: {},
@@ -557,6 +565,56 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     // ============================================================
     // END SKETCH
     // ============================================================
+
+    // ── Cost-token helpers (TUNA / non-ADA testing) ──────────────────────────
+
+    /**
+     * Funds an actor with TUNA tokens using the emulator's genesis UTxO mechanism.
+     * Provides the actor with `macroAmount` whole TUNA (× TUNA_SCALE micro-units).
+     * Must be called before snapshot building — creates genesis UTxO + ticks.
+     */
+    fundActorWithTuna(actorName: string, macroAmount: bigint) {
+        const wallet = this.actors[actorName];
+        if (!wallet) throw new Error(`fundActorWithTuna: actor "${actorName}" not found`);
+        const tunaAssets = makeAssets([
+            [TUNA_MPH, [[TUNA_TOKEN_NAME, macroAmount * TUNA_SCALE]]],
+        ]);
+        // 2 ADA covers minUtxo for a UTxO holding non-ADA tokens
+        this.network.createUtxo(wallet, 2_000_000n, tunaAssets);
+        this.network.tick(1);
+    }
+
+    /**
+     * Returns example sale data with TUNA as the cost token.
+     * All other fields identical to the standard ADA exampleData().
+     */
+    async exampleDataWithTuna(): Promise<minimalMarketSaleData> {
+        const controller = await this.mktSaleDgt();
+        const base = controller.exampleData();
+        return {
+            ...base,
+            details: {
+                V1: {
+                    ...base.details.V1,
+                    fixedSaleDetails: {
+                        ...base.details.V1.fixedSaleDetails,
+                        settings: {
+                            ...base.details.V1.fixedSaleDetails.settings,
+                            costToken: {
+                                Other: {
+                                    mph: TUNA_MPH,
+                                    tokenName: TUNA_TOKEN_NAME,
+                                    scale: TUNA_SCALE,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     _cachedNow : number = Date.now();
     packagedUpdateDetails() {
