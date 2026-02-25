@@ -609,10 +609,11 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     }
 
     async saleNativeTokenPaused() {
-        // TODO(Phase 5): buy some lots as tom to accumulate TUNA proceeds
-        //   before stopping. Uncomment after costTokenIsADA() + mkCostTokenValue()
-        //   are wired to read the sale's CostToken enum.
+        // TODO(Phase 5): fund tom with TUNA and buy some lots to accumulate
+        //   TUNA proceeds before stopping. Uncomment after costTokenIsADA() +
+        //   mkCostTokenValue() are wired to read the sale's CostToken enum.
         //
+        //   await this.fundActorWithTuna("tom", 10_000n);
         //   this.setActor("tom");
         //   const activeSale = await this.findFirstMarketSale();
         //   const chunkAge = activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
