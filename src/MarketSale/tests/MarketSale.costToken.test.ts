@@ -146,20 +146,28 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         await h.reusableBootstrap();
         await h.snapToSaleNativeTokenCost();
 
+        const saleBefore = await h.findFirstMarketSale();
+        const lotsSoldBefore = saleBefore.data!.details.V1.saleState.progressDetails.lotsSold;
+        const tunaBefore = saleBefore.utxo.value.assets.getPolicyTokens(h.capo.mph)
+            ?.find(([tn]) => tn.every((b, i) => b === TUNA_TOKEN_NAME[i]))?.[1] ?? 0n;
+
         await h.fundActorWithTuna("tom", 10_000n);
         h.setActor("tom");
 
-        const activeSale = await h.findFirstMarketSale();
-        await h.buyFromMktSale(activeSale, 1n, "buy 1 lot with TUNA");
+        const startAt = saleBefore.data!.details.V1.fixedSaleDetails.startAt;
+        const nowMs = h.network.currentSlot * 1000;
+        const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
+        await h.buyFromMktSale(saleBefore, 1n, "buy 1 lot with TUNA", {
+            travelToFuture: buyTime,
+        });
 
         const afterBuy = await h.findFirstMarketSale();
-        // Sale tokens transferred to buyer
-        expect(afterBuy.data!.details.V1.saleState.progressDetails.lotsSold).toEqual(1n);
-        // The sale UTxO should have TUNA accumulated as proceeds
-        const saleUtxoValue = afterBuy.utxo.value;
-        const tunaInSale = saleUtxoValue.assets.getPolicyTokens(h.capo.mph)
-            ?.find(([tn]) => tn.every((b, i) => b === TUNA_TOKEN_NAME[i]))?.[1];
-        expect(tunaInSale, "TUNA proceeds should be in sale UTxO").toBeGreaterThan(0n);
+        // One more lot sold
+        expect(afterBuy.data!.details.V1.saleState.progressDetails.lotsSold).toEqual(lotsSoldBefore + 1n);
+        // TUNA proceeds increased in sale UTxO
+        const tunaAfter = afterBuy.utxo.value.assets.getPolicyTokens(h.capo.mph)
+            ?.find(([tn]) => tn.every((b, i) => b === TUNA_TOKEN_NAME[i]))?.[1] ?? 0n;
+        expect(tunaAfter, "TUNA proceeds should increase after buy").toBeGreaterThan(tunaBefore);
     });
 
     it("rejects buy with wrong token (non-ada-wrong-token/REQT/jxdnb3dxmx)", async (context: MarketSale_TC) => {
@@ -186,6 +194,10 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         h.setActor("tom");
 
         const activeSale = await h.findFirstMarketSale();
+        const startAt =
+            activeSale.data!.details.V1.fixedSaleDetails.startAt;
+        const nowMs = h.network.currentSlot * 1000;
+        const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
 
         // Mock mkCostTokenValue to produce FISH value instead of TUNA
         const controller = await h.mktSaleDgt();
@@ -194,6 +206,7 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         );
 
         const buying = h.buyFromMktSale(activeSale, 1n, "buy with FISH instead of TUNA", {
+            travelToFuture: buyTime,
             expectError: true,
         });
         await expect(buying).rejects.toThrow(/key not found/);
@@ -208,6 +221,10 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         h.setActor("tom");
 
         const activeSale = await h.findFirstMarketSale();
+        const startAt =
+            activeSale.data!.details.V1.fixedSaleDetails.startAt;
+        const nowMs = h.network.currentSlot * 1000;
+        const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
 
         // Mock mkCostTokenValue to produce a much smaller payment amount
         const controller = await h.mktSaleDgt();
@@ -219,6 +236,7 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         );
 
         const buying = h.buyFromMktSale(activeSale, 1n, "buy with insufficient TUNA", {
+            travelToFuture: buyTime,
             expectError: true,
         });
         await expect(buying).rejects.toThrow(/incorrect lot price in redeemer/);

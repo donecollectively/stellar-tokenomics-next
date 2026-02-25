@@ -578,7 +578,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "bootstrapped",
-        builderVersion: undefined,
+        builderVersion: "2-pe-fix",
     })
     async snapToSaleNativeTokenCost() {
         throw new Error("never called; see saleNativeTokenCost()");
@@ -589,8 +589,6 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         this.setActor("tina");
         const saleData = await this.exampleDataWithTuna();
         await this.createMarketSale(saleData);
-        // No need to fund tom with TUNA here — the sale just records costToken
-        // metadata. TUNA tokens only need to exist at purchase time (Phase 5).
         const pendingSale = await this.findFirstMarketSale();
         return this.activateMarketSale(pendingSale, {
             mintTokenName: pendingSale.data!.details.V1.saleAssets.primaryAssetName,
@@ -600,7 +598,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "saleNativeTokenCost",
-        builderVersion: undefined,
+        builderVersion: "2-pe-fix",
     })
     async snapToSaleNativeTokenPaused() {
         throw new Error("never called; see saleNativeTokenPaused()");
@@ -611,11 +609,22 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         await this.fundActorWithTuna("tom", 10_000n);
         this.setActor("tom");
         const activeSale = await this.findFirstMarketSale();
-        await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds");
+        const startAt = activeSale.data!.details.V1.fixedSaleDetails.startAt;
+        // Buy time must be:
+        // - past startAt (satisfies "sale not yet started")
+        // - past lastPurchaseAt + 10 min (satisfies freshness check)
+        // - ahead of emulator's current slot (can't travel to the past)
+        const nowMs = this.network.currentSlot * 1000;
+        const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
+        await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds", {
+            travelToFuture: buyTime,
+        });
 
         this.setActor("tina");
         const saleAfterBuy = await this.findFirstMarketSale();
-        return this.stopMarketSale(saleAfterBuy);
+        await this.stopMarketSale(saleAfterBuy);
+        // Ensure the stop txn is fully committed before the snapshot captures state.
+        this.network.tick(1);
     }
 
     /**
