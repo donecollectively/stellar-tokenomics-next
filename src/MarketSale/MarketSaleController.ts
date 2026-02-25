@@ -706,6 +706,8 @@ export class MarketSaleController extends WrappedDgDataContract<
 
         // REQT/ykqx9qgh88 (Datum Fields Unchanged) — no updatedFields
         // REQT/5r79v9b4ht (No Constraint on Withdrawal Amount) — caller specifies amount
+        // REQT/gy6jd9cjkg (Tokens Must Remain) — only cost token is withdrawn
+        const withdrawalValue = this.mkCostTokenValue(mktSale, -withdrawalAmount);
         return this.mkTxnUpdateRecord(
             mktSale,
             {
@@ -720,7 +722,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                         },
                     },
                 },
-                addedUtxoValue: makeValue(-withdrawalAmount),
+                addedUtxoValue: withdrawalValue,
             },
             tcx
         );
@@ -941,53 +943,69 @@ export class MarketSaleController extends WrappedDgDataContract<
     // }
 
     /**
+     * Extracts the costToken from the sale's settings in ergo (intersected enum) form.
+     */
+    private getCostToken(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>
+    ) {
+        return (mktSale.data! as ErgoMarketSaleData)
+            .details.V1.fixedSaleDetails.settings.costToken;
+    }
+
+    /**
      * Returns the multiplier from macro-token to micro-token units.
      * Matches on-chain CostToken::costTokenScale() — e.g. 1_000_000 for ADA.
+     * REQT/nb3v1zg4fv (CostToken Enum Definition) — scale-aware conversion
      */
     costTokenScale(mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>) : number {
-        // TODO: read from mktSale data's costToken enum once offchain integration is wired
-        // const costToken = mktSale.data!.details.V1.fixedSaleDetails.settings.costToken;
-        // if (costToken.Other) return Number(costToken.Other.scale);
+        const costToken = this.getCostToken(mktSale);
+        if (costToken.Other) return Number(costToken.Other.scale);
         return 1_000_000; // ADA: 1 ADA = 10^6 lovelace
     }
 
+    /**
+     * Returns true when the sale's cost token is ADA.
+     * REQT/j7cf4ew85g (ADA Variant) — identifies ADA-denominated sales
+     */
     costTokenIsADA(
-        _mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>
     ): boolean {
-        // TODO: check mktSale costToken enum; return true when ADA, false when Other
-        return true; // temp — ADA-only until costToken enum lands
+        return !this.getCostToken(mktSale).Other;
     }
 
     /**
      * Creates a Value denominated in the sale's cost token.
      * For ADA sales, this is a lovelace Value; for non-ADA sales,
      * it will be a token Value using the cost token's mph and name.
+     * REQT/y5gge63n84 (Other Variant) — token-specific Value construction
      */
     mkCostTokenValue(
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
         amount: bigint
     ): Value {
-        if (this.costTokenIsADA(mktSale)) {
+        const costToken = this.getCostToken(mktSale);
+        if (!costToken.Other) {
             return makeValue(amount);
         }
-        // TODO: when costToken.Other lands, extract mph + tokenName from sale data
-        // return makeValue(costTokenMph, costTokenName, amount);
-        throw new Error("non-ADA cost token not yet supported");
+        const { mph, tokenName } = costToken.Other;
+        return makeValue(mph, tokenName, amount);
     }
 
     /**
      * Extracts the cost-token quantity from a Value, in smallest-unit terms.
      * For ADA sales, returns lovelace; for non-ADA, returns the token quantity.
+     * REQT/y5gge63n84 (Other Variant) — token-specific quantity extraction
      */
     costTokenAmount(
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
         v: Value
     ): bigint {
-        if (this.costTokenIsADA(mktSale)) {
+        const costToken = this.getCostToken(mktSale);
+        if (!costToken.Other) {
             return v.lovelace;
         }
-        // TODO: when costToken.Other lands, extract from v.assets using mph + tokenName
-        throw new Error("non-ADA cost token not yet supported");
+        const { mph, tokenName } = costToken.Other;
+        return v.assets.getPolicyTokenQuantity(mph, tokenName);
     }
 
     /**
