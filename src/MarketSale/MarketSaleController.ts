@@ -276,6 +276,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                             dynaPaceIdleDecayRate: 0.5,
 
                             pricingWeightDynaPace: 1.5,
+                            costToken: { ADA: {} },
                         },
                         startAt: startTime,
                         vxfTokensTo: undefined,
@@ -939,12 +940,15 @@ export class MarketSaleController extends WrappedDgDataContract<
     //     return 1.42;
     // }
 
+    /**
+     * Returns the multiplier from macro-token to micro-token units.
+     * Matches on-chain CostToken::costTokenScale() — e.g. 1_000_000 for ADA.
+     */
     costTokenScale(mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>) : number {
-        // We're about to change to allowing the price to be denominated in non-ADA tokens, which may be denominated in non-1,000,000 multiples.
-        // So we'll be changing the data model to include a scale factor (default=6) and use 6 implicitly for ADA.  that will be enum buyToken { ADA, Other{tokenName, scale, mph} }
-
-        // if buyToken.Other, return buyToken.scale
-        return 6;
+        // TODO: read from mktSale data's costToken enum once offchain integration is wired
+        // const costToken = mktSale.data!.details.V1.fixedSaleDetails.settings.costToken;
+        // if (costToken.Other) return Number(costToken.Other.scale);
+        return 1_000_000; // ADA: 1 ADA = 10^6 lovelace
     }
 
     costTokenIsADA(
@@ -1003,7 +1007,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         };
         const lotPriceReal = mktSaleObj.getLotPrice(pCtx);
         const totalPriceReal = realMul(Number(lotsPurchased), lotPriceReal);
-        const scale = 10 ** this.costTokenScale(mktSale);
+        const scale = this.costTokenScale(mktSale);
         const toSmallestUnit = (real: number) =>
             BigInt(Math.round(scale * real));
         return {
@@ -1062,7 +1066,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
 
         // Seed lo with target-price guess if affordable
-        const scale = 10 ** this.costTokenScale(mktSale);
+        const scale = this.costTokenScale(mktSale);
         const availableCostTokens = Number(this.costTokenAmount(mktSale, costTokensAvailable)) / scale;
         const targetGuess = Math.max(
             1,
