@@ -498,15 +498,33 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         return this.submitTxnWithBlock(tcx, submitOptions);
     }
 
+    /**
+     * Withdraws cost-token proceeds from a sale UTxO.
+     *
+     * @param macroAmount - withdrawal in whole cost-token units (e.g. 5 = 5 TUNA = 5_000
+     *   micro-TUNA when scale=1_000, or 5 ADA = 5_000_000 lovelace when scale=1_000_000).
+     *   Scale is read from the sale's costToken field.
+     */
     async withdrawProceeds(
         marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
-        withdrawalAmount: bigint,
+        macroAmount: bigint,
         submitOptions: TestHelperSubmitOptions = {}
     ) {
         const mktSaleDgt = await this.mktSaleDgt();
-        console.log(`  ----- ⚗️ withdrawing ${withdrawalAmount} lovelace from market sale`);
+        const costToken =
+            marketSale.data!.details.V1.fixedSaleDetails.settings.costToken;
+        const scale =
+            "Other" in costToken ? costToken.Other.scale : 1_000_000n;
+        const smallestAmount = macroAmount * scale;
 
-        const tcx = await mktSaleDgt.mkTxnWithdrawProceeds(marketSale, withdrawalAmount);
+        console.log(
+            `  ----- ⚗️ withdrawing ${macroAmount} macro-tokens (${smallestAmount} smallest units) from market sale`
+        );
+
+        const tcx = await mktSaleDgt.mkTxnWithdrawProceeds(
+            marketSale,
+            smallestAmount
+        );
         return this.submitTxnWithBlock(tcx, submitOptions);
     }
 
