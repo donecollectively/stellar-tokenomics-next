@@ -25,6 +25,8 @@ import {
 import { makeValue } from "@helios-lang/ledger";
 import { textToBytes } from "@donecollectively/stellar-contracts";
 
+describe("CostToken / Non-ADA Pricing", () => {
+
 // ── CostToken Settings Validation ────────────────────────────────────────────
 
 describe("CostToken Settings Validation (REQT/4zkj5q4n38)", () => {
@@ -321,3 +323,5 @@ describe("Lifecycle with Non-ADA Cost Token (REQT/hk93w5zb16)", () => {
         expect(retiredSale.utxo.value.assets.isEqual(prevUtxoAssets)).toBe(true);
     });
 });
+
+}); // CostToken / Non-ADA Pricing
