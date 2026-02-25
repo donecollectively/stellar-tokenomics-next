@@ -1,0 +1,9 @@
+{
+  "id": "2",
+  "subject": "P1.2: costToken field position in DynamicSaleV1Settings",
+  "description": "Decide where costToken: CostToken goes in the struct. Appending at end is standard for additive changes. Confirm this is a known breaking change for existing records (all must be updated via UpdatingPendingSale/UpdatingPausedSale after deployment).",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": [],
+  "owner": "osiris"
+}

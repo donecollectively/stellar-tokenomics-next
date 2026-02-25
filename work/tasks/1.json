@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "subject": "P1.1: CostToken enum — variant structure & tag order",
+  "description": "Confirm ADA (no fields, tag 0) and Other{mph, tokenName, scale} (tag 1) structure. Discuss whether explicit tag numbers are needed for cross-script interop. Understand CBOR positional encoding implications.",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": [],
+  "owner": "osiris"
+}

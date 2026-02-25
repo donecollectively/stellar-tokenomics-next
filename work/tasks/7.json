@@ -1,0 +1,9 @@
+{
+  "id": "7",
+  "subject": "P3.7: Helper method bodies on CostToken",
+  "description": "Draft concrete implementations of costTokenScale(), costAmountFromValue(v), toCostValue(amount), isCostToken(ac) on the CostToken enum. Decide inline vs helper per the onchain helper method discipline (these are trivial switches — likely inline wins, but isCostToken has real logic for Other variant).",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": [],
+  "owner": "osiris"
+}

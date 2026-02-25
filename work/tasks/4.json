@@ -1,0 +1,9 @@
+{
+  "id": "4",
+  "subject": "P2.4: Check A — SellingTokens cost-amount comparison",
+  "description": "Refactor `paidValue == expectedPayment` in SellingTokens handler to compare cost-token amounts via costAmountFromValue() instead of exact Value equality. Need access to costToken from settings — confirm access path (previous.v1details().fixedSaleDetails.settings.costToken).",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": [],
+  "owner": "osiris"
+}

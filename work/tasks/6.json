@@ -1,0 +1,9 @@
+{
+  "id": "6",
+  "subject": "P2.6: WithdrawingProceeds — sale tokens must remain",
+  "description": "Replace inputAssets == outputAssets with a check that every non-cost-token asset class is unchanged. Need isCostToken(ac) helper to classify each asset. Confirm the iteration approach: for each (mph, tn) in input assets, if not the cost token, assert output has same amount.",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": [],
+  "owner": "osiris"
+}

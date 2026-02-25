@@ -1,0 +1,9 @@
+{
+  "id": "3",
+  "subject": "P2.3: Scale bounds validation in validateUpdatedDetails()",
+  "description": "Add costToken scale validation to DynamicSaleV1Settings.validateUpdatedDetails(). Switch on ADA (no check needed) vs Other (scale must be 1–19). Confirm exact bounds and error messages.",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": [],
+  "owner": "osiris"
+}

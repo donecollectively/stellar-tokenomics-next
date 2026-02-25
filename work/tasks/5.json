@@ -1,0 +1,9 @@
+{
+  "id": "5",
+  "subject": "P2.5: Check B — isRightPayment() refactor",
+  "description": "Replace get_lovelace()/1_000_000.0 with costToken.costAmountFromValue()/scale in both lotPrice and payment extraction. Add spam/shitcoin rejection (non-ADA assets must be only the cost token or zero). Add 0.02 cost-unit overpayment tolerance replacing the strict assert(paymentDiff == 0.0).",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": [],
+  "owner": "osiris"
+}
