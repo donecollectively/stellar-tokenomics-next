@@ -95,6 +95,7 @@ import {
 } from SaleProgressDetails
 
 import {
+    CostToken,
     DynamicSaleV1Settings
 } from DynamicSaleV1Settings
 
@@ -555,16 +556,19 @@ enum DelegateActivity {
                     // todo: the purchased tokens are distributed to a
                     //   configured sale-distribution contract (e.g. vesting/escrow/yield-farm)
                     
-                    assertREQTgroup("Matches redeemer payment with paid value", false, () -> Bool {
-                        print("  -- paidValue: "+ paidValue.show());
-                        print("  -- lotSellPrice: "+ lotSellPrice.show());
-                        print("  -- lotsPurchased: "+ lotsPurchased.show());
-                        expectedPayment = lotSellPrice * lotsPurchased;
-                        print("  -- expected payment: "+ expectedPayment.show());
-                        print("  -- actual payment: "+ paidValue.show());
+                    costToken : CostToken = previous.v1details().fixedSaleDetails.settings.costToken;
 
-                        paidValue == expectedPayment
-                    });
+                    assertREQTgroup(
+                        "extracts cost-token micro-units from paid value and matches redeemer-declared price × lots (REQT-90fsr7px0z)",
+                        false,
+                        () -> Bool {
+                            paidMicroTokens : Int = costToken.microTokensFromValue(paidValue);
+                            expectedMicroTokens : Int = costToken.microTokensFromValue(lotSellPrice) * lotsPurchased;
+                            print("  -- paid micro-tokens: " + paidMicroTokens.show());
+                            print("  -- expected micro-tokens: " + expectedMicroTokens.show());
+                            paidMicroTokens == expectedMicroTokens
+                        }
+                    );
 
                     true
                     && correctActiveState

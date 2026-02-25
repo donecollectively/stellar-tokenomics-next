@@ -23,6 +23,15 @@ enum CostToken {
         tokenName: ByteArray
         scale: Int  // e.g. 6 for USDC (1 USDC = 10^6 base units)
     }
+
+    // Extracts the cost-token quantity in base units (lovelace for ADA,
+    // smallest unit for Other) from a Value.
+    func microTokensFromValue(self, v: Value) -> Int {
+        self.switch {
+            ADA => v.get_lovelace(),
+            Other{mph, tokenName, _} => v.get_policy(mph).get(tokenName)
+        }
+    }
 }
 
 struct DynamicSaleV1Settings {
