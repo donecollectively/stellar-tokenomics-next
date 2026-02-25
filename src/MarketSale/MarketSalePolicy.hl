@@ -753,15 +753,27 @@ enum DelegateActivity {
                         }
                     )
                     && bREQTgroup(
-                        reqt: "non-ADA tokens must remain in UTxO (REQT-gy6jd9cjkg)",
+                        reqt: "sale tokens and UUT must remain; only cost token may be withdrawn (REQT-gy6jd9cjkg,5r79v9b4ht)",
                         collapsed: false,
                         callback: () -> Bool {
-                            inputAssets = mktSaleDD.input().value.get_assets();
-                            outputAssets = mktSaleDD.output().value.get_assets();
-                            assert(
-                                inputAssets == outputAssets,
-                                "non-ADA tokens changed during WithdrawingProceeds"
-                            );
+                            costToken : CostToken = current.v1details().fixedSaleDetails.settings.costToken;
+                            inputAssets : Value = mktSaleDD.input().value.get_assets();
+                            outputAssets : Value = mktSaleDD.output().value.get_assets();
+                            costToken.switch {
+                                ADA => assert(
+                                    inputAssets == outputAssets,
+                                    "non-ADA tokens changed during WithdrawingProceeds"
+                                ),
+                                Other{mph, tokenName, _} => {
+                                    costAc : AssetClass = AssetClass::new(mph, tokenName);
+                                    inputWithoutCost : Value = inputAssets - Value::new(costAc, inputAssets.get(costAc));
+                                    outputWithoutCost : Value = outputAssets - Value::new(costAc, outputAssets.get(costAc));
+                                    assert(
+                                        inputWithoutCost == outputWithoutCost,
+                                        "sale tokens or UUT changed during WithdrawingProceeds"
+                                    )
+                                }
+                            };
                             true
                         }
                     )
