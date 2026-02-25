@@ -57,6 +57,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "bootstrapped",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSale() {
         throw new Error("never called; see firstMarketSale()");
@@ -115,6 +116,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSale",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSaleActivated() {
         throw new Error("never called; see firstMarketSaleActivated()");
@@ -135,13 +137,13 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         txnOptions: {
             mintTokenName?: string | number[];
             txnDescription?: string;
-            futureDate?: Date;
+            travelToFuture?: Date;
         } = {},
         newAttrs: Partial<MarketSaleDataLike> = {}
     ) {
         const { capo } = this;
         const mktSaleDgt = await this.mktSaleDgt();
-        const { futureDate, mintTokenName, txnDescription } = txnOptions;
+        const { travelToFuture, mintTokenName, txnDescription } = txnOptions;
 
         if (txnDescription) {
             console.log("  ----- ⚗️ " + txnDescription);
@@ -196,7 +198,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
             },
             tcx
         );
-        return this.submitTxnWithBlock(tcx2, { futureDate });
+        return this.submitTxnWithBlock(tcx2, { travelToFuture });
     }
 
     async mintAndAddAssets(
@@ -249,13 +251,13 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
         let tcx = capo.mkTcx(description);
 
-        const { futureDate } = submitOptions;
+        const { travelToFuture } = submitOptions;
         const tcx2 = await mktSaleDgt.mkTxnBuyFromMarketSale(
             marketSale,
             {
                 lotsPurchased: quantity,
             },
-            futureDate ? tcx.futureDate(futureDate) : tcx
+            travelToFuture ? tcx.futureDate(travelToFuture) : tcx
         );
 
         return this.submitTxnWithBlock(tcx2, submitOptions);
@@ -303,6 +305,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSaleActivated",
+        builderVersion: 2,  // v2: buys 5 lots before pausing (accumulated funds for WithdrawingProceeds)
     })
     async snapToFirstMarketSalePaused() {
         throw new Error("never called; see firstMarketSalePaused()");
@@ -310,14 +313,19 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     }
 
     async firstMarketSalePaused() {
-        this.setActor("tina");
+        // Buy some lots so the UTxO has accumulated funds (needed for WithdrawingProceeds tests)
         const activeSale = await this.findFirstMarketSale();
-        return this.stopMarketSale(activeSale);
+        this.setActor("tom");
+        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing");
+        const saleAfterBuy = await this.findFirstMarketSale();
+        this.setActor("tina");
+        return this.stopMarketSale(saleAfterBuy);
     }
 
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSalePaused",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSaleResumed() {
         throw new Error("never called; see firstMarketSaleResumed()");
@@ -333,6 +341,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSalePaused",
+        builderVersion: undefined,
     })
     async snapToFirstMarketSaleRetired() {
         throw new Error("never called; see firstMarketSaleRetired()");
@@ -417,8 +426,8 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         editableFields: {
             name?: string;
             settings?: Partial<MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["settings"]>;
-            vxfTokensTo?: MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["vxfTokensTo"];
-            vxfFundsTo?: MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["vxfFundsTo"];
+            // vxfTokensTo/vxfFundsTo removed — under None-mode (REQT/1h49829nsx)
+            // these are not editable. Use rawUpdate to test policy rejection.
         },
         options: TestHelperSubmitOptions & {
             /** Bypasses editableFields guard — passes raw updatedFields
@@ -455,13 +464,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
                                 ...editableFields.settings,
                             },
                         }),
-                        // Editable: vxfTokensTo, vxfFundsTo (validate if present)
-                        ...(editableFields.vxfTokensTo !== undefined && {
-                            vxfTokensTo: editableFields.vxfTokensTo,
-                        }),
-                        ...(editableFields.vxfFundsTo !== undefined && {
-                            vxfFundsTo: editableFields.vxfFundsTo,
-                        }),
+                        // vxfTokensTo/vxfFundsTo: not editable under None-mode (REQT/1h49829nsx)
                     },
                 },
             },
@@ -492,6 +495,18 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         console.log("  ----- ⚗️ retiring market sale");
 
         const tcx = await mktSaleDgt.mkTxnRetireMarketSale(marketSale);
+        return this.submitTxnWithBlock(tcx, submitOptions);
+    }
+
+    async withdrawProceeds(
+        marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        withdrawalAmount: bigint,
+        submitOptions: TestHelperSubmitOptions = {}
+    ) {
+        const mktSaleDgt = await this.mktSaleDgt();
+        console.log(`  ----- ⚗️ withdrawing ${withdrawalAmount} lovelace from market sale`);
+
+        const tcx = await mktSaleDgt.mkTxnWithdrawProceeds(marketSale, withdrawalAmount);
         return this.submitTxnWithBlock(tcx, submitOptions);
     }
 

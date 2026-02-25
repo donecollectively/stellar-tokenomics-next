@@ -502,7 +502,7 @@ export class MarketSaleController extends WrappedDgDataContract<
     // }
 
     async mkTxnActivateMarketSale<
-        TCX extends hasCharterRef | StellarTxnContext
+        TCX extends StellarTxnContext
     >(
         this: MarketSaleController,
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
@@ -514,7 +514,7 @@ export class MarketSaleController extends WrappedDgDataContract<
 
         const existingData = mktSale.data!;
         const activationTcx = (tcx || this.mkTcx("activate market sale"))
-            .validFor(5 * 60 * 1000); // on-chain policy enforces ≤5min window
+            .validFor(5 * 60 * 1000) as TCX; // on-chain policy enforces ≤5min window
 
         const tt = await this.mkTxnUpdateRecord(
             mktSale,

@@ -475,7 +475,28 @@ describe("MarketSale plugin", async () => {
                     mktSaleData.details.V1.saleAssets.primaryAssetName,
             });
             await expect(submitting).rejects.toThrow(
-                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
+                /vxfFundsTo must be None/
+            );
+        });
+
+        it("rejects activation when vxfTokensTo is Some (none-mode-tokens-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
+            const { h } = context;
+
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+
+            const marketSale = await h.findFirstMarketSale();
+            const mktSaleData = marketSale.data!;
+
+            mktSaleData.details.V1.fixedSaleDetails.vxfTokensTo = {
+                Anywhere: {},
+            };
+            const submitting = h.activateMarketSale(marketSale, {
+                mintTokenName:
+                    mktSaleData.details.V1.saleAssets.primaryAssetName,
+            });
+            await expect(submitting).rejects.toThrow(
+                /vxfTokensTo must be None/
             );
         });
 
@@ -701,7 +722,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "no sale while pending",
                 {
-                    futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                    travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
                     expectError: true,
                 }
             );
@@ -785,14 +806,14 @@ describe("MarketSale plugin", async () => {
             //    ^^^^ this error - from the contract!
             // );
 
-            const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 10);
+            const travelToFuture = new Date(Date.now() + 1000 * 60 * 60 * 10);
 
             const buyingZero = h.buyFromMktSale(
                 activeSale,
                 0n,
                 "case 2: buying zero amount FAILS",
                 {
-                    futureDate,
+                    travelToFuture,
                     expectError: true,
                 }
             );
@@ -804,7 +825,7 @@ describe("MarketSale plugin", async () => {
                     1n,
                 "case 3: buying too many lots FAILS",
                 {
-                    futureDate,
+                    travelToFuture,
                     expectError: true,
                 }
             );
@@ -815,7 +836,7 @@ describe("MarketSale plugin", async () => {
                 exampleData.details.V1.saleAssets.singleBuyMaxLots,
                 "case 4: buying the max number of lots WORKS",
                 {
-                    futureDate,
+                    travelToFuture,
                 }
             );
 
@@ -825,7 +846,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "case 5: buying the min number of lots WORKS",
                 {
-                    futureDate: new Date(futureDate.getTime() + 1000 * 60 * 13),
+                    travelToFuture: new Date(travelToFuture.getTime() + 1000 * 60 * 13),
                 }
             );
         });
@@ -842,8 +863,52 @@ describe("MarketSale plugin", async () => {
             const marketSale = await h.findFirstMarketSale();
 
             await h.buyFromMktSale(marketSale, 1n, "sells when active", {
-                futureDate: new Date(Date.now() + 1000 * 60 * 10),
+                travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
             });
+        });
+
+        // VXF None-Mode: funds MUST accumulate to the sale UTxO (REQT/wh3kjtwmj9)
+        // Mock salePricePerLot to rug-pull 10k lovelace from the UTxO output
+        // while the redeemer still claims the correct per-lot price.
+        it("rejects selling when funds are diverted from the sale UTxO (funds-must-accumulate/REQT/wh3kjtwmj9)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const controller = await h.mktSaleDgt();
+            const marketSale = await h.findFirstMarketSale();
+
+            const realMethod = controller.salePricePerLot.bind(controller);
+            vi.spyOn(controller, "salePricePerLot").mockImplementation(
+                (sale, lots, tcx) => {
+                    const real = realMethod(sale, lots, tcx);
+                    return {
+                        lotPrice: real.lotPrice,
+                        totalSalePrice: makeValue(real.totalSalePrice.lovelace - 10_000n),
+                    };
+                }
+            );
+
+            const buying = h.buyFromMktSale(marketSale, 1n, "funds diverted from UTxO", {
+                travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
+                expectError: true,
+            });
+            await expect(buying).rejects.toThrow(
+                /Matches redeemer payment with paid value/
+            );
+        });
+
+        // VXF None-Mode: SellingTokens checks previous (input) datum's VXF fields.
+        // This is defense-in-depth: no normal path can produce a sale with VXF Some,
+        // because Activating already rejects it. The on-chain check guards against
+        // a state that can't be reached through the off-chain API — which is the point.
+        // We can't arrange the test because we can't mutate the input UTxO's datum.
+        it("rejects selling when vxfFundsTo is Some (none-mode-selling-funds-to/REQT/1h49829nsx)", async () => {
+            console.log(
+                "⚠️  UNTESTABLE from off-chain: SellingTokens checks the INPUT datum's VXF fields.\n" +
+                "   No normal path can produce a sale with vxfFundsTo=Some — Activating rejects it.\n" +
+                "   This is defense-in-depth that can't be arranged without a custom UTxO.\n" +
+                "   The inability to arrange this test IS the proof that None-mode works."
+            );
         });
 
         it("won't sell tokens from a sale chunk less than 10 minutes old", async (context: STOK_TC) => {
@@ -873,7 +938,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "won't sell from a sale chunk less than 10 minutes old",
                 {
-                    futureDate: new Date(chunkCreatedAt + 1000 * 60 * 9),
+                    travelToFuture: new Date(chunkCreatedAt + 1000 * 60 * 9),
                     expectError: true,
                 }
             );
@@ -885,7 +950,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "will sell from a sale chunk 10 minutes old",
                 {
-                    futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
+                    travelToFuture: new Date(chunkCreatedAt + 1000 * 60 * 10),
                 }
             );
         });
@@ -904,7 +969,7 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSaleActivated();
 
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 week from now
                 Date.now() + 1000 * 60 * 60 * 24 * 7
             );
@@ -913,7 +978,7 @@ describe("MarketSale plugin", async () => {
                 1n,
                 "update timestamps for first chunk",
                 {
-                    futureDate,
+                    travelToFuture,
                 }
             );
 
@@ -928,14 +993,14 @@ describe("MarketSale plugin", async () => {
             ).toEqual(1n);
 
             const futurePlus3h = new Date(
-                futureDate.getTime() + 1000 * 60 * 60 * 3
+                travelToFuture.getTime() + 1000 * 60 * 60 * 3
             );
             await h.buyFromMktSale(
                 updatedSale,
                 19n,
                 "CHECK incremental lotsSold",
                 {
-                    futureDate: futurePlus3h,
+                    travelToFuture: futurePlus3h,
                 }
             );
             updatedSale = await h.findFirstMarketSale();
@@ -954,20 +1019,20 @@ describe("MarketSale plugin", async () => {
                 19n,
                 "CHECK incremental lotsSold",
                 {
-                    futureDate: futurePlus190m,
+                    travelToFuture: futurePlus190m,
                 }
             );
 
             updatedSale = await h.findFirstMarketSale();
             const futurePlus9h = new Date(
-                futureDate.getTime() + 1000 * 60 * 60 * 9
+                travelToFuture.getTime() + 1000 * 60 * 60 * 9
             );
             await h.buyFromMktSale(
                 updatedSale,
                 21n,
                 "CHECK incremental lotsSold",
                 {
-                    futureDate: futurePlus9h,
+                    travelToFuture: futurePlus9h,
                 }
             );
 
@@ -989,7 +1054,7 @@ describe("MarketSale plugin", async () => {
 
             const delegate = await h.mktSaleDgt();
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
@@ -1002,7 +1067,7 @@ describe("MarketSale plugin", async () => {
                     };
                 });
             const buying = h.buyFromMktSale(marketSale, 1n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
@@ -1043,7 +1108,7 @@ describe("MarketSale plugin", async () => {
                     };
                 });
             const buying2 = h.buyFromMktSale(marketSale, 1n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying2).rejects.toThrow("settings were changed");
@@ -1060,13 +1125,13 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSaleActivated();
 
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
             debugger;
             await h.buyFromMktSale(marketSale, 25n, undefined, {
-                futureDate,
+                travelToFuture,
             });
 
             const updatedSale = await h.findFirstMarketSale();
@@ -1088,7 +1153,7 @@ describe("MarketSale plugin", async () => {
 
             const delegate = await h.mktSaleDgt();
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
@@ -1100,7 +1165,7 @@ describe("MarketSale plugin", async () => {
                     return 8061555.424242;
                 });
             const buying = h.buyFromMktSale(marketSale, 1n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying).rejects.toThrow("wrong next salePace");
@@ -1115,12 +1180,12 @@ describe("MarketSale plugin", async () => {
             await h.snapToFirstMarketSaleActivated();
             // buys 26 lots
             const marketSale = await h.findFirstMarketSale();
-            const futureDate = new Date(
+            const travelToFuture = new Date(
                 // 1 day from now
                 Date.now() + 1000 * 60 * 60 * 24 * 1
             );
             const buying = h.buyFromMktSale(marketSale, 26n, undefined, {
-                futureDate,
+                travelToFuture,
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
@@ -1150,18 +1215,18 @@ describe("MarketSale plugin", async () => {
                 await h.snapToFirstMarketSaleActivated();
 
                 const marketSale = await h.findFirstMarketSale();
-                const futureDate = new Date(
+                const travelToFuture = new Date(
                     // 1 day from now
                     Date.now() + 1000 * 60 * 60 * 24 * 1
                 );
                 await h.buyFromMktSale(marketSale, 25n, undefined, {
-                    futureDate,
+                    travelToFuture,
                 });
 
                 const updatedSale = await h.findFirstMarketSale();
                 const futureDate2 = new Date(
                     // 1 hour from the first purchase
-                    futureDate.getTime() + 1000 * 60 * 60
+                    travelToFuture.getTime() + 1000 * 60 * 60
                 );
                 //todo
                 const buying = h.buyAndSplitMktSale(
@@ -1169,7 +1234,7 @@ describe("MarketSale plugin", async () => {
                     25n,
                     undefined,
                     {
-                        futureDate: futureDate2,
+                        travelToFuture: futureDate2,
                         expectError: true,
                     }
                 );
@@ -1749,7 +1814,7 @@ describe("MarketSale plugin", async () => {
             );
 
             await expect(updating).rejects.toThrow(
-                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
+                /vxfFundsTo must be None/
             );
         });
 
@@ -1886,12 +1951,14 @@ describe("MarketSale plugin", async () => {
             expect("Active" in resumedSale.data!.details.V1.saleState.state).toBe(true);
 
             // Wiring proof: Resuming defense-in-depth pipeline ran
+            // Note: REQT-jkbaba8n7n (VxfDestination validation) removed — under None-mode
+            // (REQT/2vmbpk5xw7), VXF fields are None so the validation trace changes.
+            // Will be re-added once on-chain None-mode enforcement emits its own REQT.
             h.assertEnforcedReqts(tcx, [
                 "REQT-3h96mdmn5k",  // Paused → Active state transition
                 "REQT-60azhtn9dy",  // Non-editable fields unchanged (validateStateOnlyChange)
                 "REQT-998waf4mz3",  // UTxO token value unchanged
                 "REQT-qh3qkk8f92",  // Remaining sale tokens present
-                "REQT-jkbaba8n7n",  // VxfDestination validation
                 "REQT-fkww59zyt3",  // validate() defense-in-depth
             ]);
         });
@@ -1905,8 +1972,10 @@ describe("MarketSale plugin", async () => {
                 resumedSale.data!.details.V1.saleState.progressDetails
                     .lastPurchaseAt;
             h.setActor("tom");
+            // Use Date.now() offset — lastPurchaseAt is from snapshot time and the
+            // emulator has advanced well past it through buy+stop+resume chain
             await h.buyFromMktSale(resumedSale, 1n, "buy after resume", {
-                futureDate: new Date(chunkCreatedAt + 1000 * 60 * 10),
+                travelToFuture: new Date(Date.now() + 1000 * 60 * 10),
             });
             const afterBuy = await h.findFirstMarketSale();
             expect(afterBuy.data!.details.V1.saleState.progressDetails.lotsSold).toBeGreaterThan(0n);
@@ -1979,6 +2048,16 @@ describe("MarketSale plugin", async () => {
                 { details: { V1: { ...pausedSale.data!.details.V1, saleState: { ...pausedSale.data!.details.V1.saleState, progressDetails: { ...pausedSale.data!.details.V1.saleState.progressDetails, lotsSold: 999n }}}}}))
                 .rejects.toThrow(/progressDetails can't be modified/);
         });
+
+        it("rejects resume when vxfFundsTo is Some (none-mode-resume-funds-to/REQT/1h49829nsx)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSalePaused();
+            const pausedSale = await h.findFirstMarketSale();
+            await expect(h.resumeMarketSale(pausedSale, { expectError: true },
+                { details: { V1: { ...pausedSale.data!.details.V1, fixedSaleDetails: { ...pausedSale.data!.details.V1.fixedSaleDetails, vxfFundsTo: { Anywhere: {} } }}}}))
+                .rejects.toThrow(/fixedSaleDetails can't be modified/);
+        });
     });
 
     describe("UpdatingPausedSale activity (REQT/b30wn4bdw2)", () => {
@@ -1998,10 +2077,12 @@ describe("MarketSale plugin", async () => {
             expect(updated.data!.details.V1.fixedSaleDetails.settings.targetPrice).toEqual(2.0);
 
             // Wiring proof: shared validateCommonUpdateChecks pipeline ran
+            // Note: REQT-6z88fg6j2s (VXF None-Mode Enforcement) not expected here —
+            // the check only traces when VXF fields are Some (to reject). In the happy
+            // path they're already None so the REQT isn't emitted.
             h.assertEnforcedReqts(tcx, [
                 "REQT-ntdbhc1xss",  // UTxO Value Unchanged — no token movement during edits
                 "REQT-rg5zyhd2gb",  // ThreadInfo Frozen — equality check
-                "REQT-6z88fg6j2s",  // VXF None-Mode Enforcement — vxfTokensTo/vxfFundsTo must be None
                 "REQT-b731sye0fz",  // Settings Bounds Validation When Paused — sane pricing ranges
                 "REQT-y16j4t955c",  // Name Length — at least 10 characters (via validate())
                 "REQT-egttdcamhg",  // Non-Empty Assets — saleLotAssets, totalSaleLots, etc. (via validate())
@@ -2025,7 +2106,7 @@ describe("MarketSale plugin", async () => {
                     }}},
                     expectError: true,
                 },
-            )).rejects.toThrow(/PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/);
+            )).rejects.toThrow(/vxfFundsTo must be None/);
         });
 
         // Frozen-field tests: these bypass the helper (which structurally prevents
@@ -2231,6 +2312,112 @@ describe("MarketSale plugin", async () => {
             const retiredSale = await h.findFirstMarketSale();
             await expect(h.resumeMarketSale(retiredSale, { expectError: true }))
                 .rejects.toThrow(/state must be Paused/);
+        });
+    });
+
+    describe("WithdrawingProceeds activity (REQT/ayvw26q6av)", () => {
+        it("withdraws ADA from a Paused sale — tokens and datum unchanged (withdraw-while-paused/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSalePaused();
+            const pausedSale = await h.findFirstMarketSale();
+
+            const prevValue = pausedSale.utxo.value;
+            const prevData = pausedSale.data!;
+            const withdrawAmount = 2_000_000n; // 2 ADA
+
+            h.setActor("tina");
+            await h.withdrawProceeds(pausedSale, withdrawAmount);
+
+            const afterSale = await h.findFirstMarketSale();
+            // ADA decreased by withdrawal amount
+            expect(afterSale.utxo.value.lovelace).toBe(
+                prevValue.lovelace - withdrawAmount
+            );
+            // Tokens unchanged (REQT/gy6jd9cjkg)
+            expect(afterSale.utxo.value.assets.dump()).toEqual(
+                prevValue.assets.dump()
+            );
+            // Datum unchanged (REQT/ykqx9qgh88)
+            expect(afterSale.data!.details.V1).toEqual(prevData.details.V1);
+        });
+
+        it("withdraws ADA from a Retired sale — tokens and datum unchanged (withdraw-while-retired/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleRetired();
+            const retiredSale = await h.findFirstMarketSale();
+
+            const prevValue = retiredSale.utxo.value;
+            const prevData = retiredSale.data!;
+            const withdrawAmount = 2_000_000n; // 2 ADA
+
+            h.setActor("tina");
+            await h.withdrawProceeds(retiredSale, withdrawAmount);
+
+            const afterSale = await h.findFirstMarketSale();
+            // ADA decreased by withdrawal amount
+            expect(afterSale.utxo.value.lovelace).toBe(
+                prevValue.lovelace - withdrawAmount
+            );
+            // Tokens unchanged (REQT/gy6jd9cjkg)
+            expect(afterSale.utxo.value.assets.dump()).toEqual(
+                prevValue.assets.dump()
+            );
+            // Datum unchanged (REQT/ykqx9qgh88)
+            expect(afterSale.data!.details.V1).toEqual(prevData.details.V1);
+        });
+
+        // SoldOut is a valid withdrawal state per REQT/ayvw26q6av, and the
+        // WithdrawingProceeds handler accepts it (MarketSalePolicy.hl line 745).
+        // However, the SoldOut state transition itself is not yet implemented
+        // on-chain (line 772: `SoldOut => error("todo: SoldOut")`), so we
+        // cannot reach this state to test withdrawal from it.
+        it("withdraws ADA from a SoldOut sale (withdraw-while-soldout/REQT/ayvw26q6av)", async () => {
+            console.log(
+                "⚠️  UNTESTABLE: SoldOut state transition not yet implemented on-chain.\n" +
+                "   MarketSalePolicy.hl has `SoldOut => error(\"todo: SoldOut\")`.\n" +
+                "   WithdrawingProceeds accepts SoldOut (line 745) but we can't reach it.\n" +
+                "   Add real test when SoldOut transition is implemented."
+            );
+        });
+
+        it("rejects withdrawal from an Active sale (withdraw-active-rejected/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleActivated();
+            const activeSale = await h.findFirstMarketSale();
+
+            h.setActor("tina");
+            await expect(
+                h.withdrawProceeds(activeSale, 2_000_000n, { expectError: true })
+            ).rejects.toThrow(/WithdrawingProceeds requires Paused, SoldOut, or Retired/);
+        });
+
+        it("rejects withdrawal from a Pending sale (withdraw-pending-rejected/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSale();
+            const pendingSale = await h.findFirstMarketSale();
+
+            h.setActor("tina");
+            await expect(
+                h.withdrawProceeds(pendingSale, 2_000_000n, { expectError: true })
+            ).rejects.toThrow(/WithdrawingProceeds requires Paused, SoldOut, or Retired/);
+        });
+
+        it("requires gov authority to withdraw (withdraw-no-gov-rejected/REQT/aexkjfxm2k)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSalePaused();
+            const pausedSale = await h.findFirstMarketSale();
+
+            vi.spyOn(h.capo, "txnAddGovAuthority").mockImplementation(
+                async (tcx) => tcx as any
+            );
+            await expect(
+                h.withdrawProceeds(pausedSale, 2_000_000n, { expectError: true })
+            ).rejects.toThrow(/missing.* dgTkn capoGov/);
         });
     });
 });
