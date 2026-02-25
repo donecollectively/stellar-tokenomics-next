@@ -567,6 +567,63 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     // ============================================================
 
     // ── Cost-token helpers (TUNA / non-ADA testing) ──────────────────────────
+    //
+    // Snapshot chain:
+    //   bootstrapped → saleNativeTokenCost → saleNativeTokenPaused
+    //
+    // saleNativeTokenCost: TUNA-cost sale created + tom funded + activated.
+    // saleNativeTokenPaused: sale stopped (proceeds implied — buying step
+    //   added once Phase 5 offchain stubs land; bump builderVersion then).
+
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "bootstrapped",
+        builderVersion: undefined,
+    })
+    async snapToSaleNativeTokenCost() {
+        throw new Error("never called; see saleNativeTokenCost()");
+        return this.saleNativeTokenCost();
+    }
+
+    async saleNativeTokenCost() {
+        this.setActor("tina");
+        const saleData = await this.exampleDataWithTuna();
+        await this.createMarketSale(saleData);
+        // Fund tom with enough TUNA to buy many lots at the test sale price
+        this.fundActorWithTuna("tom", 10_000n);
+        const pendingSale = await this.findFirstMarketSale();
+        return this.activateMarketSale(pendingSale, {
+            mintTokenName: pendingSale.data!.details.V1.saleAssets.primaryAssetName,
+        });
+    }
+
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "saleNativeTokenCost",
+        builderVersion: undefined,
+        // Phase 5: bump builderVersion to 0 when buying step is added below
+    })
+    async snapToSaleNativeTokenPaused() {
+        throw new Error("never called; see saleNativeTokenPaused()");
+        return this.saleNativeTokenPaused();
+    }
+
+    async saleNativeTokenPaused() {
+        // TODO(Phase 5): buy some lots as tom to accumulate TUNA proceeds
+        //   before stopping. Uncomment after costTokenIsADA() + mkCostTokenValue()
+        //   are wired to read the sale's CostToken enum.
+        //
+        //   this.setActor("tom");
+        //   const activeSale = await this.findFirstMarketSale();
+        //   const chunkAge = activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
+        //   await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds", {
+        //       futureDate: new Date(chunkAge + 1000 * 60 * 10),
+        //   });
+
+        this.setActor("tina");
+        const activeSale = await this.findFirstMarketSale();
+        return this.stopMarketSale(activeSale);
+    }
 
     /**
      * Funds an actor with TUNA tokens using the emulator's genesis UTxO mechanism.
