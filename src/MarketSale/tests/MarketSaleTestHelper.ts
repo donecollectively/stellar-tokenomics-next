@@ -601,7 +601,6 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         actor: "tina",
         parentSnapName: "saleNativeTokenCost",
         builderVersion: undefined,
-        // Phase 5: bump builderVersion to 0 when buying step is added below
     })
     async snapToSaleNativeTokenPaused() {
         throw new Error("never called; see saleNativeTokenPaused()");
@@ -609,21 +608,19 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     }
 
     async saleNativeTokenPaused() {
-        // TODO(Phase 5): fund tom with TUNA and buy some lots to accumulate
-        //   TUNA proceeds before stopping. Uncomment after costTokenIsADA() +
-        //   mkCostTokenValue() are wired to read the sale's CostToken enum.
-        //
-        //   await this.fundActorWithTuna("tom", 10_000n);
-        //   this.setActor("tom");
-        //   const activeSale = await this.findFirstMarketSale();
-        //   const chunkAge = activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
-        //   await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds", {
-        //       futureDate: new Date(chunkAge + 1000 * 60 * 10),
-        //   });
+        await this.fundActorWithTuna("tom", 10_000n);
+        this.setActor("tom");
+        const activeSale = await this.findFirstMarketSale();
+        const chunkAge =
+            activeSale.data!.details.V1.saleState.progressDetails
+                .lastPurchaseAt;
+        await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds", {
+            futureDate: new Date(chunkAge + 1000 * 60 * 10),
+        });
 
         this.setActor("tina");
-        const activeSale = await this.findFirstMarketSale();
-        return this.stopMarketSale(activeSale);
+        const saleAfterBuy = await this.findFirstMarketSale();
+        return this.stopMarketSale(saleAfterBuy);
     }
 
     /**
