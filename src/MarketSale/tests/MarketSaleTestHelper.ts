@@ -6,7 +6,7 @@ import {
     type TestHelperSubmitOptions,
 } from "@donecollectively/stellar-contracts/testing";
 import { MarketSaleCapo } from "./modules/MarketSaleCapo.js";
-import { makeAssets, makeMintingPolicyHash, makeValue } from "@helios-lang/ledger";
+import { makeTxOutput, makeValue } from "@helios-lang/ledger";
 import type {
     ErgoMarketSaleData,
     MarketSaleData,
@@ -24,9 +24,9 @@ import { equalsBytes } from "@helios-lang/codec-utils";
 import type { MarketSaleDataWrapper } from "../MarketSaleDataWrapper.js";
 
 // ── Test cost-token: TUNA ────────────────────────────────────────────────────
-// Fake deterministic MPH — 28 × 0xba — clearly not a real policy.
-// TUNA uses scale=1_000 (1 TUNA = 1_000 micro-TUNA), unlike ADA's 1_000_000.
-export const TUNA_MPH = makeMintingPolicyHash(Array(28).fill(0xba));
+// TUNA is minted under the capo's MPH (same policy as sale tokens).
+// scale=1_000: 1 TUNA = 1_000 micro-TUNA, unlike ADA's 1_000_000.
+// MPH comes from capo instance — access via this.capo.mph in methods.
 export const TUNA_TOKEN_NAME = textToBytes("TUNA");
 export const TUNA_SCALE = 1_000n;
 // ────────────────────────────────────────────────────────────────────────────
@@ -590,7 +590,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         const saleData = await this.exampleDataWithTuna();
         await this.createMarketSale(saleData);
         // Fund tom with enough TUNA to buy many lots at the test sale price
-        this.fundActorWithTuna("tom", 10_000n);
+        await this.fundActorWithTuna("tom", 10_000n);
         const pendingSale = await this.findFirstMarketSale();
         return this.activateMarketSale(pendingSale, {
             mintTokenName: pendingSale.data!.details.V1.saleAssets.primaryAssetName,
@@ -626,23 +626,35 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     }
 
     /**
-     * Funds an actor with TUNA tokens using the emulator's genesis UTxO mechanism.
-     * Provides the actor with `macroAmount` whole TUNA (× TUNA_SCALE micro-units).
-     * Must be called before snapshot building — creates genesis UTxO + ticks.
+     * Mints TUNA tokens under the capo's MPH and pays them to the named actor.
+     * Uses the standard txnMintingFungibleTokens path — requires tina as actor
+     * (gov authority). Call before activating the sale in snapshot builders.
      */
-    fundActorWithTuna(actorName: string, macroAmount: bigint) {
-        const wallet = this.actors[actorName];
-        if (!wallet) throw new Error(`fundActorWithTuna: actor "${actorName}" not found`);
-        const tunaAssets = makeAssets([
-            [TUNA_MPH, [[TUNA_TOKEN_NAME, macroAmount * TUNA_SCALE]]],
-        ]);
-        // 2 ADA covers minUtxo for a UTxO holding non-ADA tokens
-        this.network.createUtxo(wallet, 2_000_000n, tunaAssets);
-        this.network.tick(1);
+    async fundActorWithTuna(actorName: string, macroAmount: bigint) {
+        const { capo } = this;
+        const targetWallet = this.actors[actorName];
+        if (!targetWallet)
+            throw new Error(`fundActorWithTuna: actor "${actorName}" not found`);
+
+        const tunaCount = macroAmount * TUNA_SCALE;
+        console.log(`  ----- ⚗️ minting ${tunaCount} micro-TUNA for ${actorName}`);
+
+        const tcx = await capo.txnMintingFungibleTokens(
+            capo.mkTcx(`mint TUNA for ${actorName}`),
+            TUNA_TOKEN_NAME,
+            tunaCount
+        );
+        const tunaValue = makeValue(
+            2_000_000n,
+            [[capo.mph, [[TUNA_TOKEN_NAME, tunaCount]]]]
+        );
+        const tcx2 = tcx.addOutput(makeTxOutput(targetWallet.address, tunaValue));
+        return this.submitTxnWithBlock(tcx2);
     }
 
     /**
      * Returns example sale data with TUNA as the cost token.
+     * mph comes from the capo instance (TUNA is minted under capo policy).
      * All other fields identical to the standard ADA exampleData().
      */
     async exampleDataWithTuna(): Promise<minimalMarketSaleData> {
@@ -659,7 +671,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
                             ...base.details.V1.fixedSaleDetails.settings,
                             costToken: {
                                 Other: {
-                                    mph: TUNA_MPH,
+                                    mph: this.capo.mph,
                                     tokenName: TUNA_TOKEN_NAME,
                                     scale: TUNA_SCALE,
                                 },

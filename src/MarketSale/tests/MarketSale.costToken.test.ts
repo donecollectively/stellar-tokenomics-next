@@ -22,12 +22,11 @@ import {
     it,
     fit,
     xit,
-    TUNA_MPH,
     TUNA_TOKEN_NAME,
     TUNA_SCALE,
     type MarketSale_TC,
 } from "./MarketSaleTestHelper.js";
-import { makeValue, makeAssets } from "@helios-lang/ledger";
+import { makeValue } from "@helios-lang/ledger";
 import { textToBytes } from "@donecollectively/stellar-contracts";
 
 // ── CostToken Settings Validation ────────────────────────────────────────────
