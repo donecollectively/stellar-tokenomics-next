@@ -256,9 +256,9 @@ Governs the WithdrawingProceeds spending activity for extracting accumulated ADA
      - 6.3.2: REQT-panxb0gcyv: **P1**/draft: **Route Tokens Per vxfTokensTo** - When `SellingTokens` and `vxfTokensTo` is configured (Some), purchased tokens MUST be routed to the configured VXF destination rather than directly to the buyer.
      - 6.3.3: REQT-mn6ffsd5j8: **P1**/draft: **Receiver Participation During Sale** - When `SellingTokens` with a configured VXF destination, the receiver's participation MUST be verified in the transaction — if so configured.
  - 6.4.0: REQT-2vmbpk5xw7: **NEXT**/draft: **VXF None-Mode Enforcement**
-     - 6.4.1: REQT-1h49829nsx: **NEXT**/draft: **vxfFundsTo Must Be None** - All activities (Activating, UpdatingPendingSale, UpdatingPausedSale, Resuming, SellingTokens) MUST reject the transaction when `vxfFundsTo` is not None.
+     - 6.4.1: REQT-1h49829nsx: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **vxfFundsTo Must Be None** - All activities (Activating, UpdatingPendingSale, UpdatingPausedSale, Resuming, SellingTokens) MUST reject the transaction when `vxfFundsTo` is not None.
      - 6.4.2: REQT-88cfkdj7p2: **NEXT**/draft: **vxfTokensTo Must Be None** - All activities (Activating, UpdatingPendingSale, UpdatingPausedSale, Resuming, SellingTokens) MUST reject the transaction when `vxfTokensTo` is not None.
-     - 6.4.3: REQT-wh3kjtwmj9: **NEXT**/draft: **Funds Accumulate to Sale UTxO** - When `vxfFundsTo` is None, funds received during SellingTokens MUST accumulate to the mktSale UTxO.
+     - 6.4.3: REQT-wh3kjtwmj9: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Funds Accumulate to Sale UTxO** - When `vxfFundsTo` is None, funds received during SellingTokens MUST accumulate to the mktSale UTxO.
      - 6.4.4: REQT-nnxpz49srs: **NEXT**/draft: **Tokens Sent to Buyer** - When `vxfTokensTo` is None, purchased tokens MAY be sent anywhere — the buyer receives tokens directly with no on-chain routing constraint.
 
 ## Area 7: Activation
@@ -387,11 +387,11 @@ Governs the WithdrawingProceeds spending activity for extracting accumulated ADA
 #### Purpose: Governs the WithdrawingProceeds spending activity for extracting accumulated ADA from the sale UTxO. Applied when reviewing proceeds management, testing withdrawal scenarios, or auditing that withdrawal only occurs in appropriate sale states.
 
  - 13.1.0: REQT-czp1jhqgdj: **NEXT**/draft: **WithdrawingProceeds Activity**
-     - 13.1.1: REQT-ayvw26q6av: **NEXT**/draft: **Valid States for Withdrawal** - WithdrawingProceeds MUST be valid only when the sale state is Paused, SoldOut, or Retired. All other states MUST reject.
-     - 13.1.2: REQT-aexkjfxm2k: **NEXT**/draft: **Gov Authority** - WithdrawingProceeds MUST require governance authority.
-     - 13.1.3: REQT-5r79v9b4ht: **NEXT**/draft: **No Constraint on Withdrawal Amount** - WithdrawingProceeds has no constraint on how much ADA is withdrawn.
-     - 13.1.4: REQT-gy6jd9cjkg: **NEXT**/draft: **Tokens Must Remain** - WithdrawingProceeds MUST NOT move or burn any non-ADA tokens — tokens stay locked in the UTxO.
-     - 13.1.5: REQT-ykqx9qgh88: **NEXT**/draft: **Datum Fields Unchanged** - WithdrawingProceeds MUST leave all datum fields unchanged.
+     - 13.1.1: REQT-ayvw26q6av: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Valid States for Withdrawal** - WithdrawingProceeds MUST be valid only when the sale state is Paused, SoldOut, or Retired. All other states MUST reject.
+     - 13.1.2: REQT-aexkjfxm2k: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Gov Authority** - WithdrawingProceeds MUST require governance authority.
+     - 13.1.3: REQT-5r79v9b4ht: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **No Constraint on Withdrawal Amount** - WithdrawingProceeds has no constraint on how much ADA is withdrawn.
+     - 13.1.4: REQT-gy6jd9cjkg: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Tokens Must Remain** - WithdrawingProceeds MUST NOT move or burn any non-ADA tokens — tokens stay locked in the UTxO.
+     - 13.1.5: REQT-ykqx9qgh88: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Datum Fields Unchanged** - WithdrawingProceeds MUST leave all datum fields unchanged.
 
 
 # Files
