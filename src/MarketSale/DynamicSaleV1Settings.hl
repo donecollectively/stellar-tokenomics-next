@@ -26,8 +26,9 @@ enum CostToken {
 }
 
 struct DynamicSaleV1Settings {
-    targetPrice: Real
-    
+    targetPrice: Real  // count (with decimals) of the token indicated by costToken
+    costToken: CostToken  // (REQT-4zkj5q4n38)
+
     targetedSellingTime: Duration  
 
     minPrice: Real  // same as minSalePrice
