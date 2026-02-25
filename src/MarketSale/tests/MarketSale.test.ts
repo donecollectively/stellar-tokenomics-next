@@ -2294,5 +2294,31 @@ describe("MarketSale plugin", async () => {
             // Datum unchanged (REQT/ykqx9qgh88)
             expect(afterSale.data!.details.V1).toEqual(prevData.details.V1);
         });
+
+        it("withdraws ADA from a Retired sale — tokens and datum unchanged (withdraw-while-retired/REQT/ayvw26q6av)", async (context: STOK_TC) => {
+            const { h } = context;
+            await h.reusableBootstrap();
+            await h.snapToFirstMarketSaleRetired();
+            const retiredSale = await h.findFirstMarketSale();
+
+            const prevValue = retiredSale.utxo.value;
+            const prevData = retiredSale.data!;
+            const withdrawAmount = 2_000_000n; // 2 ADA
+
+            h.setActor("tina");
+            await h.withdrawProceeds(retiredSale, withdrawAmount);
+
+            const afterSale = await h.findFirstMarketSale();
+            // ADA decreased by withdrawal amount
+            expect(afterSale.utxo.value.lovelace).toBe(
+                prevValue.lovelace - withdrawAmount
+            );
+            // Tokens unchanged (REQT/gy6jd9cjkg)
+            expect(afterSale.utxo.value.assets.dump()).toEqual(
+                prevValue.assets.dump()
+            );
+            // Datum unchanged (REQT/ykqx9qgh88)
+            expect(afterSale.data!.details.V1).toEqual(prevData.details.V1);
+        });
     });
 });
