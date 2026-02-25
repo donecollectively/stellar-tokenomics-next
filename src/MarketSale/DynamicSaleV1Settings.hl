@@ -24,12 +24,37 @@ enum CostToken {
         scale: Int  // e.g. 6 for USDC (1 USDC = 10^6 base units)
     }
 
+    // Returns the decimal-place scale factor (6 for ADA = 10^6 lovelace per ADA).
+    func costTokenScale(self) -> Int {
+        self.switch {
+            ADA => 6,
+            Other{_, _, scale} => scale
+        }
+    }
+
     // Extracts the cost-token quantity in base units (lovelace for ADA,
     // smallest unit for Other) from a Value.
     func microTokensFromValue(self, v: Value) -> Int {
         self.switch {
             ADA => v.get_lovelace(),
             Other{mph, tokenName, _} => v.get_policy(mph).get(tokenName)
+        }
+    }
+
+    // Constructs a Value containing the given base-unit quantity of this cost token.
+    func toCostValue(self, microTokens: Int) -> Value {
+        self.switch {
+            ADA => Value::lovelace(microTokens),
+            Other{mph, tokenName, _} => Value::new(AssetClass::new(mph, tokenName), microTokens)
+        }
+    }
+
+    // True if the given AssetClass matches this cost token.
+    // Always false for ADA (lovelace is not an AssetClass in the assets map).
+    func isCostToken(self, ac: AssetClass) -> Bool {
+        self.switch {
+            ADA => false,
+            Other{mph, tokenName, _} => ac == AssetClass::new(mph, tokenName)
         }
     }
 }
