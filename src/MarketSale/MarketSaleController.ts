@@ -1024,13 +1024,14 @@ export class MarketSaleController extends WrappedDgDataContract<
             lotCount: BigInt(lotsPurchased),
         };
         const lotPriceReal = mktSaleObj.getLotPrice(pCtx);
-        const totalPriceReal = realMul(Number(lotsPurchased), lotPriceReal);
         const scale = this.costTokenScale(mktSale);
+        // floor() to match on-chain: (lotPriceForSale() * scale).floor()
         const toSmallestUnit = (real: number) =>
-            BigInt(Math.round(scale * real));
+            BigInt(Math.floor(scale * real));
+        const lotPriceMicro = toSmallestUnit(lotPriceReal);
         return {
-            lotPrice: this.mkCostTokenValue(mktSale, toSmallestUnit(lotPriceReal)),
-            totalSalePrice: this.mkCostTokenValue(mktSale, toSmallestUnit(totalPriceReal)),
+            lotPrice: this.mkCostTokenValue(mktSale, lotPriceMicro),
+            totalSalePrice: this.mkCostTokenValue(mktSale, lotPriceMicro * BigInt(lotsPurchased)),
         };
     }
 
