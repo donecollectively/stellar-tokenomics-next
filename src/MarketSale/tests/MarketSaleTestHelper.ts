@@ -611,12 +611,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         await this.fundActorWithTuna("tom", 10_000n);
         this.setActor("tom");
         const activeSale = await this.findFirstMarketSale();
-        const chunkAge =
-            activeSale.data!.details.V1.saleState.progressDetails
-                .lastPurchaseAt;
-        await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds", {
-            futureDate: new Date(chunkAge + 1000 * 60 * 10),
-        });
+        await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds");
 
         this.setActor("tina");
         const saleAfterBuy = await this.findFirstMarketSale();

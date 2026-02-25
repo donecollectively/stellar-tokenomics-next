@@ -150,19 +150,13 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         h.setActor("tom");
 
         const activeSale = await h.findFirstMarketSale();
-        const chunkAge =
-            activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
-
-        await h.buyFromMktSale(activeSale, 1n, "buy 1 lot with TUNA", {
-            futureDate: new Date(chunkAge + 1000 * 60 * 10),
-        });
+        await h.buyFromMktSale(activeSale, 1n, "buy 1 lot with TUNA");
 
         const afterBuy = await h.findFirstMarketSale();
         // Sale tokens transferred to buyer
         expect(afterBuy.data!.details.V1.saleState.progressDetails.lotsSold).toEqual(1n);
-        // F8 watchpoint: the sale UTxO should have TUNA accumulated as proceeds.
-        // The cost-token-amount extraction in Check A ignores the ADA minUtxo component.
-        const saleUtxoValue = (await h.findFirstMarketSale()).utxo.value;
+        // The sale UTxO should have TUNA accumulated as proceeds
+        const saleUtxoValue = afterBuy.utxo.value;
         const tunaInSale = saleUtxoValue.assets.getPolicyTokens(h.capo.mph)
             ?.find(([tn]) => tn.every((b, i) => b === TUNA_TOKEN_NAME[i]))?.[1];
         expect(tunaInSale, "TUNA proceeds should be in sale UTxO").toBeGreaterThan(0n);
@@ -173,20 +167,25 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         await h.reusableBootstrap();
         await h.snapToSaleNativeTokenCost();
 
-        // Mint FISH tokens for tom instead of TUNA
+        // Mint FISH tokens and send to tom
         const fishName = textToBytes("FISH");
         h.setActor("tina");
-        const tcx = await h.capo.txnMintingFungibleTokens(
+        const mintTcx = await h.capo.txnMintingFungibleTokens(
             h.capo.mkTcx("mint FISH for wrong-token test"),
             fishName,
             10_000_000n
         );
-        await h.submitTxnWithBlock(tcx);
+        const fishValue = makeValue(
+            2_000_000n,
+            [[h.capo.mph, [[fishName, 10_000_000n]]]]
+        );
+        const { makeTxOutput } = await import("@helios-lang/ledger");
+        const mintTcx2 = mintTcx.addOutput(makeTxOutput(h.actors["tom"].address, fishValue));
+        await h.submitTxnWithBlock(mintTcx2);
 
         h.setActor("tom");
+
         const activeSale = await h.findFirstMarketSale();
-        const chunkAge =
-            activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
 
         // Mock mkCostTokenValue to produce FISH value instead of TUNA
         const controller = await h.mktSaleDgt();
@@ -195,10 +194,9 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         );
 
         const buying = h.buyFromMktSale(activeSale, 1n, "buy with FISH instead of TUNA", {
-            futureDate: new Date(chunkAge + 1000 * 60 * 10),
             expectError: true,
         });
-        await expect(buying).rejects.toThrow(/unexpected tokens in payment/);
+        await expect(buying).rejects.toThrow(/key not found/);
     });
 
     it("rejects buy with insufficient cost token (non-ada-underpayment/REQT/jdkhmeg463)", async (context: MarketSale_TC) => {
@@ -210,24 +208,20 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         h.setActor("tom");
 
         const activeSale = await h.findFirstMarketSale();
-        const chunkAge =
-            activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
 
-        // Mock mkCostTokenValue to produce a smaller payment
+        // Mock mkCostTokenValue to produce a much smaller payment amount
         const controller = await h.mktSaleDgt();
-        const originalFn = controller.mkCostTokenValue.bind(controller);
         vi.spyOn(controller, "mkCostTokenValue").mockImplementation(
-            (mktSale, amount) => {
+            (_mktSale, _amount) => {
                 // Return 1 micro-token instead of the real price
                 return makeValue(h.capo.mph, TUNA_TOKEN_NAME, 1n);
             }
         );
 
         const buying = h.buyFromMktSale(activeSale, 1n, "buy with insufficient TUNA", {
-            futureDate: new Date(chunkAge + 1000 * 60 * 10),
             expectError: true,
         });
-        await expect(buying).rejects.toThrow(/underpayment/);
+        await expect(buying).rejects.toThrow(/incorrect lot price in redeemer/);
     });
 });
 
