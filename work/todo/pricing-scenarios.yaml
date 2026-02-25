@@ -1,0 +1,312 @@
+# Pricing Factor Test Scenarios for DynamicSaleV1
+#
+# Formula: lotPrice = clamp(targetPrice * overallProgressFactor * dynamicPaceFactor, minPrice, maxPrice)
+#
+# All scenarios use the TUNA-priced sale from saleNativeTokenCost snapshot.
+# First purchase: prevSalePace = 1.0, lotsSold = 0, lastPurchaseAt = startAt.
+#
+# Reference settings (from exampleData + TUNA override):
+#   targetPrice: 1.0
+#   minPrice: 0.5
+#   maxPrice: 4.2
+#   targetedSellingTime: 388800000 ms (4.5 days = 108 hours)
+#   totalSaleLots: 1000
+#   singleBuyMaxLots: 25
+#   progressPricingDiscountFloorPoint: 0.2
+#   progressPricingDiscountWhenSlow: 0.25
+#   progressPricingExpansionWhenFast: 0.2
+#   dynaPaceFasterSaleWeight: 0.12
+#   dynaPaceIdleDecayRate: 0.5
+#   pricingWeightDynaPace: 1.5
+#   costToken: Other (TUNA, scale 1000)
+#
+# Derived constants:
+#   targetSellingPace = 1000 / 108 ≈ 9.259 lots/hour
+#   chunkFreshness minimum: 10 minutes
+#
+# overallProgressFactor = (1 - clampedDiscount) * priceExpansion
+#   priceExpansion: 1.0 if overallPace < 1, else 1 + (overallPace-1)*(1+0.2)/3
+#   discount: based on progressPricingDiscountDepth(overallPace) * 0.25, clamped [0, 0.25]
+#     discountFloorPoint=0.2: pace ≤ 0.2 → full discount; pace ≥ 1.0 → no discount
+#
+# dynamicPaceFactor = weighted avg of (prevPace/target * 1.0 + nextPace/target * 1.5) / 2.5
+#   nextSalePace = (inferredPace * weight + prevSalePace) / (weight + 1)
+#     weight selection:
+#       inferredPace > prevSalePace → 0.12 (escalation, small weight)
+#       inferredPace ≤ prevSalePace, inferredPace > targetPace → 1.0 (gentle decay)
+#       inferredPace ≤ targetPace → max(1.0, hoursSinceLastPurchase * 0.5) (idle decay)
+
+# ─── INDIVIDUAL FACTOR SCENARIOS ───────────────────────────────────────────
+
+scenarios:
+
+  # ── priceExpansion ──
+
+  - id: expansion-inactive
+    factor: priceExpansion
+    goal: overallPace < 1 → priceExpansion = 1.0 (no expansion)
+    sequence:
+      - { lots: 1, delay_from_start: 11m }
+    # overallPace = (1/0.183h) / 9.259 ≈ 0.59
+    # priceExpansion = 1.0
+    # discount active (partial): discountDepth ≈ 0.51
+    expect:
+      priceExpansion: 1.0
+      discount: partial  # overallPace between floorPoint(0.2) and 1.0
+      price_clamped: true  # unclamped < 0.5, hits minPrice floor
+
+  - id: expansion-active
+    factor: priceExpansion
+    goal: overallPace >> 1 → priceExpansion >> 1.0
+    sequence:
+      - { lots: 25, delay_from_start: 11m }
+    # overallPace = (25/0.183h) / 9.259 ≈ 14.75
+    # priceExpansion = 1 + (14.75-1)*1.2/3 ≈ 6.50
+    # discount = 0 (overallPace well above 1.0)
+    expect:
+      priceExpansion: ">6.0"
+      discount: none
+      price_clamped: true  # unclamped >> 4.2, hits maxPrice ceiling
+
+  - id: expansion-moderate
+    factor: priceExpansion
+    goal: overallPace slightly above 1 → mild expansion
+    sequence:
+      - { lots: 2, delay_from_start: 11m }
+    # overallPace = (2/0.183) / 9.259 ≈ 1.18
+    # priceExpansion = 1 + (0.18)*1.2/3 ≈ 1.072
+    # discount = 0 (overallPace > 1.0)
+    expect:
+      priceExpansion: "~1.07"
+      discount: none
+      price_clamped: false  # should land between 0.5 and 4.2
+
+  # ── progressPricingDiscountDepth ──
+
+  - id: discount-full
+    factor: discount
+    goal: overallPace ≤ floorPoint (0.2) → maximum discount (0.25)
+    sequence:
+      - { lots: 1, delay_from_start: 24h }
+    # overallPace = (1/24h) / 9.259 ≈ 0.0045
+    # discountDepth = 1.0 (pace far below floor)
+    # clampedDiscount = 0.25
+    # overallProgressFactor = (1-0.25)*1.0 = 0.75
+    expect:
+      priceExpansion: 1.0
+      discount: 0.25  # maximum
+      price_clamped: true  # 1.0 * 0.75 * dynamicPace → likely below 0.5
+
+  - id: discount-partial
+    factor: discount
+    goal: overallPace between floorPoint and 1.0 → partial discount
+    sequence:
+      - { lots: 1, delay_from_start: 11m }
+    # Same as expansion-inactive; overallPace ≈ 0.59
+    # aboveFloor = 0.59 - 0.2 = 0.39, relHeight = 0.39/0.8 = 0.49
+    # discountDepth = 0.51, discountEarned = 0.51*0.25 = 0.128
+    # clampedDiscount ≈ 0.128
+    expect:
+      discount: "~0.128"
+      price_clamped: true
+
+  - id: discount-none
+    factor: discount
+    goal: overallPace ≥ 1.0 → discount = 0
+    sequence:
+      - { lots: 5, delay_from_start: 11m }
+    # overallPace = (5/0.183) / 9.259 ≈ 2.95
+    # discountDepth < 0, clamped to 0
+    expect:
+      discount: 0
+      price_clamped: false
+
+  # ── nextSalePace weight selection ──
+
+  - id: dynpace-escalation
+    factor: nextSalePace weight
+    goal: inferredPace > prevSalePace → weight = dynaPaceFasterSaleWeight (0.12)
+    sequence:
+      - { lots: 1, delay_from_start: 11m }
+    # prevSalePace = 1.0
+    # inferredPace = 1/0.183 ≈ 5.46 > 1.0
+    # nextPaceWeight = 0.12 (small escalation)
+    # nextSalePace = (5.46*0.12 + 1.0) / 1.12 ≈ 1.48
+    expect:
+      weight_branch: escalation
+      nextSalePace: "~1.48"
+
+  - id: dynpace-idle-decay
+    factor: nextSalePace weight
+    goal: inferredPace < targetPace, long delay → weight = max(1, hours * 0.5)
+    sequence:
+      - { lots: 1, delay_from_start: 24h }
+    # inferredPace = 1/24 ≈ 0.042 < targetPace 9.259
+    # hoursSinceLastPurchase = 24
+    # nextPaceWeight = max(1.0, 24 * 0.5) = 12.0
+    # nextSalePace = (0.042*12 + 1.0) / 13 ≈ 0.116
+    expect:
+      weight_branch: idle-decay
+      weight: 12.0
+      nextSalePace: "~0.12"
+
+  - id: dynpace-gentle-decay
+    factor: nextSalePace weight
+    goal: inferredPace < prevSalePace but > targetPace → weight = 1.0
+    note: |
+      Requires a second buy where prevSalePace was elevated by a prior fast buy
+      but inferredPace is slower while still above targetPace.
+      Need inferredPace in (9.26, prevSalePace). Achievable by buying fewer lots
+      in the second buy with a moderate time gap.
+    sequence:
+      - { lots: 10, delay_from_start: 11m }       # elevates salePace
+      - { lots: 10, delay_from_prior: 15m }        # slower but still > target
+    # After buy 1: salePace elevated, overallPace high
+    # Buy 2 inferredPace = 10/0.25 = 40 lots/h — likely still > prevSalePace
+    # NEEDS CALIBRATION: may need longer delay or fewer lots in buy 2
+    expect:
+      weight_branch: gentle-decay
+      note: calibrate delay to achieve inferredPace between targetPace and prevSalePace
+
+  # ── pricingFactorDynamicPace ──
+
+  - id: dynpace-factor-first-buy
+    factor: pricingFactorDynamicPace
+    goal: prevPace = initial (1.0), first buy → dynamic pace dominated by prevPace/target
+    sequence:
+      - { lots: 1, delay_from_start: 11m }
+    # prevPace = 1.0, target = 9.259
+    # prevPace/target = 0.108
+    # nextPace ≈ 1.48, nextPace/target ≈ 0.160
+    # dynamicPaceFactor = (0.108*1.0 + 0.160*1.5) / 2.5 ≈ 0.139
+    expect:
+      dynamicPaceFactor: "~0.14"
+
+  - id: dynpace-factor-elevated-prev
+    factor: pricingFactorDynamicPace
+    goal: elevated prevSalePace from prior fast buy → higher dynamic pace factor
+    sequence:
+      - { lots: 10, delay_from_start: 11m }
+      - { lots: 5, delay_from_prior: 11m }
+    # After buy 1: salePace elevated (~3-4)
+    # Buy 2: prevPace/target moderate, nextPace/target moderate
+    expect:
+      dynamicPaceFactor: ">0.14"
+      note: both components elevated by prior fast purchasing
+
+  # ── Price clamping ──
+
+  - id: clamp-to-floor
+    factor: clamping
+    goal: price hits minPrice (0.5) — all discount factors active
+    sequence:
+      - { lots: 1, delay_from_start: 11m }
+    # unclamped ≈ 1.0 * overallProgress(~0.87) * dynamicPace(~0.14) ≈ 0.12
+    # clamped to minPrice 0.5
+    expect:
+      unclamped_below_min: true
+      final_price: 0.5
+
+  - id: clamp-to-ceiling
+    factor: clamping
+    goal: price hits maxPrice (4.2) — all expansion factors active
+    sequence:
+      - { lots: 25, delay_from_start: 11m }
+    # overallPace ≈ 14.75, priceExpansion ≈ 6.5, discount = 0
+    # dynamicPace also high from extreme inferredPace
+    # unclamped >> 4.2
+    expect:
+      unclamped_above_max: true
+      final_price: 4.2
+
+  - id: no-clamp
+    factor: clamping
+    goal: price lands naturally between min and max
+    sequence:
+      - { lots: 5, delay_from_start: 11m }
+    # overallPace ≈ 2.95, priceExpansion ≈ 1.78, discount = 0
+    # dynamicPace moderate
+    # unclamped ≈ 0.52 (just above floor)
+    expect:
+      unclamped_in_range: true
+      note: verify price is between 0.5 and 4.2 without clamping
+
+# ─── COMBINATION SCENARIOS ─────────────────────────────────────────────────
+
+  - id: combo-expansion-plus-fast-dynpace
+    factors: [priceExpansion, dynamicPace-escalation]
+    goal: both factors amplify — rapid large purchases
+    sequence:
+      - { lots: 15, delay_from_start: 11m }
+      - { lots: 15, delay_from_prior: 11m }
+    # Buy 1: high overallPace → expansion >> 1, fast escalation
+    # Buy 2: even higher overallPace + elevated prevSalePace
+    # Price should hit maxPrice ceiling on buy 2
+    expect:
+      buy1_expansion: ">1.0"
+      buy2_price: 4.2  # ceiling
+
+  - id: combo-discount-plus-idle-decay
+    factors: [discount, dynamicPace-idle-decay]
+    goal: both factors suppress — slow sparse purchases
+    sequence:
+      - { lots: 1, delay_from_start: 48h }
+    # overallPace ≈ 0.002, discount = 0.25 (max)
+    # inferredPace ≈ 0.02, idle decay weight = max(1, 48*0.5) = 24
+    # Both factors push price down → hits minPrice floor
+    expect:
+      discount: 0.25
+      weight_branch: idle-decay
+      final_price: 0.5  # floor
+
+  - id: combo-expansion-then-decay
+    factors: [priceExpansion, dynamicPace-idle-decay]
+    goal: fast start then long pause — expansion from cumulative lots, decay from long gap
+    sequence:
+      - { lots: 10, delay_from_start: 11m }
+      - { lots: 1, delay_from_prior: 6h }
+    # Buy 1: high overallPace → expansion, fast dynamic pace
+    # Buy 2: overallPace still > 1 (11 lots total in 6.18h), expansion still active
+    #   but inferredPace = 1/6 ≈ 0.17 << targetPace → idle decay
+    #   weight = max(1, 6*0.5) = 3.0
+    # Opposing forces: expansion pushes up, idle decay on dynamic pace pushes down
+    expect:
+      buy2_expansion: ">1.0"
+      buy2_weight_branch: idle-decay
+      note: price between floor and ceiling — factors partially cancel
+
+  - id: combo-multi-step-escalation
+    factors: [priceExpansion, dynamicPace-escalation, clamping]
+    goal: three successive buys each escalating — price ramps toward ceiling
+    sequence:
+      - { lots: 5, delay_from_start: 11m }
+      - { lots: 5, delay_from_prior: 11m }
+      - { lots: 5, delay_from_prior: 11m }
+    # Each buy: overallPace increases (more lots sold, not much more time)
+    #   prevSalePace escalates each round
+    #   inferredPace stays high (5 lots / ~0.18h ≈ 27)
+    # Price should ramp: buy1 near floor, buy2 moderate, buy3 near/at ceiling
+    expect:
+      price_trend: ascending
+      buy3_near_ceiling: true
+
+# ─── IMPLEMENTATION NOTES ──────────────────────────────────────────────────
+#
+# Test file: src/MarketSale/tests/MarketSale.pricingFactors.test.ts
+# Snapshot: saleNativeTokenCost (activated TUNA-priced sale, no prior buys)
+#
+# Each single-buy scenario: restore saleNativeTokenCost, fund tom, buy, assert.
+# Multi-buy sequences: each buy needs delay_from_prior ≥ 10m (freshness check).
+#
+# Assertions per buy:
+#   - Off-chain lotPrice matches on-chain (txn succeeds = prices agree)
+#   - lotsSold incremented correctly
+#   - For clamping tests: verify the off-chain unclamped price vs final price
+#   - For factor-isolation tests: log-based verification that the expected
+#     branch/weight was used (grep trace output or compute from sale state)
+#
+# Time control:
+#   travelToFuture: new Date(Math.max(startAt + delay, h.network.currentSlot * 1000 + 1000))
+#
+# The priceExpansion fix (1.0 + expansionWhenFast) and floor-based rounding
+# must both be in place for these scenarios to pass.
