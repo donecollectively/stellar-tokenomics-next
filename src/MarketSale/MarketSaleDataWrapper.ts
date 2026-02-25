@@ -341,7 +341,7 @@ export class MarketSaleDataWrapper {
                   realDiv(
                       realMul(
                           toFixedReal(overallPace - 1.0),
-                          settings.progressPricingExpansionWhenFast
+                          1.0 + settings.progressPricingExpansionWhenFast
                       ),
                       3
                   );
