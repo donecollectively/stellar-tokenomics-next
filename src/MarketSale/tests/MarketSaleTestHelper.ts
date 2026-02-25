@@ -589,8 +589,8 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         this.setActor("tina");
         const saleData = await this.exampleDataWithTuna();
         await this.createMarketSale(saleData);
-        // Fund tom with enough TUNA to buy many lots at the test sale price
-        await this.fundActorWithTuna("tom", 10_000n);
+        // No need to fund tom with TUNA here — the sale just records costToken
+        // metadata. TUNA tokens only need to exist at purchase time (Phase 5).
         const pendingSale = await this.findFirstMarketSale();
         return this.activateMarketSale(pendingSale, {
             mintTokenName: pendingSale.data!.details.V1.saleAssets.primaryAssetName,
