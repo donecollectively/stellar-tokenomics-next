@@ -475,7 +475,7 @@ describe("MarketSale plugin", async () => {
                     mktSaleData.details.V1.saleAssets.primaryAssetName,
             });
             await expect(submitting).rejects.toThrow(
-                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
+                /vxfFundsTo must be None/
             );
         });
 
@@ -496,7 +496,7 @@ describe("MarketSale plugin", async () => {
                     mktSaleData.details.V1.saleAssets.primaryAssetName,
             });
             await expect(submitting).rejects.toThrow(
-                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
+                /vxfTokensTo must be None/
             );
         });
 
@@ -1819,7 +1819,7 @@ describe("MarketSale plugin", async () => {
             );
 
             await expect(updating).rejects.toThrow(
-                /PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/
+                /vxfFundsTo must be None/
             );
         });
 
@@ -2061,7 +2061,7 @@ describe("MarketSale plugin", async () => {
             const pausedSale = await h.findFirstMarketSale();
             await expect(h.resumeMarketSale(pausedSale, { expectError: true },
                 { details: { V1: { ...pausedSale.data!.details.V1, fixedSaleDetails: { ...pausedSale.data!.details.V1.fixedSaleDetails, vxfFundsTo: { Anywhere: {} } }}}}))
-                .rejects.toThrow(/PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/);
+                .rejects.toThrow(/fixedSaleDetails can't be modified/);
         });
     });
 
@@ -2082,10 +2082,12 @@ describe("MarketSale plugin", async () => {
             expect(updated.data!.details.V1.fixedSaleDetails.settings.targetPrice).toEqual(2.0);
 
             // Wiring proof: shared validateCommonUpdateChecks pipeline ran
+            // Note: REQT-6z88fg6j2s (VXF None-Mode Enforcement) not expected here —
+            // the check only traces when VXF fields are Some (to reject). In the happy
+            // path they're already None so the REQT isn't emitted.
             h.assertEnforcedReqts(tcx, [
                 "REQT-ntdbhc1xss",  // UTxO Value Unchanged — no token movement during edits
                 "REQT-rg5zyhd2gb",  // ThreadInfo Frozen — equality check
-                "REQT-6z88fg6j2s",  // VXF None-Mode Enforcement — vxfTokensTo/vxfFundsTo must be None
                 "REQT-b731sye0fz",  // Settings Bounds Validation When Paused — sane pricing ranges
                 "REQT-y16j4t955c",  // Name Length — at least 10 characters (via validate())
                 "REQT-egttdcamhg",  // Non-Empty Assets — saleLotAssets, totalSaleLots, etc. (via validate())
@@ -2109,7 +2111,7 @@ describe("MarketSale plugin", async () => {
                     }}},
                     expectError: true,
                 },
-            )).rejects.toThrow(/PLACEHOLDER_ERROR_MSG_UPDATE_AFTER_ONCHAIN/);
+            )).rejects.toThrow(/vxfFundsTo must be None/);
         });
 
         // Frozen-field tests: these bypass the helper (which structurally prevents

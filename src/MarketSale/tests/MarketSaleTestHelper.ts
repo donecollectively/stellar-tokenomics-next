@@ -426,8 +426,8 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         editableFields: {
             name?: string;
             settings?: Partial<MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["settings"]>;
-            vxfTokensTo?: MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["vxfTokensTo"];
-            vxfFundsTo?: MarketSaleDataLike["details"]["V1"]["fixedSaleDetails"]["vxfFundsTo"];
+            // vxfTokensTo/vxfFundsTo removed — under None-mode (REQT/1h49829nsx)
+            // these are not editable. Use rawUpdate to test policy rejection.
         },
         options: TestHelperSubmitOptions & {
             /** Bypasses editableFields guard — passes raw updatedFields
@@ -464,13 +464,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
                                 ...editableFields.settings,
                             },
                         }),
-                        // Editable: vxfTokensTo, vxfFundsTo (validate if present)
-                        ...(editableFields.vxfTokensTo !== undefined && {
-                            vxfTokensTo: editableFields.vxfTokensTo,
-                        }),
-                        ...(editableFields.vxfFundsTo !== undefined && {
-                            vxfFundsTo: editableFields.vxfFundsTo,
-                        }),
+                        // vxfTokensTo/vxfFundsTo: not editable under None-mode (REQT/1h49829nsx)
                     },
                 },
             },
