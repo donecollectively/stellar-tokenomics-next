@@ -2368,6 +2368,20 @@ describe("MarketSale plugin", async () => {
             expect(afterSale.data!.details.V1).toEqual(prevData.details.V1);
         });
 
+        // SoldOut is a valid withdrawal state per REQT/ayvw26q6av, and the
+        // WithdrawingProceeds handler accepts it (MarketSalePolicy.hl line 745).
+        // However, the SoldOut state transition itself is not yet implemented
+        // on-chain (line 772: `SoldOut => error("todo: SoldOut")`), so we
+        // cannot reach this state to test withdrawal from it.
+        it("withdraws ADA from a SoldOut sale (withdraw-while-soldout/REQT/ayvw26q6av)", async () => {
+            console.log(
+                "⚠️  UNTESTABLE: SoldOut state transition not yet implemented on-chain.\n" +
+                "   MarketSalePolicy.hl has `SoldOut => error(\"todo: SoldOut\")`.\n" +
+                "   WithdrawingProceeds accepts SoldOut (line 745) but we can't reach it.\n" +
+                "   Add real test when SoldOut transition is implemented."
+            );
+        });
+
         it("rejects withdrawal from an Active sale (withdraw-active-rejected/REQT/ayvw26q6av)", async (context: STOK_TC) => {
             const { h } = context;
             await h.reusableBootstrap();
