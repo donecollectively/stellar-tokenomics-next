@@ -304,6 +304,7 @@ Governs the denomination of sale pricing — which token buyers pay with. Define
  - 8.3.0: REQT-xwyp5rq40j: **COMPLETED**/consented: **Pricing Model Validation**
      - 8.3.1: REQT-jdkhmeg463: **COMPLETED**/consented: **Payment Matches Pricing Strategy** - SellingTokens MUST verify that the payment (paidValue) matches `lotSellPrice × lotsPurchased` as determined by the DynamicSaleV1 pricing strategy.
      - 8.3.2: REQT-yrw1e9vjdc: **COMPLETED**/consented: **Pricing Strategy Validates Updated Details** - The pricing strategy MUST validate that the updated sale details (pace, progress) are consistent with its own computations via `validateUpdatedDetails()`.
+     - 8.3.3: REQT-jxdnb3dxmx: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Payment Denomination Enforcement** - SellingTokens MUST reject payment in any token other than the designated cost token. When `costToken` is ADA, paidValue MUST contain no non-ADA assets. When `costToken` is Other, paidValue's non-ADA assets MUST be only the designated cost token — no other tokens accepted.
  - 8.4.0: REQT-eqd2j44phf: **NEXT**/draft: **Settings Editability While Paused**
      - 8.4.1: REQT-b731sye0fz: **NEXT**/draft: **Settings Bounds Validation When Paused** - Updated `settings` while Paused MUST pass the same bounds validation as when Pending — `validateDetailsWhenPending()` applies (the function name is misleading; the checks are state-independent sane bounds).
 
@@ -401,13 +402,13 @@ Governs the denomination of sale pricing — which token buyers pay with. Define
 
 ## Area 14: Cost Token Denomination
 
-### **REQT-14.0/90fsr7px0z**: **NEXT**/draft: **Cost Token Denomination**
+### **REQT-14.0/90fsr7px0z**: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Cost Token Denomination**
 #### Purpose: Governs the denomination of sale pricing — which token buyers pay with. Applied when implementing or reviewing pricing validation, lifecycle transition UTxO checks, proceeds withdrawal, or any code path converting between Real prices and on-chain Values.
 
- - 14.1.0: REQT-nb3v1zg4fv: **NEXT**/draft: **CostToken Enum Definition**
-     - 14.1.1: REQT-j7cf4ew85g: **NEXT**/draft: **ADA Variant** - `CostToken::ADA` MUST represent ADA-denominated pricing with an implicit scale of 6 (1 ADA = 10^6 lovelace). The variant carries no fields.
-     - 14.1.2: REQT-y5gge63n84: **NEXT**/draft: **Other Variant** - `CostToken::Other` MUST carry `mph: MintingPolicyHash`, `tokenName: ByteArray`, and `scale: Int` fields identifying a non-ADA cost token and its decimal precision.
- - 14.2.0: REQT-4zkj5q4n38: **NEXT**/draft: **CostToken in Settings** - `DynamicSaleV1Settings` MUST include a `costToken: CostToken` field that determines which token buyers pay with. Settings validation MUST reject `CostToken::Other` with `scale` outside the range 1–19.
+ - 14.1.0: REQT-nb3v1zg4fv: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **CostToken Enum Definition**
+     - 14.1.1: REQT-j7cf4ew85g: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **ADA Variant** - `CostToken::ADA` MUST represent ADA-denominated pricing with an implicit scale of 6 (1 ADA = 10^6 lovelace). The variant carries no fields.
+     - 14.1.2: REQT-y5gge63n84: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Other Variant** - `CostToken::Other` MUST carry `mph: MintingPolicyHash`, `tokenName: ByteArray`, and `scale: Int` (the multiplier from macro-token to micro-token units, e.g. 1_000_000 for 6 decimal places) identifying a non-ADA cost token and its base-unit conversion factor.
+ - 14.2.0: REQT-4zkj5q4n38: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **CostToken in Settings** - `DynamicSaleV1Settings` MUST include a `costToken: CostToken` field that determines which token buyers pay with. Settings validation MUST reject `CostToken::Other` with `scale` multiplier outside the range 1–10^19.
 
 
 # Files
