@@ -95,7 +95,7 @@
     },
     "devDependencies": {
         "@babel/runtime": ">=7.26.10",
-        "@donecollectively/stellar-contracts": "github:donecollectively/stellar-contracts#semver:0.9.4-beta.1",
+        "@donecollectively/stellar-contracts": "https://raw.githubusercontent.com/donecollectively/stellar-contracts/0.9.5-beta.1/stellar-contracts-0.9.5-beta.1.tgz",
         "@helios-lang/cbor": "^0.3.1",
         "@helios-lang/codec-utils": "^0.3.4",
         "@helios-lang/compiler": "^0.17.31",
