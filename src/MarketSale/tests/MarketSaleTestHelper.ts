@@ -313,7 +313,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSaleActivated",
-        builderVersion: 2,  // v2: buys 5 lots before pausing (accumulated funds for WithdrawingProceeds)
+        builderVersion: 3,  // v3: travelToFuture for buy (freshness check after upstream tcx.txnTime fix)
     })
     async snapToFirstMarketSalePaused() {
         throw new Error("never called; see firstMarketSalePaused()");
@@ -323,8 +323,13 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     async firstMarketSalePaused() {
         // Buy some lots so the UTxO has accumulated funds (needed for WithdrawingProceeds tests)
         const activeSale = await this.findFirstMarketSale();
+        const startAt = activeSale.data!.details.V1.fixedSaleDetails.startAt;
+        const nowMs = this.network.currentSlot * 1000;
+        const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
         this.setActor("tom");
-        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing");
+        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing", {
+            travelToFuture: buyTime,
+        });
         const saleAfterBuy = await this.findFirstMarketSale();
         this.setActor("tina");
         return this.stopMarketSale(saleAfterBuy);
@@ -509,8 +514,9 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     /**
      * Withdraws cost-token proceeds from a sale UTxO.
      *
-     * @param macroAmount - withdrawal in whole cost-token units (e.g. 5 = 5 TUNA = 5_000
-     *   micro-TUNA when scale=1_000, or 5 ADA = 5_000_000 lovelace when scale=1_000_000).
+     * @param macroAmount - withdrawal in cost-token units (e.g. 5.0 = 5 TUNA = 5_000
+     *   micro-TUNA when scale=1_000, or 2.0 ADA = 2_000_000 lovelace when scale=1_000_000).
+     *   Fractional amounts supported (e.g. 1.9 ADA, 42.8 TUNA).
      *   Scale is read from the sale's costToken field.
      */
     async withdrawProceeds(
@@ -590,6 +596,10 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         const saleData = await this.exampleDataWithTuna();
         await this.createMarketSale(saleData);
         const pendingSale = await this.findFirstMarketSale();
+        console.log("🔍 DIAG saleNativeTokenCost: currentSlot =", this.network.currentSlot);
+        console.log("🔍 DIAG saleNativeTokenCost: currentSlot*1000 =", this.network.currentSlot * 1000);
+        console.log("🔍 DIAG saleNativeTokenCost: Date.now() =", Date.now());
+        console.log("🔍 DIAG saleNativeTokenCost: startAt =", pendingSale.data!.details.V1.fixedSaleDetails.startAt);
         return this.activateMarketSale(pendingSale, {
             mintTokenName: pendingSale.data!.details.V1.saleAssets.primaryAssetName,
         });
