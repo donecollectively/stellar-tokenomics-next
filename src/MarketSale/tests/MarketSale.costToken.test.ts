@@ -24,7 +24,6 @@ import {
 } from "./MarketSaleTestHelper.js";
 import { makeValue } from "@helios-lang/ledger";
 import { textToBytes } from "@donecollectively/stellar-contracts";
-
 describe("CostToken / Non-ADA Pricing", () => {
 
 // ── CostToken Settings Validation ────────────────────────────────────────────
@@ -256,7 +255,7 @@ describe("WithdrawingProceeds Non-ADA (REQT/gy6jd9cjkg)", () => {
         const prevUtxoAssets = pausedSale.utxo.value.assets;
 
         // Withdraw 1 macro-TUNA of proceeds
-        await h.withdrawProceeds(pausedSale, 1n);
+        await h.withdrawProceeds(pausedSale, 1.0);
 
         const afterWithdraw = await h.findFirstMarketSale();
         // Datum unchanged
