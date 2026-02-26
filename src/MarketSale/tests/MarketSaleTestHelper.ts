@@ -515,7 +515,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
      */
     async withdrawProceeds(
         marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
-        macroAmount: bigint,
+        macroAmount: number,
         submitOptions: TestHelperSubmitOptions = {}
     ) {
         const mktSaleDgt = await this.mktSaleDgt();
@@ -523,7 +523,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
             marketSale.data!.details.V1.fixedSaleDetails.settings.costToken;
         const scale =
             "Other" in costToken ? costToken.Other.scale : 1_000_000n;
-        const smallestAmount = macroAmount * scale;
+        const smallestAmount = BigInt(Math.floor(macroAmount * Number(scale)));
 
         console.log(
             `  ----- ⚗️ withdrawing ${macroAmount} macro-tokens (${smallestAmount} smallest units) from market sale`
