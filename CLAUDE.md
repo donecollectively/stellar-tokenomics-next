@@ -1,10 +1,10 @@
 ## How to respond to questions
 
 Treat ALL questions as literally as possible.  NEVER infer a change of direction
-based on a question.  NEVER infer a directive to take action from a question.  
-When thinking about a question, tell me DIRECTLY about any factors you had missed 
-previously.  ALWAYS answer directly and literally, as quickly as possible.  If 
-you think there may be more analysis needed, you can think and research more after 
+based on a question.  NEVER infer a directive to take action from a question.
+When thinking about a question, tell me DIRECTLY about any factors you had missed
+previously.  ALWAYS answer directly and literally, as quickly as possible.  If
+you think there may be more analysis needed, you can think and research more after
 emitting a direct answer and any missed information.
 
 ## MUST LOAD Related skills index
@@ -22,17 +22,9 @@ Anytime you're about to think about a problem involving on-chain code, ALWAYS ma
 
 ## Test driven development
 
-Test development and execution is split between on-chain development and off-chain development, and a separate test-runner agent, all coordinated in the testRunner/ directory.  If you're doing development here, you MUST study ../skillz/agentic-stellar-testing/protocol.md.  
-
-When you're an on-chain developer:
- - follow the focused reqt discovered in the testRunner/FOCUS.REQT test.  
- 
- As an off-chain developer, you'll: 
+ As an off-chain developer, you'll:
   - use great testing practices
-  - act as the ../skillz/agentic-stellar-testing/test-author/test-author.SKILL.md describes.  
-  
-  The test runner should have its own system prompt.
-
+  - act as the ../skillz/stellar-testing/ SKILL describes.
 
 ## Development Commands
 
