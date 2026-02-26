@@ -327,7 +327,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSaleActivated",
-        builderVersion: 3,  // v3: travelToFuture for buy (freshness check after upstream tcx.txnTime fix)
+        builderVersion: 4,  // v4: base buyTime on lastPurchaseAt (not startAt) — chunkAge must exceed 10min from activation
     })
     async snapToFirstMarketSalePaused() {
         throw new Error("never called; see firstMarketSalePaused()");
@@ -337,9 +337,9 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     async firstMarketSalePaused() {
         // Buy some lots so the UTxO has accumulated funds (needed for WithdrawingProceeds tests)
         const activeSale = await this.findFirstMarketSale();
-        const startAt = activeSale.data!.details.V1.fixedSaleDetails.startAt;
+        const lastPurchaseAt = activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
         const nowMs = this.network.currentSlot * 1000;
-        const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
+        const buyTime = new Date(Math.max(lastPurchaseAt + 11 * 60 * 1000, nowMs + 1000));
         this.setActor("tom");
         await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing", {
             travelToFuture: buyTime,
