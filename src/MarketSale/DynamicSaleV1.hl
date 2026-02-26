@@ -3,6 +3,7 @@ module DynamicSaleV1
 import {
     REQT,
     bREQT,
+    bREQTgroup,
     TODO
 } from StellarHeliosHelpers
 
@@ -11,6 +12,7 @@ import {
 } from MarketSaleData
 
 import {
+    CostToken,
     DynamicSaleV1Settings
 } from DynamicSaleV1Settings
 
@@ -118,29 +120,64 @@ struct DynamicSaleV1 {
     // updatedState: DynamicSaleV1State
 
     func isRightPayment(self, lotPrice: Value, payment: Value) -> Bool {
-        expectedPrice = self.lotPriceForSale();
-        actualPrice : Real = lotPrice.get_lovelace() / 1_000_000.0;
-        print("    ---- actual price " + actualPrice.show());
-        print("    ---- expected price " + expectedPrice.show());
-        diff : Real = (actualPrice - expectedPrice);
-        if (diff.abs() > 0.000002) {
-            error("incorrect lot price in redeemer")
-        } else if (diff.abs() > 0.0) {
-            print("  -- unit price is close enough, delta = "+diff.show())
-        };
-        // if the actual price is "close enough" to expected, then the expected payment is...
-        // the ACTUAL price * lot-count
-        expectedPayment : Real = actualPrice * self.purchase.lotsPurchased;
-        // todo: support non-ADA payments
-        actualPayment : Real = payment.get_lovelace() / 1_000_000.0;
-        
-        print("    ---- expected payment " + expectedPayment.show() + " +/- 0.000002");
-        print("    ---- actual payment " + actualPayment.show());
-        assert(payment.get_assets().is_zero(), "non-ADA assets not yet supported here");
+        costToken : CostToken = self.settings.costToken;
+        scale : Int = costToken.costTokenScale();
 
-        paymentDiff : Real = (actualPayment - expectedPayment);
-        assert(paymentDiff == 0.0, "payment amount is not correct")
-        true
+        // Convert computed Real price to micro-tokens — single Real→Int boundary
+        expectedPriceMicro : Int = (self.lotPriceForSale() * scale).floor();
+        actualPriceMicro : Int = costToken.microTokensFromValue(lotPrice);
+
+        print("    ---- actual price (micro): " + actualPriceMicro.show());
+        print("    ---- expected price (micro): " + expectedPriceMicro.show());
+
+        priceDiff : Int = actualPriceMicro - expectedPriceMicro;
+        if (priceDiff.abs() > 2) {
+            error("incorrect lot price in redeemer")
+        } else if (priceDiff != 0) {
+            print("  -- unit price close enough, delta = " + priceDiff.show() + " micro-tokens")
+        };
+
+        // Use ACTUAL price for payment (redeemer honesty verified above)
+        expectedPaymentMicro : Int = actualPriceMicro * self.purchase.lotsPurchased;
+        actualPaymentMicro : Int = costToken.microTokensFromValue(payment);
+
+        print("    ---- expected payment (micro): " + expectedPaymentMicro.show());
+        print("    ---- actual payment (micro): " + actualPaymentMicro.show());
+
+        bREQTgroup(
+            reqt: "rejects payment containing unexpected tokens (REQT-jxdnb3dxmx)",
+            collapsed: true,
+            callback: () -> Bool {
+                costToken.switch {
+                    ADA => {
+                        extraAssets : Value = payment.get_assets();
+                        if (!extraAssets.is_zero()) {
+                            error("non-ADA assets not accepted for ADA-priced sale: " + extraAssets.show())
+                        }
+                    },
+                    Other{mph, tokenName, _} => {
+                        costAmount : Int = payment.get_policy(mph).get(tokenName);
+                        expectedAssets : Value = Value::new(AssetClass::new(mph, tokenName), costAmount);
+                        extraAssets : Value = payment.get_assets() - expectedAssets;
+                        if (!extraAssets.is_zero()) {
+                            error("unexpected tokens in payment — only cost token accepted. Extra: " + extraAssets.show())
+                        }
+                    }
+                };
+                true
+            }
+        )
+        && bREQTgroup(
+            reqt: "rejects underpayment or overpayment beyond 0.02 tolerance (REQT-jdkhmeg463)",
+            collapsed: true,
+            callback: () -> Bool {
+                overpaymentMicro : Int = scale / 50;
+                paymentDiff : Int = actualPaymentMicro - expectedPaymentMicro;
+                assert(paymentDiff >= 0, "underpayment");
+                assert(paymentDiff <= overpaymentMicro, "overpayment exceeds 0.02 tolerance");
+                true
+            }
+        )
     }
 
     // func updatedSettings(self) -> DynamicSaleV1Settings {

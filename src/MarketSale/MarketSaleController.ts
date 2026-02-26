@@ -133,6 +133,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         updated: MarketSaleDataLike,
         { activity, original, tcx }: updateContext<ErgoMarketSaleData>
     ) {
+        console.log("🔍 DIAG beforeUpdate: activityName =", JSON.stringify(activity.activityName), "activity keys =", Object.keys(activity), "state =", JSON.stringify(Object.keys(original.details.V1.saleState.state)));
         // doesn't interfere with the transaction-builder for selling while active:
         if (original.details.V1.saleState.state.Active) {
             return updated;
@@ -147,8 +148,10 @@ export class MarketSaleController extends WrappedDgDataContract<
         // REQT/stf3bz3fkk (Progress Timestamps Freshened at Activation) —
         // freshen timestamps only for the Activating activity (not UpdatingPendingSale)
         //throw new Error("activity details: "+ activity.details);
+        console.log("🔍 DIAG beforeUpdate: activityName =", JSON.stringify(activity.activityName), "activity keys =", Object.keys(activity), "activityData =", dumpAny(activity.activityData), "state =", JSON.stringify(Object.keys(original.details.V1.saleState.state)));
         if (activity.activityName == "DelegateActivity.SpendingActivities.Activating") {
             const activationTime = tcx.txnTime.getTime();
+            console.log("🔍 DIAG beforeUpdate: activationTime =", activationTime, "txnTime =", tcx.txnTime.toString());
             return {
                 ...updated,
                 details: {
@@ -276,6 +279,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                             dynaPaceIdleDecayRate: 0.5,
 
                             pricingWeightDynaPace: 1.5,
+                            costToken: { ADA: {} },
                         },
                         startAt: startTime,
                         vxfTokensTo: undefined,
@@ -705,6 +709,8 @@ export class MarketSaleController extends WrappedDgDataContract<
 
         // REQT/ykqx9qgh88 (Datum Fields Unchanged) — no updatedFields
         // REQT/5r79v9b4ht (No Constraint on Withdrawal Amount) — caller specifies amount
+        // REQT/gy6jd9cjkg (Tokens Must Remain) — only cost token is withdrawn
+        const withdrawalValue = this.mkCostTokenValue(mktSale, -withdrawalAmount);
         return this.mkTxnUpdateRecord(
             mktSale,
             {
@@ -719,7 +725,7 @@ export class MarketSaleController extends WrappedDgDataContract<
                         },
                     },
                 },
-                addedUtxoValue: makeValue(-withdrawalAmount),
+                addedUtxoValue: withdrawalValue,
             },
             tcx
         );
@@ -940,6 +946,85 @@ export class MarketSaleController extends WrappedDgDataContract<
     // }
 
     /**
+     * Extracts the costToken from the sale's settings in ergo (intersected enum) form.
+     */
+    private getCostToken(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>
+    ) {
+        return (mktSale.data! as ErgoMarketSaleData)
+            .details.V1.fixedSaleDetails.settings.costToken;
+    }
+
+    /**
+     * Returns the multiplier from macro-token to micro-token units.
+     * Matches on-chain CostToken::costTokenScale() — e.g. 1_000_000 for ADA.
+     * REQT/nb3v1zg4fv (CostToken Enum Definition) — scale-aware conversion
+     */
+    costTokenScale(mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>) : number {
+        const costToken = this.getCostToken(mktSale);
+        if (costToken.Other) return Number(costToken.Other.scale);
+        return 1_000_000; // ADA: 1 ADA = 10^6 lovelace
+    }
+
+    /**
+     * Returns true when the sale's cost token is ADA.
+     * REQT/j7cf4ew85g (ADA Variant) — identifies ADA-denominated sales
+     */
+    costTokenIsADA(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>
+    ): boolean {
+        return !this.getCostToken(mktSale).Other;
+    }
+
+    /**
+     * Creates a Value denominated in the sale's cost token.
+     * For ADA sales, this is a lovelace Value; for non-ADA sales,
+     * it will be a token Value using the cost token's mph and name.
+     * REQT/y5gge63n84 (Other Variant) — token-specific Value construction
+     */
+    mkCostTokenValue(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        amount: bigint
+    ): Value {
+        const costToken = this.getCostToken(mktSale);
+        if (!costToken.Other) {
+            return makeValue(amount);
+        }
+        const { mph, tokenName } = costToken.Other;
+        return makeValue(mph, tokenName, amount);
+    }
+
+    /**
+     * Additional value to include in the sale UTxO during a purchase, beyond
+     * the cost-token payment. Default: zero (no-op).
+     * Override to return a non-zero fee; the caller finds and adds the
+     * covering UTxO from the actor's wallet automatically.
+     * Mockable for spam-token injection tests (REQT-jxdnb3dxmx).
+     */
+    additionalPurchaseFee(
+        _mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+    ): Value {
+        return makeValue(0n);
+    }
+
+    /**
+     * Extracts the cost-token quantity from a Value, in smallest-unit terms.
+     * For ADA sales, returns lovelace; for non-ADA, returns the token quantity.
+     * REQT/y5gge63n84 (Other Variant) — token-specific quantity extraction
+     */
+    costTokenAmount(
+        mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+        v: Value
+    ): bigint {
+        const costToken = this.getCostToken(mktSale);
+        if (!costToken.Other) {
+            return v.lovelace;
+        }
+        const { mph, tokenName } = costToken.Other;
+        return v.assets.getPolicyTokenQuantity(mph, tokenName);
+    }
+
+    /**
     * Computes the dynamic purchase price for the given number of lots, based on the current time
     * and the current state of a specific market sale instance.
     */
@@ -954,11 +1039,15 @@ export class MarketSaleController extends WrappedDgDataContract<
             now: tcx.txnTime,
             lotCount: BigInt(lotsPurchased),
         };
-        const lotPriceAda = mktSaleObj.getLotPrice(pCtx);
-        const totalAda = realMul(Number(lotsPurchased), lotPriceAda);
+        const lotPriceReal = mktSaleObj.getLotPrice(pCtx);
+        const scale = this.costTokenScale(mktSale);
+        // floor() to match on-chain: (lotPriceForSale() * scale).floor()
+        const toSmallestUnit = (real: number) =>
+            BigInt(Math.floor(scale * real));
+        const lotPriceMicro = toSmallestUnit(lotPriceReal);
         return {
-            lotPrice: makeValue(this.ADA(lotPriceAda)),
-            totalSalePrice: makeValue(this.ADA(totalAda)),
+            lotPrice: this.mkCostTokenValue(mktSale, lotPriceMicro),
+            totalSalePrice: this.mkCostTokenValue(mktSale, lotPriceMicro * BigInt(lotsPurchased)),
         };
     }
 
@@ -968,10 +1057,9 @@ export class MarketSaleController extends WrappedDgDataContract<
     */
     computeLotsForPurchase(
         mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
-        fundsAvailable: Value,
+        costTokensAvailable: Value,
         tcx: StellarTxnContext<any>
     ): { lots: number; lotPrice: Value; totalSalePrice: Value } {
-        const availableLovelace = fundsAvailable.lovelace;
         const saleData = mktSale.data!;
         const settings = saleData.details.V1.fixedSaleDetails.settings;
         const saleAssets = saleData.details.V1.saleAssets;
@@ -983,7 +1071,7 @@ export class MarketSaleController extends WrappedDgDataContract<
             remainingLots
         );
 
-        if (upperBound <= 0 || availableLovelace <= 0n) {
+        if (upperBound <= 0 || this.costTokenAmount(mktSale, costTokensAvailable) <= 0n) {
             return { lots: 0, ...this.salePricePerLot(mktSale, 1, tcx) };
         }
 
@@ -997,7 +1085,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         const canAfford = (lots: number): boolean => {
             if (lots <= 0) return true;
             const result = this.salePricePerLot(mktSale, lots, tcx);
-            if (result.totalSalePrice.lovelace <= availableLovelace) {
+            if (costTokensAvailable.isGreaterOrEqual(result.totalSalePrice)) {
                 lastAffordable = result;
                 return true;
             }
@@ -1013,11 +1101,12 @@ export class MarketSaleController extends WrappedDgDataContract<
         }
 
         // Seed lo with target-price guess if affordable
-        const availableAda = Number(availableLovelace) / 1_000_000;
+        const scale = this.costTokenScale(mktSale);
+        const availableCostTokens = Number(this.costTokenAmount(mktSale, costTokensAvailable)) / scale;
         const targetGuess = Math.max(
             1,
             Math.min(
-                Math.floor(availableAda / settings.targetPrice),
+                Math.floor(availableCostTokens / settings.targetPrice),
                 upperBound
             )
         );
@@ -1071,13 +1160,13 @@ export class MarketSaleController extends WrappedDgDataContract<
         const nextSalePace = mktSaleObj.computeNextSalePace(pCtx);
         console.log("    -- next sale pace", nextSalePace);
 
-        const pmtLovelace = totalSalePrice.lovelace;
-        const addedUtxoValue = totalSalePrice.subtract(tokenValuePurchase);
+        const purchaseFee = this.additionalPurchaseFee(mktSale);
+        const addedUtxoValue = totalSalePrice.subtract(tokenValuePurchase)
+            .add(purchaseFee);
 
         console.log("    -- existing value", dumpAny(mktSale.utxo.value));
         console.log("    -- tokenValuePurchase", dumpAny(tokenValuePurchase));
         console.log("    -- value adjustment", dumpAny(addedUtxoValue));
-        console.log("    -- payment lovelace", pmtLovelace);
         console.log("    -- payment", dumpAny(totalSalePrice));
 
         const { lastPurchaseAt: prevPurchaseAt } =
@@ -1088,9 +1177,12 @@ export class MarketSaleController extends WrappedDgDataContract<
             5 * 60 * 1000 // 5 minutes
         );
 
+        const paymentPredicate = this.costTokenIsADA(mktSale)
+            ? this.uh.mkValuePredicate(totalSalePrice.lovelace, tcxIn)
+            : this.uh.mkTokenPredicate(totalSalePrice);
         const paymentUtxo = await this.uh.findActorUtxo(
             "token-purchase payment",
-            this.uh.mkValuePredicate(pmtLovelace, tcxIn),
+            paymentPredicate,
             {
                 exceptInTcx: tcx,
             }
@@ -1100,6 +1192,17 @@ export class MarketSaleController extends WrappedDgDataContract<
             tcx2.addInput(paymentUtxo) as TCX & typeof tcx;
         } else {
             throw new Error("no payment utxo found");
+        }
+
+        // If there's an additional purchase fee, find a UTxO covering it
+        if (purchaseFee.lovelace > 0n || !purchaseFee.assets.isZero()) {
+            const feeUtxo = await this.uh.findActorUtxo(
+                "additional purchase fee",
+                this.uh.mkTokenPredicate(purchaseFee),
+                { exceptInTcx: tcx2 }
+            );
+            if (!feeUtxo) throw new Error("no UTxO found for additional purchase fee");
+            tcx2.addInput(feeUtxo);
         }
 
         const { lotCount, lotsSold } =

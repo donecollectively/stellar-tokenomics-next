@@ -63,6 +63,8 @@ import type {
     SaleProgressDetailsV1, ErgoSaleProgressDetailsV1, SaleProgressDetailsV1Like,
     MarketSaleState, ErgoMarketSaleState, MarketSaleStateLike,
     OtherSaleStateV1, ErgoOtherSaleStateV1, OtherSaleStateV1Like,
+    CostToken$Other, CostToken$Ergo$Other, CostToken$OtherLike,
+    CostToken, ErgoCostToken, CostTokenLike,
     DynamicSaleV1Settings, ErgoDynamicSaleV1Settings, DynamicSaleV1SettingsLike,
     RelativeDelegateLink, ErgoRelativeDelegateLink, RelativeDelegateLinkLike,
     VxfExpectedActivity$SpecificRedeemerId, VxfExpectedActivity$Ergo$SpecificRedeemerId, VxfExpectedActivity$SpecificRedeemerIdLike,
@@ -189,6 +191,10 @@ export class MarketSalePolicyDataBridge extends ContractDataBridge {
        */
         MarketSaleState: new MarketSaleStateHelper({isMainnet: this.isMainnet}),
       /**
+       * generates UplcData for the enum type ***CostToken*** for the `BasicDelegate` script
+       */
+        CostToken: new CostTokenHelper({isMainnet: this.isMainnet}),
+      /**
        * generates UplcData for the enum type ***VxfExpectedActivity*** for the `BasicDelegate` script
        */
         VxfExpectedActivity: new VxfExpectedActivityHelper({isMainnet: this.isMainnet}),
@@ -310,6 +316,7 @@ export class MarketSalePolicyDataBridge extends ContractDataBridge {
        */
         DynamicSaleV1Settings: (fields: DynamicSaleV1SettingsLike | {
     targetPrice: /*minStructField*/ number
+    costToken: /*minStructField*/ CostTokenLike
     targetedSellingTime: /*minStructField*/ IntLike
     minPrice: /*minStructField*/ number
     maxPrice: /*minStructField*/ number
@@ -584,6 +591,27 @@ export class MarketSalePolicyDataBridgeReader extends DataBridgeReaderClass {
         const cast = typeHelper.ᱺᱺcast;
 
         return cast.fromUplcData(d) as ErgoMarketSaleState;
+    } /* enumReader helper */
+
+    /**
+        * reads UplcData *known to fit the **CostToken*** enum type,
+        * for the BasicDelegate script.
+        * #### Standard WARNING
+        *
+        * This is a low-level data-reader for use in ***advanced development scenarios***.
+        *
+        * Used correctly with data that matches the enum type, this reader
+        * returns strongly-typed data - your code using these types will be safe.
+        *
+        * On the other hand, reading non-matching data will not give you a valid result.
+        * It may throw an error, or it may throw no error, but return a value that
+        * causes some error later on in your code, when you try to use it.
+        */
+    CostToken(d : UplcData) {
+        const typeHelper = this.bridge.types.CostToken;
+        const cast = typeHelper.ᱺᱺcast;
+
+        return cast.fromUplcData(d) as ErgoCostToken;
     } /* enumReader helper */
 
     /**
@@ -1456,6 +1484,48 @@ export class OtherSaleStateV1Helper extends DataBridge {
     //    return this.ᱺᱺcast.toUplcData(fields);
     //}
 } //mkStructHelperClass 
+
+
+/**
+ * Helper class for generating UplcData for variants of the ***CostToken*** enum type.
+ * @public
+ * @remarks
+ * this class is not intended to be used directly.  Its methods are available through automatic accesors in the parent struct, contract-datum- or contract-activity-bridges. */
+export class CostTokenHelper extends EnumBridge<JustAnEnum> {
+    /*mkEnumHelperClass*/
+    /**
+            * @internal
+            *  uses unicode U+1c7a - sorts to the end */
+    ᱺᱺcast = makeCast<CostToken, CostTokenLike>(
+        CostTokenSchema,
+        { isMainnet: this.isMainnet, unwrapSingleFieldEnumVariants: true }
+    );
+
+/**
+ * (property getter): UplcData for ***"DynamicSaleV1Settings::CostToken.ADA"***
+ * @remarks - ***tagOnly*** variant accessor returns an empty ***constrData#0***
+ */
+    get ADA() {
+        const uplc = this.mkUplcData({ ADA: {} }, 
+            "DynamicSaleV1Settings::CostToken.ADA");
+        return uplc;
+    } /* tagOnly variant accessor */
+
+    /**
+     * generates  UplcData for ***"DynamicSaleV1Settings::CostToken.Other"***
+     * @remarks - ***CostToken$OtherLike*** is the same as the expanded field-types.
+     */
+    Other(fields: CostToken$OtherLike | { 
+        mph: MintingPolicyHash | string | number[],
+        tokenName: number[],
+        scale: IntLike
+    }) : UplcData {
+        const uplc = this.mkUplcData({
+            Other: fields 
+        }, "DynamicSaleV1Settings::CostToken.Other");
+       return uplc;
+    } /*multiFieldVariant enum accessor*/
+}/*mkEnumHelperClass*/
 
 
 /**
@@ -2519,6 +2589,18 @@ export class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
     }
 
     /**
+     * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.WithdrawingProceeds"***
+     */
+    WithdrawingProceeds(
+        id: number[]
+    ) : UplcData {
+        const uplc = this.mkUplcData({ 
+           WithdrawingProceeds: id
+        }, "MarketSalePolicy::SpendingActivity.WithdrawingProceeds"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
      * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.Retiring"***
      */
     Retiring(
@@ -2527,6 +2609,18 @@ export class SpendingActivityHelper extends EnumBridge<JustAnEnum> {
         const uplc = this.mkUplcData({ 
            Retiring: id
         }, "MarketSalePolicy::SpendingActivity.Retiring"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
+     * generates  UplcData for ***"MarketSalePolicy::SpendingActivity.SoldOut"***
+     */
+    SoldOut(
+        id: number[]
+    ) : UplcData {
+        const uplc = this.mkUplcData({ 
+           SoldOut: id
+        }, "MarketSalePolicy::SpendingActivity.SoldOut"); /*singleField enum variant*/
        return uplc;
     }
 }/*mkEnumHelperClass*/
@@ -3500,6 +3594,23 @@ export class SpendingActivityHelperNested extends EnumBridge<isActivity> {
     }
 
     /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.WithdrawingProceeds"***
+    * @remarks
+    * #### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    WithdrawingProceeds(
+        id: number[]
+    ) : isActivity {
+        const uplc = this.mkUplcData({ 
+           WithdrawingProceeds: id
+        }, "MarketSalePolicy::SpendingActivity.WithdrawingProceeds"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
      * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.Retiring"***
     * @remarks
     * #### Nested activity: 
@@ -3513,6 +3624,23 @@ export class SpendingActivityHelperNested extends EnumBridge<isActivity> {
         const uplc = this.mkUplcData({ 
            Retiring: id
         }, "MarketSalePolicy::SpendingActivity.Retiring"); /*singleField enum variant*/
+       return uplc;
+    }
+
+    /**
+     * generates isActivity/redeemer wrapper with UplcData for ***"MarketSalePolicy::SpendingActivity.SoldOut"***
+    * @remarks
+    * #### Nested activity: 
+    * this is connected to a nested-activity wrapper, so the details are piped through 
+    * the parent's uplc-encoder, producing a single uplc object with 
+    * a complete wrapper for this inner activity detail.
+     */
+    SoldOut(
+        id: number[]
+    ) : isActivity {
+        const uplc = this.mkUplcData({ 
+           SoldOut: id
+        }, "MarketSalePolicy::SpendingActivity.SoldOut"); /*singleField enum variant*/
        return uplc;
     }
 }/*mkEnumHelperClass*/
@@ -4924,6 +5052,50 @@ export const OtherSaleStateV1Schema : StructTypeSchema = {
     ]
 };
 
+export const CostTokenSchema : EnumTypeSchema = {
+    "kind": "enum",
+    "name": "CostToken",
+    "id": "__module__DynamicSaleV1Settings__CostToken[]",
+    "variantTypes": [
+        {
+            "kind": "variant",
+            "tag": 0,
+            "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+            "name": "ADA",
+            "fieldTypes": []
+        },
+        {
+            "kind": "variant",
+            "tag": 1,
+            "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+            "name": "Other",
+            "fieldTypes": [
+                {
+                    "name": "mph",
+                    "type": {
+                        "kind": "internal",
+                        "name": "MintingPolicyHash"
+                    }
+                },
+                {
+                    "name": "tokenName",
+                    "type": {
+                        "kind": "internal",
+                        "name": "ByteArray"
+                    }
+                },
+                {
+                    "name": "scale",
+                    "type": {
+                        "kind": "internal",
+                        "name": "Int"
+                    }
+                }
+            ]
+        }
+    ]
+};
+
 export const DynamicSaleV1SettingsSchema : StructTypeSchema = {
     "kind": "struct",
     "format": "list",
@@ -4935,6 +5107,52 @@ export const DynamicSaleV1SettingsSchema : StructTypeSchema = {
             "type": {
                 "kind": "internal",
                 "name": "Real"
+            }
+        },
+        {
+            "name": "costToken",
+            "type": {
+                "kind": "enum",
+                "name": "CostToken",
+                "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                "variantTypes": [
+                    {
+                        "kind": "variant",
+                        "tag": 0,
+                        "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                        "name": "ADA",
+                        "fieldTypes": []
+                    },
+                    {
+                        "kind": "variant",
+                        "tag": 1,
+                        "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                        "name": "Other",
+                        "fieldTypes": [
+                            {
+                                "name": "mph",
+                                "type": {
+                                    "kind": "internal",
+                                    "name": "MintingPolicyHash"
+                                }
+                            },
+                            {
+                                "name": "tokenName",
+                                "type": {
+                                    "kind": "internal",
+                                    "name": "ByteArray"
+                                }
+                            },
+                            {
+                                "name": "scale",
+                                "type": {
+                                    "kind": "internal",
+                                    "name": "Int"
+                                }
+                            }
+                        ]
+                    }
+                ]
             }
         },
         {
@@ -5398,6 +5616,52 @@ export const FixedSaleDetailsV1Schema : StructTypeSchema = {
                         "type": {
                             "kind": "internal",
                             "name": "Real"
+                        }
+                    },
+                    {
+                        "name": "costToken",
+                        "type": {
+                            "kind": "enum",
+                            "name": "CostToken",
+                            "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                            "variantTypes": [
+                                {
+                                    "kind": "variant",
+                                    "tag": 0,
+                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                                    "name": "ADA",
+                                    "fieldTypes": []
+                                },
+                                {
+                                    "kind": "variant",
+                                    "tag": 1,
+                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                                    "name": "Other",
+                                    "fieldTypes": [
+                                        {
+                                            "name": "mph",
+                                            "type": {
+                                                "kind": "internal",
+                                                "name": "MintingPolicyHash"
+                                            }
+                                        },
+                                        {
+                                            "name": "tokenName",
+                                            "type": {
+                                                "kind": "internal",
+                                                "name": "ByteArray"
+                                            }
+                                        },
+                                        {
+                                            "name": "scale",
+                                            "type": {
+                                                "kind": "internal",
+                                                "name": "Int"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
                         }
                     },
                     {
@@ -6165,6 +6429,52 @@ export const MktSaleDetailsSchema : EnumTypeSchema = {
                                             "type": {
                                                 "kind": "internal",
                                                 "name": "Real"
+                                            }
+                                        },
+                                        {
+                                            "name": "costToken",
+                                            "type": {
+                                                "kind": "enum",
+                                                "name": "CostToken",
+                                                "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                                                "variantTypes": [
+                                                    {
+                                                        "kind": "variant",
+                                                        "tag": 0,
+                                                        "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                                                        "name": "ADA",
+                                                        "fieldTypes": []
+                                                    },
+                                                    {
+                                                        "kind": "variant",
+                                                        "tag": 1,
+                                                        "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                                                        "name": "Other",
+                                                        "fieldTypes": [
+                                                            {
+                                                                "name": "mph",
+                                                                "type": {
+                                                                    "kind": "internal",
+                                                                    "name": "MintingPolicyHash"
+                                                                }
+                                                            },
+                                                            {
+                                                                "name": "tokenName",
+                                                                "type": {
+                                                                    "kind": "internal",
+                                                                    "name": "ByteArray"
+                                                                }
+                                                            },
+                                                            {
+                                                                "name": "scale",
+                                                                "type": {
+                                                                    "kind": "internal",
+                                                                    "name": "Int"
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
                                             }
                                         },
                                         {
@@ -6972,6 +7282,52 @@ export const MarketSaleDataSchema : StructTypeSchema = {
                                                         "type": {
                                                             "kind": "internal",
                                                             "name": "Real"
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "costToken",
+                                                        "type": {
+                                                            "kind": "enum",
+                                                            "name": "CostToken",
+                                                            "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                                                            "variantTypes": [
+                                                                {
+                                                                    "kind": "variant",
+                                                                    "tag": 0,
+                                                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                                                                    "name": "ADA",
+                                                                    "fieldTypes": []
+                                                                },
+                                                                {
+                                                                    "kind": "variant",
+                                                                    "tag": 1,
+                                                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                                                                    "name": "Other",
+                                                                    "fieldTypes": [
+                                                                        {
+                                                                            "name": "mph",
+                                                                            "type": {
+                                                                                "kind": "internal",
+                                                                                "name": "MintingPolicyHash"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "name": "tokenName",
+                                                                            "type": {
+                                                                                "kind": "internal",
+                                                                                "name": "ByteArray"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "name": "scale",
+                                                                            "type": {
+                                                                                "kind": "internal",
+                                                                                "name": "Int"
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
                                                         }
                                                     },
                                                     {
@@ -7885,6 +8241,52 @@ export const DelegateDatumSchema : EnumTypeSchema = {
                                                                             "type": {
                                                                                 "kind": "internal",
                                                                                 "name": "Real"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "name": "costToken",
+                                                                            "type": {
+                                                                                "kind": "enum",
+                                                                                "name": "CostToken",
+                                                                                "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                                                                                "variantTypes": [
+                                                                                    {
+                                                                                        "kind": "variant",
+                                                                                        "tag": 0,
+                                                                                        "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                                                                                        "name": "ADA",
+                                                                                        "fieldTypes": []
+                                                                                    },
+                                                                                    {
+                                                                                        "kind": "variant",
+                                                                                        "tag": 1,
+                                                                                        "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                                                                                        "name": "Other",
+                                                                                        "fieldTypes": [
+                                                                                            {
+                                                                                                "name": "mph",
+                                                                                                "type": {
+                                                                                                    "kind": "internal",
+                                                                                                    "name": "MintingPolicyHash"
+                                                                                                }
+                                                                                            },
+                                                                                            {
+                                                                                                "name": "tokenName",
+                                                                                                "type": {
+                                                                                                    "kind": "internal",
+                                                                                                    "name": "ByteArray"
+                                                                                                }
+                                                                                            },
+                                                                                            {
+                                                                                                "name": "scale",
+                                                                                                "type": {
+                                                                                                    "kind": "internal",
+                                                                                                    "name": "Int"
+                                                                                                }
+                                                                                            }
+                                                                                        ]
+                                                                                    }
+                                                                                ]
                                                                             }
                                                                         },
                                                                         {
@@ -9261,9 +9663,39 @@ export const SpendingActivitySchema : EnumTypeSchema = {
         },
         {
             "kind": "variant",
-            "tag": 9,
+            "tag": 51,
+            "id": "__module__MarketSalePolicy__SpendingActivity[]__WithdrawingProceeds",
+            "name": "WithdrawingProceeds",
+            "fieldTypes": [
+                {
+                    "name": "id",
+                    "type": {
+                        "kind": "internal",
+                        "name": "ByteArray"
+                    }
+                }
+            ]
+        },
+        {
+            "kind": "variant",
+            "tag": 65,
             "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
             "name": "Retiring",
+            "fieldTypes": [
+                {
+                    "name": "id",
+                    "type": {
+                        "kind": "internal",
+                        "name": "ByteArray"
+                    }
+                }
+            ]
+        },
+        {
+            "kind": "variant",
+            "tag": 86,
+            "id": "__module__MarketSalePolicy__SpendingActivity[]__SoldOut",
+            "name": "SoldOut",
             "fieldTypes": [
                 {
                     "name": "id",
@@ -9942,9 +10374,39 @@ export const DelegateActivitySchema : EnumTypeSchema = {
                             },
                             {
                                 "kind": "variant",
-                                "tag": 9,
+                                "tag": 51,
+                                "id": "__module__MarketSalePolicy__SpendingActivity[]__WithdrawingProceeds",
+                                "name": "WithdrawingProceeds",
+                                "fieldTypes": [
+                                    {
+                                        "name": "id",
+                                        "type": {
+                                            "kind": "internal",
+                                            "name": "ByteArray"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "kind": "variant",
+                                "tag": 65,
                                 "id": "__module__MarketSalePolicy__SpendingActivity[]__Retiring",
                                 "name": "Retiring",
+                                "fieldTypes": [
+                                    {
+                                        "name": "id",
+                                        "type": {
+                                            "kind": "internal",
+                                            "name": "ByteArray"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "kind": "variant",
+                                "tag": 86,
+                                "id": "__module__MarketSalePolicy__SpendingActivity[]__SoldOut",
+                                "name": "SoldOut",
                                 "fieldTypes": [
                                     {
                                         "name": "id",
@@ -16314,6 +16776,52 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                         }
                     },
                     {
+                        "name": "costToken",
+                        "type": {
+                            "kind": "enum",
+                            "name": "CostToken",
+                            "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                            "variantTypes": [
+                                {
+                                    "kind": "variant",
+                                    "tag": 0,
+                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                                    "name": "ADA",
+                                    "fieldTypes": []
+                                },
+                                {
+                                    "kind": "variant",
+                                    "tag": 1,
+                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                                    "name": "Other",
+                                    "fieldTypes": [
+                                        {
+                                            "name": "mph",
+                                            "type": {
+                                                "kind": "internal",
+                                                "name": "MintingPolicyHash"
+                                            }
+                                        },
+                                        {
+                                            "name": "tokenName",
+                                            "type": {
+                                                "kind": "internal",
+                                                "name": "ByteArray"
+                                            }
+                                        },
+                                        {
+                                            "name": "scale",
+                                            "type": {
+                                                "kind": "internal",
+                                                "name": "Int"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
                         "name": "targetedSellingTime",
                         "type": {
                             "kind": "internal",
@@ -16631,6 +17139,52 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                                     "type": {
                                                                         "kind": "internal",
                                                                         "name": "Real"
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "name": "costToken",
+                                                                    "type": {
+                                                                        "kind": "enum",
+                                                                        "name": "CostToken",
+                                                                        "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                                                                        "variantTypes": [
+                                                                            {
+                                                                                "kind": "variant",
+                                                                                "tag": 0,
+                                                                                "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                                                                                "name": "ADA",
+                                                                                "fieldTypes": []
+                                                                            },
+                                                                            {
+                                                                                "kind": "variant",
+                                                                                "tag": 1,
+                                                                                "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                                                                                "name": "Other",
+                                                                                "fieldTypes": [
+                                                                                    {
+                                                                                        "name": "mph",
+                                                                                        "type": {
+                                                                                            "kind": "internal",
+                                                                                            "name": "MintingPolicyHash"
+                                                                                        }
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "tokenName",
+                                                                                        "type": {
+                                                                                            "kind": "internal",
+                                                                                            "name": "ByteArray"
+                                                                                        }
+                                                                                    },
+                                                                                    {
+                                                                                        "name": "scale",
+                                                                                        "type": {
+                                                                                            "kind": "internal",
+                                                                                            "name": "Int"
+                                                                                        }
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
                                                                     }
                                                                 },
                                                                 {
@@ -17446,6 +18000,52 @@ export const DynamicSaleV1Schema : StructTypeSchema = {
                                                                         "type": {
                                                                             "kind": "internal",
                                                                             "name": "Real"
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "name": "costToken",
+                                                                        "type": {
+                                                                            "kind": "enum",
+                                                                            "name": "CostToken",
+                                                                            "id": "__module__DynamicSaleV1Settings__CostToken[]",
+                                                                            "variantTypes": [
+                                                                                {
+                                                                                    "kind": "variant",
+                                                                                    "tag": 0,
+                                                                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__ADA",
+                                                                                    "name": "ADA",
+                                                                                    "fieldTypes": []
+                                                                                },
+                                                                                {
+                                                                                    "kind": "variant",
+                                                                                    "tag": 1,
+                                                                                    "id": "__module__DynamicSaleV1Settings__CostToken[]__Other",
+                                                                                    "name": "Other",
+                                                                                    "fieldTypes": [
+                                                                                        {
+                                                                                            "name": "mph",
+                                                                                            "type": {
+                                                                                                "kind": "internal",
+                                                                                                "name": "MintingPolicyHash"
+                                                                                            }
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "tokenName",
+                                                                                            "type": {
+                                                                                                "kind": "internal",
+                                                                                                "name": "ByteArray"
+                                                                                            }
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "scale",
+                                                                                            "type": {
+                                                                                                "kind": "internal",
+                                                                                                "name": "Int"
+                                                                                            }
+                                                                                        }
+                                                                                    ]
+                                                                                }
+                                                                            ]
                                                                         }
                                                                     },
                                                                     {

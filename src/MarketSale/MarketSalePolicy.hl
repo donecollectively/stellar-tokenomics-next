@@ -95,6 +95,7 @@ import {
 } from SaleProgressDetails
 
 import {
+    CostToken,
     DynamicSaleV1Settings
 } from DynamicSaleV1Settings
 
@@ -555,16 +556,19 @@ enum DelegateActivity {
                     // todo: the purchased tokens are distributed to a
                     //   configured sale-distribution contract (e.g. vesting/escrow/yield-farm)
                     
-                    assertREQTgroup("Matches redeemer payment with paid value", false, () -> Bool {
-                        print("  -- paidValue: "+ paidValue.show());
-                        print("  -- lotSellPrice: "+ lotSellPrice.show());
-                        print("  -- lotsPurchased: "+ lotsPurchased.show());
-                        expectedPayment = lotSellPrice * lotsPurchased;
-                        print("  -- expected payment: "+ expectedPayment.show());
-                        print("  -- actual payment: "+ paidValue.show());
+                    costToken : CostToken = previous.v1details().fixedSaleDetails.settings.costToken;
 
-                        paidValue == expectedPayment
-                    });
+                    assertREQTgroup(
+                        "extracts cost-token micro-units from paid value and matches redeemer-declared price × lots (REQT-90fsr7px0z)",
+                        false,
+                        () -> Bool {
+                            paidMicroTokens : Int = costToken.microTokensFromValue(paidValue);
+                            expectedMicroTokens : Int = costToken.microTokensFromValue(lotSellPrice) * lotsPurchased;
+                            print("  -- paid micro-tokens: " + paidMicroTokens.show());
+                            print("  -- expected micro-tokens: " + expectedMicroTokens.show());
+                            paidMicroTokens == expectedMicroTokens
+                        }
+                    );
 
                     true
                     && correctActiveState
@@ -749,15 +753,27 @@ enum DelegateActivity {
                         }
                     )
                     && bREQTgroup(
-                        reqt: "non-ADA tokens must remain in UTxO (REQT-gy6jd9cjkg)",
+                        reqt: "sale tokens and UUT must remain; only cost token may be withdrawn (REQT-gy6jd9cjkg,5r79v9b4ht)",
                         collapsed: false,
                         callback: () -> Bool {
-                            inputAssets = mktSaleDD.input().value.get_assets();
-                            outputAssets = mktSaleDD.output().value.get_assets();
-                            assert(
-                                inputAssets == outputAssets,
-                                "non-ADA tokens changed during WithdrawingProceeds"
-                            );
+                            costToken : CostToken = current.v1details().fixedSaleDetails.settings.costToken;
+                            inputAssets : Value = mktSaleDD.input().value.get_assets();
+                            outputAssets : Value = mktSaleDD.output().value.get_assets();
+                            costToken.switch {
+                                ADA => assert(
+                                    inputAssets == outputAssets,
+                                    "non-ADA tokens changed during WithdrawingProceeds"
+                                ),
+                                Other{mph, tokenName, _} => {
+                                    costAc : AssetClass = AssetClass::new(mph, tokenName);
+                                    inputWithoutCost : Value = inputAssets - Value::new(costAc, inputAssets.get(costAc));
+                                    outputWithoutCost : Value = outputAssets - Value::new(costAc, outputAssets.get(costAc));
+                                    assert(
+                                        inputWithoutCost == outputWithoutCost,
+                                        "sale tokens or UUT changed during WithdrawingProceeds"
+                                    )
+                                }
+                            };
                             true
                         }
                     )

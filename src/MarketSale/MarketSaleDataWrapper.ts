@@ -6,7 +6,7 @@ import {
     type someDataWrapper,
 } from "@donecollectively/stellar-contracts";
 import type {
-    DynamicSaleV1Settings,
+    ErgoDynamicSaleV1Settings,
     ErgoMarketSaleData,
     MarketSaleData,
     MarketSaleDataLike,
@@ -289,7 +289,7 @@ export class MarketSaleDataWrapper {
 
     progressPricingDiscountDepth(
         overallPacingProgress: number,
-        settings: DynamicSaleV1Settings
+        settings: ErgoDynamicSaleV1Settings
     ): number {
         const ceilingHeight = toFixedReal(
             1 - settings.progressPricingDiscountFloorPoint
@@ -332,7 +332,7 @@ export class MarketSaleDataWrapper {
 
     priceExpansion(
         overallPace: number,
-        settings: DynamicSaleV1Settings
+        settings: ErgoDynamicSaleV1Settings
     ): number {
         const pe =
             overallPace < 1.0
@@ -341,7 +341,7 @@ export class MarketSaleDataWrapper {
                   realDiv(
                       realMul(
                           toFixedReal(overallPace - 1.0),
-                          settings.progressPricingExpansionWhenFast
+                          1.0 + settings.progressPricingExpansionWhenFast
                       ),
                       3
                   );

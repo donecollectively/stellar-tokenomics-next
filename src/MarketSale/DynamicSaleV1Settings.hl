@@ -13,11 +13,57 @@ import {
     TODO
 } from StellarHeliosHelpers
 
+// CostToken identifies which token buyers pay with and provides the scale
+// factor for converting between Real prices and on-chain Values.
+// (REQT-nb3v1zg4fv,j7cf4ew85g,y5gge63n84)
+enum CostToken {
+    ADA  // implicit multiplier=1_000_000; 1 ADA = 10^6 lovelace
+    Other {
+        mph: MintingPolicyHash
+        tokenName: ByteArray
+        scale: Int  // multiplier, e.g. 1_000_000 for USDC (1 USDC = 10^6 base units)
+    }
+
+    // Returns the multiplier from macro-token to micro-token units
+    // (1_000_000 for ADA = 10^6 lovelace per ADA).
+    func costTokenScale(self) -> Int {
+        self.switch {
+            ADA => 1_000_000,
+            Other{_, _, scale} => scale
+        }
+    }
+
+    // Extracts the cost-token quantity in base units (lovelace for ADA,
+    // smallest unit for Other) from a Value.
+    func microTokensFromValue(self, v: Value) -> Int {
+        self.switch {
+            ADA => v.get_lovelace(),
+            Other{mph, tokenName, _} => v.get_policy(mph).get(tokenName)
+        }
+    }
+
+    // Constructs a Value containing the given base-unit quantity of this cost token.
+    func toCostValue(self, microTokens: Int) -> Value {
+        self.switch {
+            ADA => Value::lovelace(microTokens),
+            Other{mph, tokenName, _} => Value::new(AssetClass::new(mph, tokenName), microTokens)
+        }
+    }
+
+    // True if the given AssetClass matches this cost token.
+    // Always false for ADA (lovelace is not an AssetClass in the assets map).
+    func isCostToken(self, ac: AssetClass) -> Bool {
+        self.switch {
+            ADA => false,
+            Other{mph, tokenName, _} => ac == AssetClass::new(mph, tokenName)
+        }
+    }
+}
+
 struct DynamicSaleV1Settings {
-    targetPrice: Real  
-    //TODO: add pricing unit
-    // pricingUnit: AssetClass
-    
+    targetPrice: Real  // count (with decimals) of the token indicated by costToken
+    costToken: CostToken  // (REQT-4zkj5q4n38)
+
     targetedSellingTime: Duration  
 
     minPrice: Real  // same as minSalePrice
@@ -53,7 +99,20 @@ struct DynamicSaleV1Settings {
         assert(self.pricingWeightDynaPace >= 0.0, "dyna pace weight negative");
         assert(self.pricingWeightDynaPace < 15, "dyna pace weight way too high");
 
-        true
+        bREQTgroup(
+            reqt: "rejects CostToken::Other with scale multiplier outside 1–10^19 (REQT-4zkj5q4n38)",
+            collapsed: false,
+            callback: () -> Bool {
+                self.costToken.switch {
+                    ADA => true,
+                    Other{_, _, scale} => {
+                        assert(scale >= 1, "costToken scale too low (must be >= 1)");
+                        assert(scale <= 10_000_000_000_000_000_000, "costToken scale too high (must be <= 10^19)");
+                        true
+                    }
+                }
+            }
+        )
     })}
 
     // func validateUpdatedDetails(self) -> Bool {

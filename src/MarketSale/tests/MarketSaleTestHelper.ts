@@ -6,7 +6,7 @@ import {
     type TestHelperSubmitOptions,
 } from "@donecollectively/stellar-contracts/testing";
 import { MarketSaleCapo } from "./modules/MarketSaleCapo.js";
-import { makeValue } from "@helios-lang/ledger";
+import { makeTxOutput, makeValue } from "@helios-lang/ledger";
 import type {
     ErgoMarketSaleData,
     MarketSaleData,
@@ -22,6 +22,14 @@ import {
 import type { MarketSaleController } from "../MarketSaleController.js";
 import { equalsBytes } from "@helios-lang/codec-utils";
 import type { MarketSaleDataWrapper } from "../MarketSaleDataWrapper.js";
+
+// ── Test cost-token: TUNA ────────────────────────────────────────────────────
+// TUNA is minted under the capo's MPH (same policy as sale tokens).
+// scale=1_000: 1 TUNA = 1_000 micro-TUNA, unlike ADA's 1_000_000.
+// MPH comes from capo instance — access via this.capo.mph in methods.
+export const TUNA_TOKEN_NAME = textToBytes("TUNA");
+export const TUNA_SCALE = 1_000n;
+// ────────────────────────────────────────────────────────────────────────────
 
 export let helperState: TestHelperState<MarketSaleCapo> = {
     snapshots: {},
@@ -241,7 +249,10 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         marketSale: FoundDatumUtxo<MarketSaleData>,
         quantity: number | bigint = 1n,
         description: string = "buying from mktSale",
-        submitOptions: TestHelperSubmitOptions = {}
+        submitOptions: TestHelperSubmitOptions & {
+            /** Extra value to deposit into the sale UTxO (e.g. spam tokens for policy tests) */
+            extraDepositValue?: Value;
+        } = {}
     ) {
         const { capo } = this;
         const mktSaleDgt = await this.mktSaleDgt();
@@ -251,7 +262,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
         let tcx = capo.mkTcx(description);
 
-        const { travelToFuture } = submitOptions;
+        const { travelToFuture, extraDepositValue } = submitOptions;
         const tcx2 = await mktSaleDgt.mkTxnBuyFromMarketSale(
             marketSale,
             {
@@ -259,6 +270,17 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
             },
             travelToFuture ? tcx.futureDate(travelToFuture) : tcx
         );
+
+        if (extraDepositValue) {
+            // Find a UTxO covering the extra value and add it as input
+            const extraUtxo = await mktSaleDgt.uh.findActorUtxo(
+                "extra deposit for buy",
+                mktSaleDgt.uh.mkTokenPredicate(extraDepositValue),
+                { exceptInTcx: tcx2 }
+            );
+            if (!extraUtxo) throw new Error("no UTxO found for extraDepositValue");
+            tcx2.addInput(extraUtxo);
+        }
 
         return this.submitTxnWithBlock(tcx2, submitOptions);
     }
@@ -305,7 +327,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstMarketSaleActivated",
-        builderVersion: 2,  // v2: buys 5 lots before pausing (accumulated funds for WithdrawingProceeds)
+        builderVersion: 4,  // v4: base buyTime on lastPurchaseAt (not startAt) — chunkAge must exceed 10min from activation
     })
     async snapToFirstMarketSalePaused() {
         throw new Error("never called; see firstMarketSalePaused()");
@@ -315,8 +337,13 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     async firstMarketSalePaused() {
         // Buy some lots so the UTxO has accumulated funds (needed for WithdrawingProceeds tests)
         const activeSale = await this.findFirstMarketSale();
+        const lastPurchaseAt = activeSale.data!.details.V1.saleState.progressDetails.lastPurchaseAt;
+        const nowMs = this.network.currentSlot * 1000;
+        const buyTime = new Date(Math.max(lastPurchaseAt + 11 * 60 * 1000, nowMs + 1000));
         this.setActor("tom");
-        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing");
+        await this.buyFromMktSale(activeSale, 5n, "accumulate funds before pausing", {
+            travelToFuture: buyTime,
+        });
         const saleAfterBuy = await this.findFirstMarketSale();
         this.setActor("tina");
         return this.stopMarketSale(saleAfterBuy);
@@ -498,15 +525,34 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         return this.submitTxnWithBlock(tcx, submitOptions);
     }
 
+    /**
+     * Withdraws cost-token proceeds from a sale UTxO.
+     *
+     * @param macroAmount - withdrawal in cost-token units (e.g. 5.0 = 5 TUNA = 5_000
+     *   micro-TUNA when scale=1_000, or 2.0 ADA = 2_000_000 lovelace when scale=1_000_000).
+     *   Fractional amounts supported (e.g. 1.9 ADA, 42.8 TUNA).
+     *   Scale is read from the sale's costToken field.
+     */
     async withdrawProceeds(
         marketSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
-        withdrawalAmount: bigint,
+        macroAmount: number,
         submitOptions: TestHelperSubmitOptions = {}
     ) {
         const mktSaleDgt = await this.mktSaleDgt();
-        console.log(`  ----- ⚗️ withdrawing ${withdrawalAmount} lovelace from market sale`);
+        const costToken =
+            marketSale.data!.details.V1.fixedSaleDetails.settings.costToken;
+        const scale =
+            "Other" in costToken ? costToken.Other.scale : 1_000_000n;
+        const smallestAmount = BigInt(Math.floor(macroAmount * Number(scale)));
 
-        const tcx = await mktSaleDgt.mkTxnWithdrawProceeds(marketSale, withdrawalAmount);
+        console.log(
+            `  ----- ⚗️ withdrawing ${macroAmount} macro-tokens (${smallestAmount} smallest units) from market sale`
+        );
+
+        const tcx = await mktSaleDgt.mkTxnWithdrawProceeds(
+            marketSale,
+            smallestAmount
+        );
         return this.submitTxnWithBlock(tcx, submitOptions);
     }
 
@@ -539,6 +585,131 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
     // ============================================================
     // END SKETCH
     // ============================================================
+
+    // ── Cost-token helpers (TUNA / non-ADA testing) ──────────────────────────
+    //
+    // Snapshot chain:
+    //   bootstrapped → saleNativeTokenCost → saleNativeTokenPaused
+    //
+    // saleNativeTokenCost: TUNA-cost sale created + tom funded + activated.
+    // saleNativeTokenPaused: sale stopped (proceeds implied — buying step
+    //   added once Phase 5 offchain stubs land; bump builderVersion then).
+
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "bootstrapped",
+        builderVersion: "2-pe-fix",
+    })
+    async snapToSaleNativeTokenCost() {
+        throw new Error("never called; see saleNativeTokenCost()");
+        return this.saleNativeTokenCost();
+    }
+
+    async saleNativeTokenCost() {
+        this.setActor("tina");
+        const saleData = await this.exampleDataWithTuna();
+        await this.createMarketSale(saleData);
+        const pendingSale = await this.findFirstMarketSale();
+        console.log("🔍 DIAG saleNativeTokenCost: currentSlot =", this.network.currentSlot);
+        console.log("🔍 DIAG saleNativeTokenCost: currentSlot*1000 =", this.network.currentSlot * 1000);
+        console.log("🔍 DIAG saleNativeTokenCost: Date.now() =", Date.now());
+        console.log("🔍 DIAG saleNativeTokenCost: startAt =", pendingSale.data!.details.V1.fixedSaleDetails.startAt);
+        return this.activateMarketSale(pendingSale, {
+            mintTokenName: pendingSale.data!.details.V1.saleAssets.primaryAssetName,
+        });
+    }
+
+    @CapoTestHelper.hasNamedSnapshot({
+        actor: "tina",
+        parentSnapName: "saleNativeTokenCost",
+        builderVersion: "2-pe-fix",
+    })
+    async snapToSaleNativeTokenPaused() {
+        throw new Error("never called; see saleNativeTokenPaused()");
+        return this.saleNativeTokenPaused();
+    }
+
+    async saleNativeTokenPaused() {
+        await this.fundActorWithTuna("tom", 10_000n);
+        this.setActor("tom");
+        const activeSale = await this.findFirstMarketSale();
+        const startAt = activeSale.data!.details.V1.fixedSaleDetails.startAt;
+        // Buy time must be:
+        // - past startAt (satisfies "sale not yet started")
+        // - past lastPurchaseAt + 10 min (satisfies freshness check)
+        // - ahead of emulator's current slot (can't travel to the past)
+        const nowMs = this.network.currentSlot * 1000;
+        const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
+        await this.buyFromMktSale(activeSale, 5n, "accumulate TUNA proceeds", {
+            travelToFuture: buyTime,
+        });
+
+        this.setActor("tina");
+        const saleAfterBuy = await this.findFirstMarketSale();
+        await this.stopMarketSale(saleAfterBuy);
+        // Ensure the stop txn is fully committed before the snapshot captures state.
+        this.network.tick(1);
+    }
+
+    /**
+     * Mints TUNA tokens under the capo's MPH and pays them to the named actor.
+     * Uses the standard txnMintingFungibleTokens path — requires tina as actor
+     * (gov authority). Call before activating the sale in snapshot builders.
+     */
+    async fundActorWithTuna(actorName: string, macroAmount: bigint) {
+        const { capo } = this;
+        const targetWallet = this.actors[actorName];
+        if (!targetWallet)
+            throw new Error(`fundActorWithTuna: actor "${actorName}" not found`);
+
+        const tunaCount = macroAmount * TUNA_SCALE;
+        console.log(`  ----- ⚗️ minting ${tunaCount} micro-TUNA for ${actorName}`);
+
+        const tcx = await capo.txnMintingFungibleTokens(
+            capo.mkTcx(`mint TUNA for ${actorName}`),
+            TUNA_TOKEN_NAME,
+            tunaCount
+        );
+        const tunaValue = makeValue(
+            2_000_000n,
+            [[capo.mph, [[TUNA_TOKEN_NAME, tunaCount]]]]
+        );
+        const tcx2 = tcx.addOutput(makeTxOutput(targetWallet.address, tunaValue));
+        return this.submitTxnWithBlock(tcx2);
+    }
+
+    /**
+     * Returns example sale data with TUNA as the cost token.
+     * mph comes from the capo instance (TUNA is minted under capo policy).
+     * All other fields identical to the standard ADA exampleData().
+     */
+    async exampleDataWithTuna(): Promise<minimalMarketSaleData> {
+        const controller = await this.mktSaleDgt();
+        const base = controller.exampleData();
+        return {
+            ...base,
+            details: {
+                V1: {
+                    ...base.details.V1,
+                    fixedSaleDetails: {
+                        ...base.details.V1.fixedSaleDetails,
+                        settings: {
+                            ...base.details.V1.fixedSaleDetails.settings,
+                            costToken: {
+                                Other: {
+                                    mph: this.capo.mph,
+                                    tokenName: TUNA_TOKEN_NAME,
+                                    scale: TUNA_SCALE,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     _cachedNow : number = Date.now();
     packagedUpdateDetails() {

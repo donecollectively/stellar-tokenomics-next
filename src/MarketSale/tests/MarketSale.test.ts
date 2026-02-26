@@ -893,7 +893,7 @@ describe("MarketSale plugin", async () => {
                 expectError: true,
             });
             await expect(buying).rejects.toThrow(
-                /Matches redeemer payment with paid value/
+                /extracts cost-token micro-units from paid value and matches redeemer-declared price/
             );
         });
 
@@ -2324,7 +2324,7 @@ describe("MarketSale plugin", async () => {
 
             const prevValue = pausedSale.utxo.value;
             const prevData = pausedSale.data!;
-            const withdrawAmount = 2_000_000n; // 2 ADA
+            const withdrawAmount = 2.0; // 2 ADA
 
             h.setActor("tina");
             await h.withdrawProceeds(pausedSale, withdrawAmount);
@@ -2332,7 +2332,7 @@ describe("MarketSale plugin", async () => {
             const afterSale = await h.findFirstMarketSale();
             // ADA decreased by withdrawal amount
             expect(afterSale.utxo.value.lovelace).toBe(
-                prevValue.lovelace - withdrawAmount
+                prevValue.lovelace - 2_000_000n
             );
             // Tokens unchanged (REQT/gy6jd9cjkg)
             expect(afterSale.utxo.value.assets.dump()).toEqual(
@@ -2350,7 +2350,7 @@ describe("MarketSale plugin", async () => {
 
             const prevValue = retiredSale.utxo.value;
             const prevData = retiredSale.data!;
-            const withdrawAmount = 2_000_000n; // 2 ADA
+            const withdrawAmount = 2.0; // 2 ADA
 
             h.setActor("tina");
             await h.withdrawProceeds(retiredSale, withdrawAmount);
@@ -2358,7 +2358,7 @@ describe("MarketSale plugin", async () => {
             const afterSale = await h.findFirstMarketSale();
             // ADA decreased by withdrawal amount
             expect(afterSale.utxo.value.lovelace).toBe(
-                prevValue.lovelace - withdrawAmount
+                prevValue.lovelace - 2_000_000n
             );
             // Tokens unchanged (REQT/gy6jd9cjkg)
             expect(afterSale.utxo.value.assets.dump()).toEqual(
@@ -2390,7 +2390,7 @@ describe("MarketSale plugin", async () => {
 
             h.setActor("tina");
             await expect(
-                h.withdrawProceeds(activeSale, 2_000_000n, { expectError: true })
+                h.withdrawProceeds(activeSale, 2.0, { expectError: true })
             ).rejects.toThrow(/WithdrawingProceeds requires Paused, SoldOut, or Retired/);
         });
 
@@ -2402,7 +2402,7 @@ describe("MarketSale plugin", async () => {
 
             h.setActor("tina");
             await expect(
-                h.withdrawProceeds(pendingSale, 2_000_000n, { expectError: true })
+                h.withdrawProceeds(pendingSale, 2.0, { expectError: true })
             ).rejects.toThrow(/WithdrawingProceeds requires Paused, SoldOut, or Retired/);
         });
 
@@ -2416,7 +2416,7 @@ describe("MarketSale plugin", async () => {
                 async (tcx) => tcx as any
             );
             await expect(
-                h.withdrawProceeds(pausedSale, 2_000_000n, { expectError: true })
+                h.withdrawProceeds(pausedSale, 2.0, { expectError: true })
             ).rejects.toThrow(/missing.* dgTkn capoGov/);
         });
     });

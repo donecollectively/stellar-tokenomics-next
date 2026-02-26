@@ -338,6 +338,108 @@ export interface OtherSaleStateV1Like {
 
 
 /**
+ * A strong type for the canonical form of CostToken$Other
+ * @remarks
+ * Note that any enum fields in this type are expressed as a disjoint union of the enum variants.  Processing
+ * enum data conforming to this type can be a bit of a pain.
+ * For a more ergonomic, though less strictly-safe form of this type, see CostToken$Ergo$Other instead.
+ * @public
+ */
+export interface CostToken$Other {
+    mph: MintingPolicyHash  /*minVariantField*/ ,
+    tokenName: number[]  /*minVariantField*/ ,
+    scale: bigint  /*minVariantField*/ 
+}
+
+
+/**
+ * An ergonomic, though less strictly-safe form of CostToken$Other
+ * @remarks
+ * This type can use enums expressed as merged unions of the enum variants.  You might think of this type
+ * as being "read-only", in that it's possible to create data with this type that would not be suitable for
+ * conversion to on-chain use.  For creating such data, use the CostToken$OtherLike type,
+ * or the on-chain data-building helpers instead.
+ * @public
+ */
+export type CostToken$Ergo$Other = CostToken$Other  /*ergo like-canonical-this-variant*/
+
+/**
+ * A strong type for the permissive form of CostToken$Other
+ * @remarks
+ * The field types enable implicit conversion from various allowable input types (including the canonical form).
+ * @public
+ */
+export interface CostToken$OtherLike {
+    mph: MintingPolicyHash | string | number[]  /*minVariantField*/ ,
+    tokenName: number[]  /*minVariantField*/ ,
+    scale: IntLike  /*minVariantField*/ 
+}
+
+
+
+
+            /**
+            * @internal
+            */
+            export type CostTokenMeta = EnumTypeMeta<
+    {module: "DynamicSaleV1Settings", enumName: "CostToken"}, {
+        ADA: singleEnumVariantMeta<CostTokenMeta, "ADA",
+            "Constr#0", "tagOnly", tagOnly, "noSpecialFlags"
+        >,
+        Other: singleEnumVariantMeta<CostTokenMeta, "Other",
+            "Constr#1", 
+            "fields", CostToken$Other, "noSpecialFlags"
+        >
+    }
+>;
+
+
+/**
+ * CostToken enum variants
+ * 
+ * @remarks - expresses the essential raw data structures
+ * supporting the **2 variant(s)** of the CostToken enum type
+ * 
+ * - **Note**: Stellar Contracts provides a higher-level `CostTokenHelper` class
+ *     for generating UPLC data for this enum type
+ * @public
+ */
+export type CostToken = 
+        | { ADA: tagOnly /*minEnumVariant*/ }
+        | { Other: CostToken$Other /*minEnumVariant*/ }
+
+/**
+ * ergonomic type enabling easy access to values converted from the on-chain form
+ * @remarks
+ * The data will be expressed in canonical form, and enum variants are merged to a single type with optional fields.
+ * Nested enums are also merged in this ergonomic way.
+ * @public
+ */
+export type ErgoCostToken = IntersectedEnum<
+        | { ADA: tagOnly /*minEnumVariant*/ }
+        | { Other: CostToken$Ergo$Other /*minEnumVariant*/ }
+>
+
+/**
+ * CostToken enum variants (permissive)
+ * 
+ * @remarks - expresses the allowable data structure
+ * for creating any of the **2 variant(s)** of the CostToken enum type
+ * 
+ * - **Note**: Stellar Contracts provides a higher-level `CostTokenHelper` class
+ *     for generating UPLC data for this enum type
+ *
+ * #### Permissive Type
+ * This is a permissive type that allows additional input data types, which are 
+ * converted by convention to the canonical types used in the on-chain context.
+ * @public
+ */
+export type CostTokenLike = IntersectedEnum<
+        | { ADA: tagOnly /*minEnumVariant*/ }
+        | { Other: CostToken$OtherLike /*minEnumVariant*/ }
+>
+
+/**
  * A strong type for the canonical form of DynamicSaleV1Settings
  * @remarks
  * Note that any enum fields in this type are expressed as a disjoint union of the enum variants.  Processing
@@ -347,6 +449,7 @@ export interface OtherSaleStateV1Like {
  */
 export interface DynamicSaleV1Settings {
     targetPrice: /*minStructField*/ number
+    costToken: /*minStructField*/ CostToken
     targetedSellingTime: /*minStructField*/ bigint
     minPrice: /*minStructField*/ number
     maxPrice: /*minStructField*/ number
@@ -368,7 +471,20 @@ export interface DynamicSaleV1Settings {
  * or the on-chain data-building helpers instead.
  * @public
  */
-export type ErgoDynamicSaleV1Settings = DynamicSaleV1Settings/*like canon-other*/
+export type ErgoDynamicSaleV1Settings = {
+    targetPrice: /*minStructField*/ number
+    costToken: /*minStructField*/ ErgoCostToken
+    targetedSellingTime: /*minStructField*/ bigint
+    minPrice: /*minStructField*/ number
+    maxPrice: /*minStructField*/ number
+    progressPricingDiscountFloorPoint: /*minStructField*/ number
+    progressPricingDiscountWhenSlow: /*minStructField*/ number
+    progressPricingExpansionWhenFast: /*minStructField*/ number
+    dynaPaceFasterSaleWeight: /*minStructField*/ number
+    dynaPaceIdleDecayRate: /*minStructField*/ number
+    pricingWeightDynaPace: /*minStructField*/ number
+}
+
 
 /**
  * A strong type for the permissive form of DynamicSaleV1Settings
@@ -378,6 +494,7 @@ export type ErgoDynamicSaleV1Settings = DynamicSaleV1Settings/*like canon-other*
  */
 export interface DynamicSaleV1SettingsLike {
     targetPrice: /*minStructField*/ number
+    costToken: /*minStructField*/ CostTokenLike
     targetedSellingTime: /*minStructField*/ IntLike
     minPrice: /*minStructField*/ number
     maxPrice: /*minStructField*/ number
@@ -1989,8 +2106,16 @@ export interface SpendingActivity$MergingChildChunkLike {
             "Constr#8", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]   , "noSpecialFlags"
         >,
+        WithdrawingProceeds: singleEnumVariantMeta<SpendingActivityMeta, "WithdrawingProceeds",
+            "Constr#51", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]   , "noSpecialFlags"
+        >,
         Retiring: singleEnumVariantMeta<SpendingActivityMeta, "Retiring",
-            "Constr#9", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+            "Constr#65", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]   , "noSpecialFlags"
+        >,
+        SoldOut: singleEnumVariantMeta<SpendingActivityMeta, "SoldOut",
+            "Constr#86", "singletonField", /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]   , "noSpecialFlags"
         >
     }
@@ -2001,7 +2126,7 @@ export interface SpendingActivity$MergingChildChunkLike {
  * SpendingActivity enum variants
  * 
  * @remarks - expresses the essential raw data structures
- * supporting the **10 variant(s)** of the SpendingActivity enum type
+ * supporting the **12 variant(s)** of the SpendingActivity enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `SpendingActivityHelper` class
  *     for generating UPLC data for this enum type
@@ -2023,7 +2148,11 @@ export type SpendingActivity =
 			number[]    /*minEnumVariant*/ }
         | { UpdatingPausedSale: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
+        | { WithdrawingProceeds: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Retiring: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { SoldOut: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
 
 /**
@@ -2049,7 +2178,11 @@ export type ErgoSpendingActivity = IntersectedEnum<
 			number[]    /*minEnumVariant*/ }
         | { UpdatingPausedSale: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
+        | { WithdrawingProceeds: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Retiring: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { SoldOut: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
 >
 
@@ -2057,7 +2190,7 @@ export type ErgoSpendingActivity = IntersectedEnum<
  * SpendingActivity enum variants (permissive)
  * 
  * @remarks - expresses the allowable data structure
- * for creating any of the **10 variant(s)** of the SpendingActivity enum type
+ * for creating any of the **12 variant(s)** of the SpendingActivity enum type
  * 
  * - **Note**: Stellar Contracts provides a higher-level `SpendingActivityHelper` class
  *     for generating UPLC data for this enum type
@@ -2083,7 +2216,11 @@ export type SpendingActivityLike = IntersectedEnum<
 			number[]    /*minEnumVariant*/ }
         | { UpdatingPausedSale: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
+        | { WithdrawingProceeds: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
         | { Retiring: /* implied wrapper { id: ... } for singleVariantField */ 
+			number[]    /*minEnumVariant*/ }
+        | { SoldOut: /* implied wrapper { id: ... } for singleVariantField */ 
 			number[]    /*minEnumVariant*/ }
 >
 

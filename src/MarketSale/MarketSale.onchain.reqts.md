@@ -138,6 +138,12 @@ Governs the WithdrawingProceeds spending activity for extracting accumulated ADA
 #### Key Requirements:
 1. **Proceeds Withdrawal**: Governance authority can withdraw accumulated ADA from a sale that is Paused, SoldOut, or Retired — with no constraint on withdrawal amount, and tokens must remain locked in the UTxO
 
+### 14. Cost Token Denomination
+Governs the denomination of sale pricing — which token buyers pay with. Defines the CostToken enum (ADA vs. Other) in settings, with helpers for scale-aware conversion between Real prices and on-chain Values. Referenced by pricing validation, lifecycle transition UTxO checks, and proceeds withdrawal.
+
+#### Key Requirements:
+1. **Cost Token Denomination**: The sale's pricing denomination is configurable via a CostToken enum in settings — ADA by default, with support for non-ADA tokens specifying mph, tokenName, and scale. Helpers convert between Real prices and on-chain Values using the cost token's scale factor.
+
 
 # Detailed Requirements
 
@@ -298,6 +304,7 @@ Governs the WithdrawingProceeds spending activity for extracting accumulated ADA
  - 8.3.0: REQT-xwyp5rq40j: **COMPLETED**/consented: **Pricing Model Validation**
      - 8.3.1: REQT-jdkhmeg463: **COMPLETED**/consented: **Payment Matches Pricing Strategy** - SellingTokens MUST verify that the payment (paidValue) matches `lotSellPrice × lotsPurchased` as determined by the DynamicSaleV1 pricing strategy.
      - 8.3.2: REQT-yrw1e9vjdc: **COMPLETED**/consented: **Pricing Strategy Validates Updated Details** - The pricing strategy MUST validate that the updated sale details (pace, progress) are consistent with its own computations via `validateUpdatedDetails()`.
+     - 8.3.3: REQT-jxdnb3dxmx: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Payment Denomination Enforcement** - SellingTokens MUST reject payment in any token other than the designated cost token. When `costToken` is ADA, paidValue MUST contain no non-ADA assets. When `costToken` is Other, paidValue's non-ADA assets MUST be only the designated cost token — no other tokens accepted.
  - 8.4.0: REQT-eqd2j44phf: **NEXT**/draft: **Settings Editability While Paused**
      - 8.4.1: REQT-b731sye0fz: **NEXT**/draft: **Settings Bounds Validation When Paused** - Updated `settings` while Paused MUST pass the same bounds validation as when Pending — `validateDetailsWhenPending()` applies (the function name is misleading; the checks are state-independent sane bounds).
 
@@ -389,9 +396,19 @@ Governs the WithdrawingProceeds spending activity for extracting accumulated ADA
  - 13.1.0: REQT-czp1jhqgdj: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **WithdrawingProceeds Activity**
      - 13.1.1: REQT-ayvw26q6av: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Valid States for Withdrawal** - WithdrawingProceeds MUST be valid only when the sale state is Paused, SoldOut, or Retired. All other states MUST reject.
      - 13.1.2: REQT-aexkjfxm2k: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Gov Authority** - WithdrawingProceeds MUST require governance authority.
-     - 13.1.3: REQT-5r79v9b4ht: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **No Constraint on Withdrawal Amount** - WithdrawingProceeds has no constraint on how much ADA is withdrawn.
-     - 13.1.4: REQT-gy6jd9cjkg: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Tokens Must Remain** - WithdrawingProceeds MUST NOT move or burn any non-ADA tokens — tokens stay locked in the UTxO.
+     - 13.1.3: REQT-5r79v9b4ht: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **No Constraint on Withdrawal Amount** - WithdrawingProceeds has no constraint on how much of the cost token is withdrawn.
+     - 13.1.4: REQT-gy6jd9cjkg: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Tokens Must Remain** - WithdrawingProceeds MUST only withdraw the cost token (ADA or the token specified by `costToken`). All sale tokens and the record-id UUT MUST remain in the UTxO.
      - 13.1.5: REQT-ykqx9qgh88: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Datum Fields Unchanged** - WithdrawingProceeds MUST leave all datum fields unchanged.
+
+## Area 14: Cost Token Denomination
+
+### **REQT-14.0/90fsr7px0z**: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Cost Token Denomination**
+#### Purpose: Governs the denomination of sale pricing — which token buyers pay with. Applied when implementing or reviewing pricing validation, lifecycle transition UTxO checks, proceeds withdrawal, or any code path converting between Real prices and on-chain Values.
+
+ - 14.1.0: REQT-nb3v1zg4fv: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **CostToken Enum Definition**
+     - 14.1.1: REQT-j7cf4ew85g: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **ADA Variant** - `CostToken::ADA` MUST represent ADA-denominated pricing with an implicit scale of 6 (1 ADA = 10^6 lovelace). The variant carries no fields.
+     - 14.1.2: REQT-y5gge63n84: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **Other Variant** - `CostToken::Other` MUST carry `mph: MintingPolicyHash`, `tokenName: ByteArray`, and `scale: Int` (the multiplier from macro-token to micro-token units, e.g. 1_000_000 for 6 decimal places) identifying a non-ADA cost token and its base-unit conversion factor.
+ - 14.2.0: REQT-4zkj5q4n38: **IMPLEMENTED/NEEDS VERIFICATION**/draft: **CostToken in Settings** - `DynamicSaleV1Settings` MUST include a `costToken: CostToken` field that determines which token buyers pay with. Settings validation MUST reject `CostToken::Other` with `scale` multiplier outside the range 1–10^19.
 
 
 # Files

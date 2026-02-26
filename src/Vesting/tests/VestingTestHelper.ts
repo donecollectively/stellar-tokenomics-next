@@ -52,6 +52,7 @@ export class VestingTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "bootstrapped",
+        builderVersion: undefined,
     })
     async snapToFirstVesting() {
         throw new Error("never called; see firstVesting()");
@@ -106,6 +107,7 @@ export class VestingTestHelper extends DefaultCapoTestHelper.forCapoClass(
     @CapoTestHelper.hasNamedSnapshot({
         actor: "tina",
         parentSnapName: "firstVesting",
+        builderVersion: undefined,
     })
     async snapToFirstVestingActivated() {
         throw new Error("never called; see firstVestingActivated()");
