@@ -174,7 +174,9 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         await h.reusableBootstrap();
         await h.snapToSaleNativeTokenCost();
 
-        // Mint FISH tokens and send to tom
+        // Fund tom with TUNA (correct payment) and FISH (spam token)
+        await h.fundActorWithTuna("tom", 10_000n);
+
         const fishName = textToBytes("FISH");
         h.setActor("tina");
         const mintTcx = await h.capo.txnMintingFungibleTokens(
@@ -198,17 +200,18 @@ describe("Non-ADA Cost Token Pricing (REQT/jdkhmeg463, REQT/jxdnb3dxmx)", () => 
         const nowMs = h.network.currentSlot * 1000;
         const buyTime = new Date(Math.max(startAt + 11 * 60 * 1000, nowMs + 1000));
 
-        // Mock mkCostTokenValue to produce FISH value instead of TUNA
+        // Mock additionalPurchaseFee to inject FISH into the sale UTxO output.
+        // The controller automatically finds and adds the FISH UTxO as input.
         const controller = await h.mktSaleDgt();
-        vi.spyOn(controller, "mkCostTokenValue").mockImplementation(
-            (_mktSale, amount) => makeValue(h.capo.mph, fishName, amount)
+        vi.spyOn(controller, "additionalPurchaseFee").mockImplementation(
+            (_mktSale) => makeValue(h.capo.mph, fishName, 1_000n)
         );
 
-        const buying = h.buyFromMktSale(activeSale, 1n, "buy with FISH instead of TUNA", {
+        const buying = h.buyFromMktSale(activeSale, 1n, "buy with TUNA + FISH spam", {
             travelToFuture: buyTime,
             expectError: true,
         });
-        await expect(buying).rejects.toThrow(/key not found/);
+        await expect(buying).rejects.toThrow(/unexpected tokens in payment/);
     });
 
     it("rejects buy with insufficient cost token (non-ada-underpayment/REQT/jdkhmeg463)", async (context: MarketSale_TC) => {

@@ -148,7 +148,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         // REQT/stf3bz3fkk (Progress Timestamps Freshened at Activation) —
         // freshen timestamps only for the Activating activity (not UpdatingPendingSale)
         //throw new Error("activity details: "+ activity.details);
-        console.log("🔍 DIAG beforeUpdate: activityName =", JSON.stringify(activity.activityName), "activity keys =", Object.keys(activity), "activityData =", JSON.stringify(activity.activityData).slice(0, 200), "state =", JSON.stringify(Object.keys(original.details.V1.saleState.state)));
+        console.log("🔍 DIAG beforeUpdate: activityName =", JSON.stringify(activity.activityName), "activity keys =", Object.keys(activity), "activityData =", dumpAny(activity.activityData), "state =", JSON.stringify(Object.keys(original.details.V1.saleState.state)));
         if (activity.activityName == "DelegateActivity.SpendingActivities.Activating") {
             const activationTime = tcx.txnTime.getTime();
             console.log("🔍 DIAG beforeUpdate: activationTime =", activationTime, "txnTime =", tcx.txnTime.toString());
@@ -995,6 +995,19 @@ export class MarketSaleController extends WrappedDgDataContract<
     }
 
     /**
+     * Additional value to include in the sale UTxO during a purchase, beyond
+     * the cost-token payment. Default: zero (no-op).
+     * Override to return a non-zero fee; the caller finds and adds the
+     * covering UTxO from the actor's wallet automatically.
+     * Mockable for spam-token injection tests (REQT-jxdnb3dxmx).
+     */
+    additionalPurchaseFee(
+        _mktSale: FoundDatumUtxo<MarketSaleData, MarketSaleDataWrapper>,
+    ): Value {
+        return makeValue(0n);
+    }
+
+    /**
      * Extracts the cost-token quantity from a Value, in smallest-unit terms.
      * For ADA sales, returns lovelace; for non-ADA, returns the token quantity.
      * REQT/y5gge63n84 (Other Variant) — token-specific quantity extraction
@@ -1147,7 +1160,9 @@ export class MarketSaleController extends WrappedDgDataContract<
         const nextSalePace = mktSaleObj.computeNextSalePace(pCtx);
         console.log("    -- next sale pace", nextSalePace);
 
-        const addedUtxoValue = totalSalePrice.subtract(tokenValuePurchase);
+        const purchaseFee = this.additionalPurchaseFee(mktSale);
+        const addedUtxoValue = totalSalePrice.subtract(tokenValuePurchase)
+            .add(purchaseFee);
 
         console.log("    -- existing value", dumpAny(mktSale.utxo.value));
         console.log("    -- tokenValuePurchase", dumpAny(tokenValuePurchase));
@@ -1177,6 +1192,17 @@ export class MarketSaleController extends WrappedDgDataContract<
             tcx2.addInput(paymentUtxo) as TCX & typeof tcx;
         } else {
             throw new Error("no payment utxo found");
+        }
+
+        // If there's an additional purchase fee, find a UTxO covering it
+        if (purchaseFee.lovelace > 0n || !purchaseFee.assets.isZero()) {
+            const feeUtxo = await this.uh.findActorUtxo(
+                "additional purchase fee",
+                this.uh.mkTokenPredicate(purchaseFee),
+                { exceptInTcx: tcx2 }
+            );
+            if (!feeUtxo) throw new Error("no UTxO found for additional purchase fee");
+            tcx2.addInput(feeUtxo);
         }
 
         const { lotCount, lotsSold } =

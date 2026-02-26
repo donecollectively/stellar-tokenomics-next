@@ -149,13 +149,19 @@ struct DynamicSaleV1 {
             collapsed: true,
             callback: () -> Bool {
                 costToken.switch {
-                    ADA => assert(payment.get_assets().is_zero(),
-                        "non-ADA assets not accepted for ADA-priced sale"),
+                    ADA => {
+                        extraAssets : Value = payment.get_assets();
+                        if (!extraAssets.is_zero()) {
+                            error("non-ADA assets not accepted for ADA-priced sale: " + extraAssets.show())
+                        }
+                    },
                     Other{mph, tokenName, _} => {
                         costAmount : Int = payment.get_policy(mph).get(tokenName);
                         expectedAssets : Value = Value::new(AssetClass::new(mph, tokenName), costAmount);
-                        assert(payment.get_assets() == expectedAssets,
-                            "unexpected tokens in payment — only cost token accepted")
+                        extraAssets : Value = payment.get_assets() - expectedAssets;
+                        if (!extraAssets.is_zero()) {
+                            error("unexpected tokens in payment — only cost token accepted. Extra: " + extraAssets.show())
+                        }
                     }
                 };
                 true

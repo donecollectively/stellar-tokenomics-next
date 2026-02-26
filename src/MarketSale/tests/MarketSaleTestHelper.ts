@@ -249,7 +249,10 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
         marketSale: FoundDatumUtxo<MarketSaleData>,
         quantity: number | bigint = 1n,
         description: string = "buying from mktSale",
-        submitOptions: TestHelperSubmitOptions = {}
+        submitOptions: TestHelperSubmitOptions & {
+            /** Extra value to deposit into the sale UTxO (e.g. spam tokens for policy tests) */
+            extraDepositValue?: Value;
+        } = {}
     ) {
         const { capo } = this;
         const mktSaleDgt = await this.mktSaleDgt();
@@ -259,7 +262,7 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
 
         let tcx = capo.mkTcx(description);
 
-        const { travelToFuture } = submitOptions;
+        const { travelToFuture, extraDepositValue } = submitOptions;
         const tcx2 = await mktSaleDgt.mkTxnBuyFromMarketSale(
             marketSale,
             {
@@ -267,6 +270,17 @@ export class MarketSaleTestHelper extends DefaultCapoTestHelper.forCapoClass(
             },
             travelToFuture ? tcx.futureDate(travelToFuture) : tcx
         );
+
+        if (extraDepositValue) {
+            // Find a UTxO covering the extra value and add it as input
+            const extraUtxo = await mktSaleDgt.uh.findActorUtxo(
+                "extra deposit for buy",
+                mktSaleDgt.uh.mkTokenPredicate(extraDepositValue),
+                { exceptInTcx: tcx2 }
+            );
+            if (!extraUtxo) throw new Error("no UTxO found for extraDepositValue");
+            tcx2.addInput(extraUtxo);
+        }
 
         return this.submitTxnWithBlock(tcx2, submitOptions);
     }
