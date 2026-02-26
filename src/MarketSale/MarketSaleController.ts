@@ -133,6 +133,7 @@ export class MarketSaleController extends WrappedDgDataContract<
         updated: MarketSaleDataLike,
         { activity, original, tcx }: updateContext<ErgoMarketSaleData>
     ) {
+        console.log("🔍 DIAG beforeUpdate: activityName =", JSON.stringify(activity.activityName), "activity keys =", Object.keys(activity), "state =", JSON.stringify(Object.keys(original.details.V1.saleState.state)));
         // doesn't interfere with the transaction-builder for selling while active:
         if (original.details.V1.saleState.state.Active) {
             return updated;
@@ -147,8 +148,10 @@ export class MarketSaleController extends WrappedDgDataContract<
         // REQT/stf3bz3fkk (Progress Timestamps Freshened at Activation) —
         // freshen timestamps only for the Activating activity (not UpdatingPendingSale)
         //throw new Error("activity details: "+ activity.details);
+        console.log("🔍 DIAG beforeUpdate: activityName =", JSON.stringify(activity.activityName), "activity keys =", Object.keys(activity), "activityData =", JSON.stringify(activity.activityData).slice(0, 200), "state =", JSON.stringify(Object.keys(original.details.V1.saleState.state)));
         if (activity.activityName == "DelegateActivity.SpendingActivities.Activating") {
             const activationTime = tcx.txnTime.getTime();
+            console.log("🔍 DIAG beforeUpdate: activationTime =", activationTime, "txnTime =", tcx.txnTime.toString());
             return {
                 ...updated,
                 details: {
